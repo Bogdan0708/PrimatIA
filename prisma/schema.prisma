@@ -73,6 +73,11 @@ model Tenant {
   importBatches         ImportBatch[]
   auditLogs             AuditLog[]
   exportJobs            ExportJob[]
+  citizenUsers          CitizenUser[]
+  notificari            Notificare[]
+  onlinePayments        OnlinePayment[]
+  certificateRequests   CertificateRequest[]
+  contactMessages       ContactMessage[]
 
   @@map("tenants")
 }
@@ -239,6 +244,8 @@ model Contribuabil {
   somatii               Somatie[]
   consimtaminte         Consimtamant[]
   proprietatiDetinatori ProprietateDetinator[]
+  citizenLinks          CitizenContribuabilLink[]
+  certificateRequests   CertificateRequest[]
 
   @@index([tenantId, cnpHash])
   @@index([tenantId, cui])
@@ -897,4 +904,209 @@ model PatrimvenCodeMapping {
 
   @@unique([entityType, internalCode])
   @@map("patrimven_code_mappings")
+}
+
+// =============================================================================
+// 11. PHASE 4: CITIZEN PORTAL
+// =============================================================================
+
+model CitizenUser {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  email        String @db.VarChar(255)
+  passwordHash String @map("password_hash") @db.VarChar(255)
+  firstName    String @map("first_name") @db.VarChar(100)
+  lastName     String @map("last_name") @db.VarChar(100)
+  phone        String? @db.VarChar(50)
+
+  // Verification
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  verificationToken String? @map("verification_token") @db.VarChar(255)
+  verificationExpires DateTime? @map("verification_expires") @db.Timestamptz
+
+  // Auth
+  isActive      Boolean   @default(false) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
+  loginAttempts Int       @default(0) @map("login_attempts")
+  lockedUntil   DateTime? @map("locked_until") @db.Timestamptz
+
+  // Preferences
+  limbaPreferata String @default("ro") @map("limba_preferata") @db.VarChar(2)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  linkedContribuabili CitizenContribuabilLink[]
+  certificateRequests CertificateRequest[]
+  onlinePayments      OnlinePayment[]
+  contactMessages     ContactMessage[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("citizen_users")
+}
+
+model CitizenContribuabilLink {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  citizenUserId  String @map("citizen_user_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  linkType   String    @default("owner") @map("link_type") @db.VarChar(20) // owner, mandate
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz
+  isActive   Boolean   @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  citizenUser  CitizenUser  @relation(fields: [citizenUserId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+
+  @@unique([citizenUserId, contribuabilId])
+  @@index([tenantId, citizenUserId])
+  @@map("citizen_contribuabil_links")
+}
+
+model CertificateRequest {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  citizenUserId  String @map("citizen_user_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  tipCertificat String @map("tip_certificat") @db.VarChar(50) // certificat_atestare, adeverinta_fiscala
+  scop          String? @db.VarChar(255) // purpose of the certificate
+  nrExemplare   Int     @default(1) @map("nr_exemplare")
+
+  // Processing
+  status      String    @default("pending") @db.VarChar(20) // pending, processing, ready, rejected, downloaded
+  processedAt DateTime? @map("processed_at") @db.Timestamptz
+  rejectedReason String? @map("rejected_reason")
+
+  // Generated document
+  documentId String? @map("document_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  citizenUser  CitizenUser  @relation(fields: [citizenUserId], references: [id])
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+
+  @@index([tenantId, citizenUserId, status])
+  @@map("certificate_requests")
+}
+
+// =============================================================================
+// 12. PHASE 4: NOTIFICATIONS
+// =============================================================================
+
+model Notificare {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Recipient
+  contribuabilId String? @map("contribuabil_id") @db.Uuid
+  citizenUserId  String? @map("citizen_user_id") @db.Uuid
+  recipientEmail String? @map("recipient_email") @db.VarChar(255)
+
+  // Content
+  canal     String @db.VarChar(20) // email, sms, in_app
+  template  String @db.VarChar(50) // template identifier
+  limba     String @default("ro") @db.VarChar(2)
+  subject   String? @db.VarChar(500)
+  bodyHtml  String? @map("body_html")
+  bodyText  String? @map("body_text")
+  dataJson  Json    @default("{}") @map("data_json") @db.JsonB
+
+  // Delivery
+  status    String    @default("pending") @db.VarChar(20) // pending, sent, delivered, failed, bounced
+  sentAt    DateTime? @map("sent_at") @db.Timestamptz
+  errorMessage String? @map("error_message")
+  externalId   String? @map("external_id") @db.VarChar(255) // ID from email provider
+
+  // Trigger
+  triggerEvent String? @map("trigger_event") @db.VarChar(50)
+  triggerEntityType String? @map("trigger_entity_type") @db.VarChar(50)
+  triggerEntityId   String? @map("trigger_entity_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, contribuabilId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("notificari")
+}
+
+// =============================================================================
+// 13. PHASE 4: ONLINE PAYMENTS (Ghișeul.ro mock)
+// =============================================================================
+
+model OnlinePayment {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  citizenUserId  String @map("citizen_user_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Payment details
+  suma       Decimal @db.Decimal(12, 2)
+  status     String  @default("initiated") @db.VarChar(20) // initiated, pending, confirmed, failed, cancelled
+  modalitate String  @default("ghiseul_ro") @db.VarChar(30)
+
+  // Gateway
+  gatewayRef      String? @map("gateway_ref") @db.VarChar(255)
+  gatewayResponse Json?   @map("gateway_response") @db.JsonB
+
+  // Selected debts to pay
+  selectedDebts Json @default("[]") @map("selected_debts") @db.JsonB // array of {impozitId, amount}
+
+  // Linked payment (after confirmation)
+  plataId String? @map("plata_id") @db.Uuid
+
+  initiatedAt DateTime  @default(now()) @map("initiated_at") @db.Timestamptz
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  citizenUser CitizenUser @relation(fields: [citizenUserId], references: [id])
+
+  @@index([tenantId, citizenUserId, status])
+  @@index([gatewayRef])
+  @@map("online_payments")
+}
+
+// =============================================================================
+// 14. PHASE 4: CONTACT MESSAGES
+// =============================================================================
+
+model ContactMessage {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  citizenUserId String? @map("citizen_user_id") @db.Uuid
+  name          String  @db.VarChar(255)
+  email         String  @db.VarChar(255)
+  phone         String? @db.VarChar(50)
+  subject       String  @db.VarChar(255)
+  message       String
+
+  status    String    @default("new") @db.VarChar(20) // new, read, replied, closed
+  repliedAt DateTime? @map("replied_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  citizenUser CitizenUser? @relation(fields: [citizenUserId], references: [id])
+
+  @@index([tenantId, status, createdAt])
+  @@map("contact_messages")
 }

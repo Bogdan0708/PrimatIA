@@ -22,6 +22,7 @@ import {
   BarChart3,
   AlertTriangle,
   Database,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -111,6 +112,12 @@ const adminNavItems: NavItem[] = [
     href: "/admin/patrimven",
     labelKey: "patrimven",
     icon: Database,
+    roles: ["super_admin", "primaria_admin"],
+  },
+  {
+    href: "/admin/notificari",
+    labelKey: "notifications",
+    icon: Bell,
     roles: ["super_admin", "primaria_admin"],
   },
 ];

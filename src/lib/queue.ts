@@ -22,6 +22,7 @@ export const QUEUE_NAMES = {
   PATRIMVEN_EXPORT: "patrimven-export",
   REPORT_GENERATION: "report-generation",
   SOMATIE_GENERATION: "somatie-generation",
+  NOTIFICATION_BATCH: "notification-batch",
 } as const;
 
 let queues: Map<string, Queue> = new Map();
@@ -68,6 +69,15 @@ export interface SomatieGenerationJobData {
   exportJobId: string;
 }
 
+export interface NotificationBatchJobData {
+  tenantId: string;
+  userId: string;
+  templateCode: string;
+  channel: "email" | "sms" | "push";
+  recipientIds: string[];
+  parameters: Record<string, unknown>;
+}
+
 // ============================================================================
 // Helper to add jobs
 // ============================================================================
@@ -100,6 +110,14 @@ export async function addSomatieGenerationJob(data: SomatieGenerationJobData) {
   const queue = getQueue(QUEUE_NAMES.SOMATIE_GENERATION);
   return queue.add("somatie-generate", data, {
     attempts: 2,
+    backoff: { type: "exponential", delay: 5000 },
+  });
+}
+
+export async function addNotificationBatchJob(data: NotificationBatchJobData) {
+  const queue = getQueue(QUEUE_NAMES.NOTIFICATION_BATCH);
+  return queue.add("notification-batch", data, {
+    attempts: 3,
     backoff: { type: "exponential", delay: 5000 },
   });
 }

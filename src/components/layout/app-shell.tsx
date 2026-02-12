@@ -5,6 +5,7 @@ import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -48,6 +49,7 @@ export function AppShell({
           tenantName={tenantName}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         />
+        <OfflineIndicator />
         <main className="flex-1 overflow-y-auto bg-background p-6">
           {children}
         </main>
