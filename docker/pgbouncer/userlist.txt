@@ -1,0 +1,3 @@
+"primaria_admin" "primaria_dev_password"
+"primaria_app" "primaria_dev_password"
+"primaria_service" "primaria_dev_password"

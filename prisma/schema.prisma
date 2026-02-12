@@ -1,0 +1,855 @@
+// PrimărIA — Prisma Schema
+// PostgreSQL 16 with Row-Level Security (RLS handled via raw SQL migrations)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+// =============================================================================
+// 1. TENANTS & USERS
+// =============================================================================
+
+model Tenant {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @db.VarChar(255)
+  slug        String  @unique @db.VarChar(100)
+  cui         String? @db.VarChar(20)
+  sirutaCode  String? @map("siruta_code") @db.VarChar(10)
+  county      String  @db.VarChar(50)
+  communeType String  @default("comuna") @map("commune_type") @db.VarChar(20)
+  communeRank Int     @default(5) @map("commune_rank")
+  population  Int?
+  zoneCount   Int     @default(4) @map("zone_count")
+
+  // Contact
+  email   String? @db.VarChar(255)
+  phone   String? @db.VarChar(50)
+  address String?
+  website String? @db.VarChar(255)
+
+  // Branding
+  logoUrl    String? @map("logo_url") @db.VarChar(500)
+  headerText String? @map("header_text")
+
+  // Subscription
+  tier              String    @default("comuna") @db.VarChar(20)
+  status            String    @default("trial") @db.VarChar(20)
+  subscriptionStart DateTime? @map("subscription_start") @db.Date
+  subscriptionEnd   DateTime? @map("subscription_end") @db.Date
+
+  // Settings
+  settings Json @default("{}") @db.JsonB
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenantUsers           TenantUser[]
+  adrese                Adresa[]
+  zoneFiscale           ZonaFiscala[]
+  contribuabili         Contribuabil[]
+  proprietatiCladiri    ProprietateCladire[]
+  proprietatiTerenuri   ProprietateTeren[]
+  proprietatiVehicule   ProprietateVehicul[]
+  hclDecisions          HclDecision[]
+  taxRateTables         TaxRateTable[]
+  scutiriReguli         ScutireRegula[]
+  scutiriContribuabil   ScutireContribuabil[]
+  impozite              Impozit[]
+  plati                 Plata[]
+  platiDistributie      PlataDistributie[]
+  documente             Document[]
+  somatii               Somatie[]
+  consimtaminte         Consimtamant[]
+  penalitati            Penalitate[]
+  proprietatiDetinatori ProprietateDetinator[]
+  importBatches         ImportBatch[]
+  auditLogs             AuditLog[]
+
+  @@map("tenants")
+}
+
+model TenantUser {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @map("tenant_id") @db.Uuid
+  email          String  @db.VarChar(255)
+  passwordHash   String  @map("password_hash") @db.VarChar(255)
+  firstName      String  @map("first_name") @db.VarChar(100)
+  lastName       String  @map("last_name") @db.VarChar(100)
+  role           String  @default("operator") @db.VarChar(20)
+  phone          String? @db.VarChar(50)
+  cnp            String? @db.VarChar(13)
+  limbaPreferata String? @default("ro") @map("limba_preferata") @db.VarChar(2)
+
+  // Auth
+  isActive      Boolean   @default(true) @map("is_active")
+  totpSecret    String?   @map("totp_secret") @db.VarChar(100)
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
+  loginAttempts Int       @default(0) @map("login_attempts")
+  lockedUntil   DateTime? @map("locked_until") @db.Timestamptz
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenant                  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  scutiriApproved         ScutireContribuabil[] @relation("ApprovedByUser")
+  documentseSemnate       Document[]            @relation("SignedByUser")
+  platiInregistrate       Plata[]               @relation("RegisteredByUser")
+  importBatchesImported   ImportBatch[]         @relation("ImportedByUser")
+  importBatchesRolledBack ImportBatch[]         @relation("RolledBackByUser")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("tenant_users")
+}
+
+// =============================================================================
+// 2. ADDRESSES & ZONES
+// =============================================================================
+
+model Adresa {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @map("tenant_id") @db.Uuid
+  strada      String? @db.VarChar(255)
+  numar       String? @db.VarChar(20)
+  bloc        String? @db.VarChar(20)
+  scara       String? @db.VarChar(10)
+  etaj        String? @db.VarChar(10)
+  apartament  String? @db.VarChar(10)
+  localitate  String  @db.VarChar(100)
+  judet       String  @db.VarChar(50)
+  codPostal   String? @map("cod_postal") @db.VarChar(10)
+  zonaFiscala String? @map("zona_fiscala") @db.VarChar(1)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant                     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabiliDomiciliu     Contribuabil[]       @relation("DomiciliuAddress")
+  contribuabiliCorespondenta Contribuabil[]       @relation("CorespondentaAddress")
+  proprietatiCladiri         ProprietateCladire[]
+  proprietatiTerenuri        ProprietateTeren[]
+
+  @@map("adrese")
+}
+
+model ZonaFiscala {
+  id            String  @id @default(uuid()) @db.Uuid
+  tenantId      String  @map("tenant_id") @db.Uuid
+  zona          String  @db.VarChar(1)
+  denumire      String? @db.VarChar(255)
+  delimitare    String?
+  hclDecisionId String? @map("hcl_decision_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hclDecision HclDecision? @relation(fields: [hclDecisionId], references: [id])
+
+  @@unique([tenantId, zona, hclDecisionId])
+  @@map("zone_fiscale")
+}
+
+// =============================================================================
+// 3. TAX TYPE REGISTRY (Global, not tenant-scoped)
+// =============================================================================
+
+model TaxTypeRegistry {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(50)
+  name        Json    @db.JsonB
+  legalBasis  String? @map("legal_basis") @db.VarChar(100)
+  category    String  @db.VarChar(30)
+  formulaType String? @map("formula_type") @db.VarChar(30)
+  isActive    Boolean @default(true) @map("is_active")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  impozite Impozit[]
+
+  @@map("tax_type_registry")
+}
+
+// =============================================================================
+// 4. TAXPAYERS
+// =============================================================================
+
+model Contribuabil {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  // Identity
+  tip     String  @db.VarChar(2)
+  cnp     Bytes?
+  cnpHash String? @map("cnp_hash") @db.VarChar(64)
+  cui     String? @db.VarChar(20)
+  nume    String  @db.VarChar(255)
+  prenume String? @db.VarChar(255)
+
+  // Contact
+  adresaDomiciliuId     String? @map("adresa_domiciliu_id") @db.Uuid
+  adresaCorespondentaId String? @map("adresa_corespondenta_id") @db.Uuid
+  telefon               String? @db.VarChar(50)
+  email                 String? @db.VarChar(255)
+
+  // PJ-specific
+  reprezentantLegal String? @map("reprezentant_legal") @db.VarChar(255)
+  nrRegistruComert  String? @map("nr_registru_comert") @db.VarChar(50)
+
+  // Fiscal
+  codRol           String?  @map("cod_rol") @db.VarChar(50)
+  nrDosarFiscal    String?  @map("nr_dosar_fiscal") @db.VarChar(50)
+  dataInregistrare DateTime @default(now()) @map("data_inregistrare") @db.Date
+
+  // Status
+  limbaPreferata String? @default("ro") @map("limba_preferata") @db.VarChar(2)
+  status         String  @default("activ") @db.VarChar(20)
+  note           String?
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  adresaDomiciliu       Adresa?                @relation("DomiciliuAddress", fields: [adresaDomiciliuId], references: [id])
+  adresaCorespondenta   Adresa?                @relation("CorespondentaAddress", fields: [adresaCorespondentaId], references: [id])
+  proprietatiCladiri    ProprietateCladire[]
+  proprietatiTerenuri   ProprietateTeren[]
+  proprietatiVehicule   ProprietateVehicul[]
+  scutiri               ScutireContribuabil[]
+  impozite              Impozit[]
+  plati                 Plata[]
+  documente             Document[]
+  somatii               Somatie[]
+  consimtaminte         Consimtamant[]
+  proprietatiDetinatori ProprietateDetinator[]
+
+  @@index([tenantId, cnpHash])
+  @@index([tenantId, cui])
+  @@index([tenantId, nume, prenume])
+  @@map("contribuabili")
+}
+
+// =============================================================================
+// 5. PROPERTIES
+// =============================================================================
+
+model ProprietateCladire {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Location
+  adresaId           String  @map("adresa_id") @db.Uuid
+  zona               String  @default("A") @db.VarChar(1)
+  numarCadastral     String? @map("numar_cadastral") @db.VarChar(50)
+  numarCarteFunciara String? @map("numar_carte_funciara") @db.VarChar(50)
+
+  // Building characteristics
+  destinatie           String   @db.VarChar(20)
+  tipConstructie       String   @map("tip_constructie") @db.VarChar(50)
+  anConstructie        Int      @map("an_constructie")
+  suprafataConstruita  Decimal  @map("suprafata_construita") @db.Decimal(12, 2)
+  suprafataUtila       Decimal? @map("suprafata_utila") @db.Decimal(12, 2)
+  suprafataDesfasurata Decimal? @map("suprafata_desfasurata") @db.Decimal(12, 2)
+  nrEtaje              Int      @default(1) @map("nr_etaje")
+
+  // Valuation
+  valoareImpozabila Decimal? @map("valoare_impozabila") @db.Decimal(15, 2)
+  valoareInventar   Decimal? @map("valoare_inventar") @db.Decimal(15, 2)
+
+  // Mixed building specifics
+  suprafataRezidentiala   Decimal? @map("suprafata_rezidentiala") @db.Decimal(12, 2)
+  suprafataNerezidentiala Decimal? @map("suprafata_nerezidentiala") @db.Decimal(12, 2)
+
+  // Ownership
+  cotaParte          Decimal   @default(100.00) @map("cota_parte") @db.Decimal(5, 2)
+  nrProprietari      Int       @default(1) @map("nr_proprietari")
+  tipActProprietate  String?   @map("tip_act_proprietate") @db.VarChar(50)
+  nrActProprietate   String?   @map("nr_act_proprietate") @db.VarChar(50)
+  dataActProprietate DateTime? @map("data_act_proprietate") @db.Date
+
+  // Status
+  dataDobandire   DateTime  @map("data_dobandire") @db.Date
+  dataInstrainare DateTime? @map("data_instrainare") @db.Date
+  status          String    @default("activ") @db.VarChar(20)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+  adresa       Adresa       @relation(fields: [adresaId], references: [id])
+
+  @@index([tenantId, contribuabilId])
+  @@index([tenantId, zona, destinatie])
+  @@map("proprietati_cladiri")
+}
+
+model ProprietateTeren {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Location
+  adresaId           String? @map("adresa_id") @db.Uuid
+  zona               String  @default("A") @db.VarChar(1)
+  numarCadastral     String? @map("numar_cadastral") @db.VarChar(50)
+  numarCarteFunciara String? @map("numar_carte_funciara") @db.VarChar(50)
+
+  // Land characteristics
+  categorie   String   @db.VarChar(30)
+  suprafataMp Decimal  @map("suprafata_mp") @db.Decimal(12, 2)
+  suprafataHa Decimal? @map("suprafata_ha") @db.Decimal(10, 4)
+
+  // Ownership
+  cotaParte          Decimal   @default(100.00) @map("cota_parte") @db.Decimal(5, 2)
+  tipActProprietate  String?   @map("tip_act_proprietate") @db.VarChar(50)
+  nrActProprietate   String?   @map("nr_act_proprietate") @db.VarChar(50)
+  dataActProprietate DateTime? @map("data_act_proprietate") @db.Date
+
+  // Status
+  dataDobandire   DateTime  @map("data_dobandire") @db.Date
+  dataInstrainare DateTime? @map("data_instrainare") @db.Date
+  status          String    @default("activ") @db.VarChar(20)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+  adresa       Adresa?      @relation(fields: [adresaId], references: [id])
+
+  @@index([tenantId, contribuabilId])
+  @@map("proprietati_terenuri")
+}
+
+model ProprietateVehicul {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Vehicle identification
+  numarInmatriculare String? @map("numar_inmatriculare") @db.VarChar(20)
+  serieSasiu         String? @map("serie_sasiu") @db.VarChar(50)
+  nrCarteIdentitate  String? @map("nr_carte_identitate") @db.VarChar(50)
+
+  // Vehicle characteristics
+  tipVehicul     String   @map("tip_vehicul") @db.VarChar(30)
+  marca          String?  @db.VarChar(100)
+  model          String?  @db.VarChar(100)
+  anFabricatie   Int      @map("an_fabricatie")
+  cilindreeCmc   Int?     @map("cilindree_cmc")
+  putereKw       Decimal? @map("putere_kw") @db.Decimal(8, 2)
+  masaTotalaKg   Int?     @map("masa_totala_kg")
+  nrLocuri       Int?     @map("nr_locuri")
+  normaPoluare   String?  @map("norma_poluare") @db.VarChar(10)
+  tipCombustibil String?  @map("tip_combustibil") @db.VarChar(20)
+
+  // Ownership
+  dataDobandire   DateTime  @map("data_dobandire") @db.Date
+  dataInstrainare DateTime? @map("data_instrainare") @db.Date
+  status          String    @default("activ") @db.VarChar(20)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+
+  @@index([tenantId, contribuabilId])
+  @@index([tenantId, numarInmatriculare])
+  @@map("proprietati_vehicule")
+}
+
+// =============================================================================
+// 6. TAX & FINANCIAL
+// =============================================================================
+
+model HclDecision {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  hclNumber  String   @map("hcl_number") @db.VarChar(20)
+  hclDate    DateTime @map("hcl_date") @db.Date
+  fiscalYear Int      @map("fiscal_year")
+  title      String?
+
+  inflationIndex Decimal?  @map("inflation_index") @db.Decimal(6, 4)
+  validFrom      DateTime  @map("valid_from") @db.Date
+  validTo        DateTime? @map("valid_to") @db.Date
+
+  status      String  @default("draft") @db.VarChar(20)
+  approvedBy  String? @map("approved_by") @db.VarChar(255)
+  documentUrl String? @map("document_url") @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  taxRateTables TaxRateTable[]
+  zoneFiscale   ZonaFiscala[]
+  impozite      Impozit[]      @relation("ImpozitHclDecision")
+
+  @@index([tenantId, fiscalYear, status])
+  @@map("hcl_decisions")
+}
+
+model TaxRateTable {
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  hclDecisionId String @map("hcl_decision_id") @db.Uuid
+
+  // Tax identification
+  taxType  String  @map("tax_type") @db.VarChar(50)
+  category String? @db.VarChar(50)
+  zona     String? @db.VarChar(1)
+  rang     Int?
+
+  // Rate
+  rateType  String  @default("percent") @map("rate_type") @db.VarChar(10)
+  rateValue Decimal @map("rate_value") @db.Decimal(12, 6)
+  unit      String? @db.VarChar(20)
+
+  // Legal bounds
+  minRate Decimal? @map("min_rate") @db.Decimal(12, 6)
+  maxRate Decimal? @map("max_rate") @db.Decimal(12, 6)
+
+  // Metadata
+  descriptionRo String? @map("description_ro")
+  legalArticle  String? @map("legal_article") @db.VarChar(50)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  hclDecision HclDecision @relation(fields: [hclDecisionId], references: [id])
+  impozite    Impozit[]   @relation("ImpozitRateTable")
+
+  @@index([tenantId, hclDecisionId, taxType, category, zona])
+  @@map("tax_rate_tables")
+}
+
+model ScutireRegula {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  nameRo     String  @map("name_ro") @db.VarChar(255)
+  nameEn     String? @map("name_en") @db.VarChar(255)
+  legalBasis String  @map("legal_basis") @db.VarChar(100)
+
+  taxTypes        String[] @map("tax_types")
+  discountPercent Decimal  @map("discount_percent") @db.Decimal(5, 2)
+
+  conditions        Json     @default("{}") @db.JsonB
+  requiredDocuments String[] @map("required_documents")
+  autoRenewable     Boolean  @default(false) @map("auto_renewable")
+
+  isActive  Boolean   @default(true) @map("is_active")
+  validFrom DateTime? @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant              Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  scutiriContribuabil ScutireContribuabil[]
+
+  @@map("scutiri_reguli")
+}
+
+model ScutireContribuabil {
+  id              String @id @default(uuid()) @db.Uuid
+  tenantId        String @map("tenant_id") @db.Uuid
+  contribuabilId  String @map("contribuabil_id") @db.Uuid
+  scutireRegulaId String @map("scutire_regula_id") @db.Uuid
+
+  proprietateType String? @map("proprietate_type") @db.VarChar(20)
+  proprietateId   String? @map("proprietate_id") @db.Uuid
+
+  fiscalYear Int       @map("fiscal_year")
+  validFrom  DateTime  @map("valid_from") @db.Date
+  validTo    DateTime? @map("valid_to") @db.Date
+
+  // Documentation
+  documenteVerificate Json      @default("[]") @map("documente_verificate") @db.JsonB
+  approvedById        String?   @map("approved_by") @db.Uuid
+  approvedAt          DateTime? @map("approved_at") @db.Timestamptz
+
+  status String  @default("pending") @db.VarChar(20)
+  note   String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil  Contribuabil  @relation(fields: [contribuabilId], references: [id])
+  scutireRegula ScutireRegula @relation(fields: [scutireRegulaId], references: [id])
+  approvedBy    TenantUser?   @relation("ApprovedByUser", fields: [approvedById], references: [id])
+
+  @@index([tenantId, contribuabilId, fiscalYear])
+  @@map("scutiri_contribuabil")
+}
+
+model Impozit {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Tax details
+  taxTypeId  String @map("tax_type_id") @db.Uuid
+  fiscalYear Int    @map("fiscal_year")
+
+  // Source property/asset
+  proprietateType String? @map("proprietate_type") @db.VarChar(20)
+  proprietateId   String? @map("proprietate_id") @db.Uuid
+
+  // Proration & discount
+  dataStartCalcul DateTime? @map("data_start_calcul") @db.Date
+  dataStopCalcul  DateTime? @map("data_stop_calcul") @db.Date
+  nrLuni          Int       @default(12) @map("nr_luni")
+  bonificatie     Decimal   @default(0) @map("bonificatie") @db.Decimal(12, 2)
+
+  // Calculation
+  hclDecisionId  String? @map("hcl_decision_id") @db.Uuid
+  rateTableId    String? @map("rate_table_id") @db.Uuid
+  bazaImpozabila Decimal @map("baza_impozabila") @db.Decimal(15, 2)
+  rataAplicata   Decimal @map("rata_aplicata") @db.Decimal(12, 6)
+  sumaCalculata  Decimal @map("suma_calculata") @db.Decimal(12, 2)
+  sumaScutire    Decimal @default(0) @map("suma_scutire") @db.Decimal(12, 2)
+  sumaDatorata   Decimal @map("suma_datorata") @db.Decimal(12, 2)
+
+  // Installments
+  rata1         Decimal  @map("rata_1") @db.Decimal(12, 2)
+  rata1Scadenta DateTime @map("rata_1_scadenta") @db.Date
+  rata2         Decimal  @map("rata_2") @db.Decimal(12, 2)
+  rata2Scadenta DateTime @map("rata_2_scadenta") @db.Date
+
+  // Payment tracking
+  sumaPlatita    Decimal @default(0) @map("suma_platita") @db.Decimal(12, 2)
+  sumaPenalitati Decimal @default(0) @map("suma_penalitati") @db.Decimal(12, 2)
+
+  status String @default("calculat") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil     Contribuabil       @relation(fields: [contribuabilId], references: [id])
+  taxType          TaxTypeRegistry    @relation(fields: [taxTypeId], references: [id])
+  hclDecision      HclDecision?       @relation("ImpozitHclDecision", fields: [hclDecisionId], references: [id])
+  rateTable        TaxRateTable?      @relation("ImpozitRateTable", fields: [rateTableId], references: [id])
+  platiDistributie PlataDistributie[]
+  documente        Document[]
+  penalitati       Penalitate[]
+  somatiiImpozite  SomatieImpozit[]
+
+  @@index([tenantId, contribuabilId, fiscalYear])
+  @@index([tenantId, taxTypeId, fiscalYear])
+  @@map("impozite")
+}
+
+model Plata {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Payment details
+  suma       Decimal  @db.Decimal(12, 2)
+  dataPlata  DateTime @map("data_plata") @db.Date
+  modalitate String   @db.VarChar(30)
+
+  // Reference
+  nrChitanta   String? @map("nr_chitanta") @db.VarChar(50)
+  nrDocument   String? @map("nr_document") @db.VarChar(50)
+  ghiseulRoRef String? @map("ghiseul_ro_ref") @db.VarChar(100)
+
+  // Processing
+  distribuit Boolean @default(false)
+  nota       String?
+
+  inregistratDeId String? @map("inregistrat_de") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil     Contribuabil       @relation(fields: [contribuabilId], references: [id])
+  inregistratDe    TenantUser?        @relation("RegisteredByUser", fields: [inregistratDeId], references: [id])
+  platiDistributie PlataDistributie[]
+
+  @@index([tenantId, contribuabilId, dataPlata])
+  @@index([tenantId, dataPlata])
+  @@map("plati")
+}
+
+model PlataDistributie {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  plataId   String @map("plata_id") @db.Uuid
+  impozitId String @map("impozit_id") @db.Uuid
+
+  sumaDebit      Decimal @default(0) @map("suma_debit") @db.Decimal(12, 2)
+  sumaPenalitati Decimal @default(0) @map("suma_penalitati") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plata   Plata   @relation(fields: [plataId], references: [id])
+  impozit Impozit @relation(fields: [impozitId], references: [id])
+
+  @@map("plati_distributie")
+}
+
+// =============================================================================
+// 7. DOCUMENTS & ENFORCEMENT
+// =============================================================================
+
+model Document {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @map("tenant_id") @db.Uuid
+  contribuabilId String? @map("contribuabil_id") @db.Uuid
+
+  tip           String   @db.VarChar(50)
+  numarDocument String   @map("numar_document") @db.VarChar(50)
+  dataDocument  DateTime @default(now()) @map("data_document") @db.Date
+
+  // Content
+  templateId String? @map("template_id") @db.VarChar(100)
+  dataJson   Json    @map("data_json") @db.JsonB
+
+  // Storage
+  fileUrl       String? @map("file_url") @db.VarChar(500)
+  fileSizeBytes BigInt? @map("file_size_bytes")
+
+  // Signing
+  semnat     Boolean   @default(false)
+  semnatDeId String?   @map("semnat_de") @db.Uuid
+  semnatLa   DateTime? @map("semnat_la") @db.Timestamptz
+
+  // Related entities
+  impozitId String? @map("impozit_id") @db.Uuid
+  somatieId String? @map("somatie_id") @db.Uuid
+
+  status String @default("generat") @db.VarChar(20)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil? @relation(fields: [contribuabilId], references: [id])
+  semnatDe     TenantUser?   @relation("SignedByUser", fields: [semnatDeId], references: [id])
+  impozit      Impozit?      @relation(fields: [impozitId], references: [id])
+  somatie      Somatie?      @relation(fields: [somatieId], references: [id])
+
+  @@index([tenantId, contribuabilId, tip])
+  @@index([tenantId, numarDocument])
+  @@map("documente")
+}
+
+model Somatie {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  // Enforcement details
+  tip         String   @db.VarChar(30)
+  numar       String   @db.VarChar(50)
+  dataEmitere DateTime @default(now()) @map("data_emitere") @db.Date
+
+  // Amounts
+  sumaDebit      Decimal @map("suma_debit") @db.Decimal(12, 2)
+  sumaPenalitati Decimal @default(0) @map("suma_penalitati") @db.Decimal(12, 2)
+  sumaTotala     Decimal @map("suma_totala") @db.Decimal(12, 2)
+
+  // Workflow
+  termenPlata DateTime @map("termen_plata") @db.Date
+  status      String   @default("emis") @db.VarChar(30)
+
+  // Communication
+  dataComunicare       DateTime? @map("data_comunicare") @db.Date
+  modalitateComunicare String?   @map("modalitate_comunicare") @db.VarChar(30)
+  confirmarePrimire    Boolean   @default(false) @map("confirmare_primire")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil    Contribuabil     @relation(fields: [contribuabilId], references: [id])
+  documente       Document[]
+  somatiiImpozite SomatieImpozit[]
+
+  @@index([tenantId, contribuabilId])
+  @@index([tenantId, status, termenPlata])
+  @@map("somatii")
+}
+
+model SomatieImpozit {
+  somatieId String @map("somatie_id") @db.Uuid
+  impozitId String @map("impozit_id") @db.Uuid
+
+  // Relations
+  somatie Somatie @relation(fields: [somatieId], references: [id], onDelete: Cascade)
+  impozit Impozit @relation(fields: [impozitId], references: [id])
+
+  @@id([somatieId, impozitId])
+  @@map("somatii_impozite")
+}
+
+// =============================================================================
+// 8. CONSENT, PENALTIES & CO-OWNERSHIP
+// =============================================================================
+
+model Consimtamant {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  contribuabilId String @map("contribuabil_id") @db.Uuid
+
+  canal         String    @db.VarChar(20)
+  consimtamant  Boolean   @default(false)
+  dataAcord     DateTime? @map("data_acord") @db.Timestamptz
+  dataRetragere DateTime? @map("data_retragere") @db.Timestamptz
+  ipAddress     String?   @map("ip_address") @db.Inet
+  sursa         String?   @db.VarChar(50)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+
+  @@unique([tenantId, contribuabilId, canal])
+  @@map("consimtaminte")
+}
+
+model Penalitate {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  impozitId String @map("impozit_id") @db.Uuid
+
+  dataCalcul     DateTime @map("data_calcul") @db.Date
+  sumaRestanta   Decimal  @map("suma_restanta") @db.Decimal(12, 2)
+  rataPenalizare Decimal  @map("rata_penalizare") @db.Decimal(8, 6)
+  sumaPenalizare Decimal  @map("suma_penalizare") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  impozit Impozit @relation(fields: [impozitId], references: [id])
+
+  @@unique([tenantId, impozitId, dataCalcul])
+  @@index([tenantId, impozitId, dataCalcul])
+  @@map("penalitati")
+}
+
+model ProprietateDetinator {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  proprietateType String @map("proprietate_type") @db.VarChar(20)
+  proprietateId   String @map("proprietate_id") @db.Uuid
+  contribuabilId  String @map("contribuabil_id") @db.Uuid
+
+  cotaParte Decimal   @map("cota_parte") @db.Decimal(5, 2)
+  validFrom DateTime  @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+
+  tipAct  String?   @map("tip_act") @db.VarChar(50)
+  nrAct   String?   @map("nr_act") @db.VarChar(50)
+  dataAct DateTime? @map("data_act") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contribuabil Contribuabil @relation(fields: [contribuabilId], references: [id])
+
+  @@index([proprietateType, proprietateId])
+  @@index([tenantId, contribuabilId])
+  @@map("proprietati_detinatori")
+}
+
+// =============================================================================
+// 9. IMPORT & AUDIT
+// =============================================================================
+
+model ImportBatch {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  filename     String @db.VarChar(255)
+  entityType   String @map("entity_type") @db.VarChar(50)
+  totalRows    Int    @default(0) @map("total_rows")
+  importedRows Int    @default(0) @map("imported_rows")
+  errorRows    Int    @default(0) @map("error_rows")
+
+  status       String    @default("pending") @db.VarChar(20)
+  rollbackAt   DateTime? @map("rollback_at") @db.Timestamptz
+  rollbackById String?   @map("rollback_by") @db.Uuid
+  errorLog     Json      @default("[]") @map("error_log") @db.JsonB
+
+  importedById String?   @map("imported_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz
+
+  // Relations
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  importedBy TenantUser? @relation("ImportedByUser", fields: [importedById], references: [id])
+  rollbackBy TenantUser? @relation("RolledBackByUser", fields: [rollbackById], references: [id])
+
+  @@map("import_batches")
+}
+
+model AuditLog {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  userId   String? @map("user_id") @db.Uuid
+
+  action     String  @db.VarChar(50)
+  entityType String  @map("entity_type") @db.VarChar(50)
+  entityId   String? @map("entity_id") @db.Uuid
+
+  oldValues Json? @map("old_values") @db.JsonB
+  newValues Json? @map("new_values") @db.JsonB
+
+  ipAddress String? @map("ip_address") @db.Inet
+  userAgent String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, entityType, entityId, createdAt])
+  @@index([tenantId, userId, createdAt])
+  @@map("audit_logs")
+}
