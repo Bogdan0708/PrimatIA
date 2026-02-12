@@ -18,6 +18,10 @@ import {
   FileDown,
   ScrollText,
   Shield,
+  FileText,
+  BarChart3,
+  AlertTriangle,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -61,6 +65,21 @@ const mainNavItems: NavItem[] = [
     labelKey: "payments",
     icon: CreditCard,
   },
+  {
+    href: "/documente",
+    labelKey: "documents",
+    icon: FileText,
+  },
+  {
+    href: "/rapoarte",
+    labelKey: "reports",
+    icon: BarChart3,
+  },
+  {
+    href: "/somatii",
+    labelKey: "somatii",
+    icon: AlertTriangle,
+  },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -86,6 +105,12 @@ const adminNavItems: NavItem[] = [
     href: "/admin/import",
     labelKey: "imports",
     icon: FileDown,
+    roles: ["super_admin", "primaria_admin"],
+  },
+  {
+    href: "/admin/patrimven",
+    labelKey: "patrimven",
+    icon: Database,
     roles: ["super_admin", "primaria_admin"],
   },
 ];

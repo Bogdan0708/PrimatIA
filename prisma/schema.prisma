@@ -72,6 +72,7 @@ model Tenant {
   proprietatiDetinatori ProprietateDetinator[]
   importBatches         ImportBatch[]
   auditLogs             AuditLog[]
+  exportJobs            ExportJob[]
 
   @@map("tenants")
 }
@@ -106,6 +107,7 @@ model TenantUser {
   platiInregistrate       Plata[]               @relation("RegisteredByUser")
   importBatchesImported   ImportBatch[]         @relation("ImportedByUser")
   importBatchesRolledBack ImportBatch[]         @relation("RolledBackByUser")
+  exportJobsRequested    ExportJob[]           @relation("ExportRequestedByUser")
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -852,4 +854,47 @@ model AuditLog {
   @@index([tenantId, entityType, entityId, createdAt])
   @@index([tenantId, userId, createdAt])
   @@map("audit_logs")
+}
+
+// =============================================================================
+// 10. PHASE 3: EXPORT JOBS & PATRIMVEN
+// =============================================================================
+
+model ExportJob {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+
+  tip       String @db.VarChar(30) // patrimven, forexebug, efactura, raport
+  parametri Json   @default("{}") @db.JsonB
+
+  status   String @default("pending") @db.VarChar(20) // pending, processing, completed, failed
+  progress Int    @default(0)
+
+  fileUrl       String? @map("file_url") @db.VarChar(500)
+  fileSizeBytes BigInt? @map("file_size_bytes")
+  errorMessage  String? @map("error_message")
+
+  startedAt   DateTime? @map("started_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  requestedById String? @map("requested_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedBy TenantUser? @relation("ExportRequestedByUser", fields: [requestedById], references: [id])
+
+  @@map("export_jobs")
+}
+
+model PatrimvenCodeMapping {
+  id String @id @default(uuid()) @db.Uuid
+
+  entityType    String @map("entity_type") @db.VarChar(50)
+  internalCode  String @map("internal_code") @db.VarChar(50)
+  patrimvenCode String @map("patrimven_code") @db.VarChar(50)
+  descriptionRo String? @map("description_ro") @db.VarChar(255)
+
+  @@unique([entityType, internalCode])
+  @@map("patrimven_code_mappings")
 }
