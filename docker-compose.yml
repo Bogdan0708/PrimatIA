@@ -10,7 +10,7 @@ services:
     container_name: primaria-postgres
     restart: unless-stopped
     ports:
-      - "5433:5432" # 5433 on host to avoid conflict with any local PostgreSQL
+      - "5435:5432" # 5435 on host to avoid conflict with hospitality-saas (5433) and review-responder (5434)
     environment:
       POSTGRES_USER: primaria_admin
       POSTGRES_PASSWORD: primaria_dev_password
@@ -48,7 +48,7 @@ services:
     container_name: primaria-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6381:6379"
     command: redis-server --appendonly yes
     volumes:
       - redisdata:/data

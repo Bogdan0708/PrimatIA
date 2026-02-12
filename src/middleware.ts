@@ -220,7 +220,17 @@ export default function middleware(request: NextRequest) {
     }
   }
 
-  // Run the i18n middleware for all routes
+  // Skip i18n middleware for API routes
+  if (pathname.startsWith("/api/")) {
+    const response = NextResponse.next();
+    addSecurityHeaders(response);
+    if (pathname.startsWith("/api/portal")) {
+      addCorsHeaders(response, request);
+    }
+    return response;
+  }
+
+  // Run the i18n middleware for page routes
   const response = intlMiddleware(request);
 
   // Add security headers to all responses
