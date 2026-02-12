@@ -1,0 +1,177 @@
+# =============================================================================
+# PrimărIA - Docker Compose (production)
+# =============================================================================
+# Usage:
+#   cp .env.production.example .env
+#   # Edit .env with real values
+#   docker compose -f docker-compose.production.yml up -d --build
+# =============================================================================
+
+services:
+  # ──────────────────────────────────────────────
+  # Next.js Application
+  # ──────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: primaria-app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      AUTH_SECRET: ${AUTH_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: ${REDIS_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - primaria-network
+
+  # ──────────────────────────────────────────────
+  # PostgreSQL 16 with Row-Level Security support
+  # ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: primaria-postgres
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-primaria_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+      POSTGRES_DB: ${POSTGRES_DB:-primaria}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-primaria_admin} -d ${POSTGRES_DB:-primaria}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - primaria-network
+
+  # ──────────────────────────────────────────────
+  # PgBouncer - connection pooler (transaction mode)
+  # ──────────────────────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: primaria-pgbouncer
+    restart: always
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./docker/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./docker/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - primaria-network
+
+  # ──────────────────────────────────────────────
+  # Redis 7 - caching & session store
+  # ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: primaria-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-CHANGE_ME}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-CHANGE_ME}
+    volumes:
+      - redisdata:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-CHANGE_ME}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - primaria-network
+
+  # ──────────────────────────────────────────────
+  # MinIO - S3-compatible object storage
+  # ──────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: primaria-minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-CHANGE_ME}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-CHANGE_ME}
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - primaria-network
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  miniodata:
+    driver: local
+
+networks:
+  primaria-network:
+    driver: bridge

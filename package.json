@@ -13,7 +13,11 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -52,6 +56,7 @@
     "nodemailer": "^6.10.1",
     "react": "^18",
     "react-dom": "^18",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6"
@@ -62,12 +67,14 @@
     "@types/nodemailer": "^7.0.9",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^5.1.4",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "prisma": "^6.0.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.0.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }

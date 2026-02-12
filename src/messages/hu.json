@@ -76,7 +76,16 @@
     "collectionRate": "Beszedési arány",
     "recentPayments": "Legutóbbi fizetések",
     "upcomingDeadlines": "Közelgő határidők",
-    "quickActions": "Gyors műveletek"
+    "quickActions": "Gyors műveletek",
+    "revenueByMonth": "Bevétel havonta",
+    "taxTypeBreakdown": "Adónem szerinti bontás",
+    "collectionRateTrend": "Behajtási ráta alakulása",
+    "overdueAging": "Lejárt tartozások korösszetétele",
+    "totalProperties": "Összesen ingatlanok",
+    "buildings": "Épületek",
+    "landPlots": "Telkek",
+    "vehiclesCount": "Járművek",
+    "days": "napok"
   },
   "taxpayer": {
     "title": "Adófizetők",

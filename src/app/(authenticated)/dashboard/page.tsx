@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Calculator, CreditCard, AlertTriangle } from "lucide-react";
+import { Users, Calculator, CreditCard, AlertTriangle, Building2 } from "lucide-react";
+import { DashboardCharts } from "./_components/dashboard-charts";
 
 export default async function DashboardPage() {
   await requireStaff();
@@ -31,6 +32,9 @@ export default async function DashboardPage() {
     totalProprietati,
     taxAggregates,
     recentPayments,
+    revenueByMonth,
+    taxBreakdown,
+    overdueAging,
   ] = await Promise.all([
     prisma.contribuabil.count({
       where: { tenantId, deletedAt: null, status: "activ" },
@@ -64,7 +68,59 @@ export default async function DashboardPage() {
       orderBy: { dataPlata: "desc" },
       take: 5,
     }),
+    // Revenue by month (last 12 months) - group payments by month
+    prisma.$queryRaw`
+      SELECT
+        TO_CHAR(data_plata, 'YYYY-MM') as month,
+        SUM(suma) as total
+      FROM plati
+      WHERE tenant_id = ${tenantId}::uuid
+        AND data_plata >= NOW() - INTERVAL '12 months'
+      GROUP BY TO_CHAR(data_plata, 'YYYY-MM')
+      ORDER BY month
+    ` as Promise<{ month: string; total: number }[]>,
+    // Tax type breakdown
+    prisma.$queryRaw`
+      SELECT
+        ttr.category,
+        SUM(i.suma_datorata) as total
+      FROM impozite i
+      JOIN tax_type_registry ttr ON i.tax_type_id = ttr.id
+      WHERE i.tenant_id = ${tenantId}::uuid
+        AND i.fiscal_year = ${new Date().getFullYear()}
+      GROUP BY ttr.category
+    ` as Promise<{ category: string; total: number }[]>,
+    // Overdue aging - calculate days overdue from rata_1_scadenta
+    prisma.$queryRaw`
+      SELECT
+        CASE
+          WHEN CURRENT_DATE - rata_1_scadenta <= 30 THEN '0-30'
+          WHEN CURRENT_DATE - rata_1_scadenta <= 90 THEN '31-90'
+          WHEN CURRENT_DATE - rata_1_scadenta <= 180 THEN '91-180'
+          ELSE '180+'
+        END as bucket,
+        SUM(suma_datorata - suma_platita) as total
+      FROM impozite
+      WHERE tenant_id = ${tenantId}::uuid
+        AND suma_datorata > suma_platita
+        AND rata_1_scadenta < CURRENT_DATE
+      GROUP BY bucket
+      ORDER BY bucket
+    ` as Promise<{ bucket: string; total: number }[]>,
   ]);
+
+  // Compute collection rate trend from revenueByMonth and monthly debits
+  // We derive a simple trend: cumulative paid / cumulative owed over the months
+  const collectionRateTrend = revenueByMonth.map((item) => {
+    const totalDatoratVal = Number(taxAggregates._sum.sumaDatorata ?? 0);
+    const cumulativePaid = revenueByMonth
+      .filter((r) => r.month <= item.month)
+      .reduce((sum, r) => sum + Number(r.total), 0);
+    const rate = totalDatoratVal > 0
+      ? Math.min(100, Math.round((cumulativePaid / totalDatoratVal) * 100 * 10) / 10)
+      : 0;
+    return { month: item.month, rate };
+  });
 
   const totalProps =
     totalProprietati[0] + totalProprietati[1] + totalProprietati[2];
@@ -93,7 +149,7 @@ export default async function DashboardPage() {
     {
       title: t("totalTaxpayers"),
       value: totalContribuabili.toLocaleString(),
-      subtitle: `${totalProps} proprietăți`,
+      subtitle: `${totalProps} ${t("totalProperties").toLowerCase()}`,
       icon: Users,
     },
     {
@@ -105,7 +161,7 @@ export default async function DashboardPage() {
     {
       title: t("outstandingDebts"),
       value: formatCurrency(totalRestante),
-      subtitle: totalPenalitati > 0 ? `(din care ${formatCurrency(totalPenalitati)} penalități)` : "",
+      subtitle: totalPenalitati > 0 ? `(din care ${formatCurrency(totalPenalitati)} penalitati)` : "",
       icon: AlertTriangle,
     },
     {
@@ -113,6 +169,12 @@ export default async function DashboardPage() {
       value: `${collectionRate}%`,
       subtitle: "",
       icon: Calculator,
+    },
+    {
+      title: t("totalProperties"),
+      value: totalProps.toLocaleString(),
+      subtitle: `${totalProprietati[0]} ${t("buildings")} / ${totalProprietati[1]} ${t("landPlots")} / ${totalProprietati[2]} ${t("vehiclesCount")}`,
+      icon: Building2,
     },
   ];
 
@@ -123,7 +185,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -146,6 +208,14 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Charts */}
+      <DashboardCharts
+        revenueByMonth={revenueByMonth}
+        taxBreakdown={taxBreakdown}
+        collectionRateTrend={collectionRateTrend}
+        overdueAging={overdueAging}
+      />
 
       {/* Recent Payments & Deadlines */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -203,7 +273,7 @@ export default async function DashboardPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Bonificație 10% (plată integrală)</span>
+                <span>Bonificatie 10% (plata integrala)</span>
                 <span className="font-mono text-muted-foreground">
                   31 Martie {new Date().getFullYear()}
                 </span>

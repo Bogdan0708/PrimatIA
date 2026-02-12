@@ -76,7 +76,16 @@
     "collectionRate": "Collection Rate",
     "recentPayments": "Recent Payments",
     "upcomingDeadlines": "Upcoming Deadlines",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "revenueByMonth": "Revenue by Month",
+    "taxTypeBreakdown": "Tax Type Breakdown",
+    "collectionRateTrend": "Collection Rate Trend",
+    "overdueAging": "Overdue Aging",
+    "totalProperties": "Total Properties",
+    "buildings": "Buildings",
+    "landPlots": "Land Plots",
+    "vehiclesCount": "Vehicles",
+    "days": "days"
   },
   "taxpayer": {
     "title": "Taxpayers",

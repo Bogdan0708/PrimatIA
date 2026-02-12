@@ -76,7 +76,16 @@
     "collectionRate": "Rată de colectare",
     "recentPayments": "Plăți recente",
     "upcomingDeadlines": "Termene apropiate",
-    "quickActions": "Acțiuni rapide"
+    "quickActions": "Acțiuni rapide",
+    "revenueByMonth": "Venituri pe luni",
+    "taxTypeBreakdown": "Repartizare pe tip impozit",
+    "collectionRateTrend": "Evoluția gradului de colectare",
+    "overdueAging": "Îmbătrânire restanțe",
+    "totalProperties": "Total proprietăți",
+    "buildings": "Clădiri",
+    "landPlots": "Terenuri",
+    "vehiclesCount": "Vehicule",
+    "days": "zile"
   },
   "taxpayer": {
     "title": "Contribuabili",

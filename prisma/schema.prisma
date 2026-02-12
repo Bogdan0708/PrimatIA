@@ -632,6 +632,8 @@ model PlataDistributie {
   plata   Plata   @relation(fields: [plataId], references: [id])
   impozit Impozit @relation(fields: [impozitId], references: [id])
 
+  @@index([tenantId, plataId])
+  @@index([tenantId, impozitId])
   @@map("plati_distributie")
 }
 
