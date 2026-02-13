@@ -5,8 +5,9 @@ import { Plus, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getTerenuri } from "./_actions/teren-actions";
+import { deleteTeren, getTerenuri } from "./_actions/teren-actions";
 import { PropertySearch } from "./_components/property-search";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 
 export default async function TerenuriPage({
   searchParams,
@@ -132,6 +133,10 @@ export default async function TerenuriPage({
                         <Link href={`${localePrefix}/proprietati/terenuri/${item.id}/edit`}>
                           <Button variant="ghost" size="sm">{tc("edit")}</Button>
                         </Link>
+                        <ConfirmDeleteButton
+                          id={item.id}
+                          onDelete={deleteTeren}
+                        />
                       </div>
                     </td>
                   </tr>

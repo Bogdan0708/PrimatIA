@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Calculator, CreditCard, AlertTriangle, Building2 } from "lucide-react";
+import { Users, Calculator, CreditCard, AlertTriangle, Building2, Clock } from "lucide-react";
 import { DashboardCharts } from "./_components/dashboard-charts";
 
 export default async function DashboardPage() {
@@ -34,9 +34,14 @@ export default async function DashboardPage() {
     totalProprietati,
     taxAggregates,
     recentPayments,
+    pendingPayments,
     revenueByMonth,
     taxBreakdown,
     overdueAging,
+    recentContribuabili,
+    recentCladiri,
+    recentTerenuri,
+    recentVehicule,
   ] = await Promise.all([
     prisma.contribuabil.count({
       where: { tenantId, deletedAt: null, status: "activ" },
@@ -70,6 +75,12 @@ export default async function DashboardPage() {
       orderBy: { dataPlata: "desc" },
       take: 5,
     }),
+    prisma.$queryRaw`
+      SELECT COUNT(*)::int as count
+      FROM impozite
+      WHERE tenant_id = ${tenantId}::uuid
+        AND (suma_datorata + suma_penalitati) > suma_platita
+    ` as Promise<{ count: number }[]>,
     // Revenue by month (last 12 months) - group payments by month
     prisma.$queryRaw`
       SELECT
@@ -109,6 +120,42 @@ export default async function DashboardPage() {
       GROUP BY bucket
       ORDER BY bucket
     ` as Promise<{ bucket: string; total: number }[]>,
+    prisma.contribuabil.findMany({
+      where: { tenantId, deletedAt: null },
+      select: { id: true, nume: true, prenume: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.proprietateCladire.findMany({
+      where: { tenantId, deletedAt: null },
+      select: {
+        id: true,
+        createdAt: true,
+        contribuabil: { select: { id: true, nume: true, prenume: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.proprietateTeren.findMany({
+      where: { tenantId, deletedAt: null },
+      select: {
+        id: true,
+        createdAt: true,
+        contribuabil: { select: { id: true, nume: true, prenume: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.proprietateVehicul.findMany({
+      where: { tenantId, deletedAt: null },
+      select: {
+        id: true,
+        createdAt: true,
+        contribuabil: { select: { id: true, nume: true, prenume: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
   ]);
 
   // Compute collection rate trend from revenueByMonth and monthly debits
@@ -130,6 +177,7 @@ export default async function DashboardPage() {
   const totalPlatit = Number(taxAggregates._sum.sumaPlatita ?? 0);
   const totalPenalitati = Number(taxAggregates._sum.sumaPenalitati ?? 0);
   const totalRestante = totalDatorat + totalPenalitati - totalPlatit;
+  const pendingPaymentsCount = Number(pendingPayments[0]?.count ?? 0);
   const collectionRate =
     totalDatorat > 0 ? Math.round((totalPlatit / totalDatorat) * 100) : 0;
 
@@ -167,6 +215,12 @@ export default async function DashboardPage() {
       icon: AlertTriangle,
     },
     {
+      title: t("pendingPayments"),
+      value: pendingPaymentsCount.toLocaleString(),
+      subtitle: totalRestante > 0 ? formatCurrency(totalRestante) : "",
+      icon: Clock,
+    },
+    {
       title: t("collectionRate"),
       value: `${collectionRate}%`,
       subtitle: "",
@@ -180,6 +234,39 @@ export default async function DashboardPage() {
     },
   ];
 
+  const formatName = (nume: string, prenume?: string | null) =>
+    `${nume} ${prenume ?? ""}`.trim();
+
+  const activityItems = [
+    ...recentContribuabili.map((item) => ({
+      date: item.createdAt,
+      label: t("activityTaxpayer", { name: formatName(item.nume, item.prenume) }),
+      href: `${localePrefix}/contribuabili/${item.id}`,
+    })),
+    ...recentCladiri.map((item) => ({
+      date: item.createdAt,
+      label: t("activityBuilding", { name: formatName(item.contribuabil.nume, item.contribuabil.prenume) }),
+      href: `${localePrefix}/proprietati/cladiri/${item.id}/edit`,
+    })),
+    ...recentTerenuri.map((item) => ({
+      date: item.createdAt,
+      label: t("activityLand", { name: formatName(item.contribuabil.nume, item.contribuabil.prenume) }),
+      href: `${localePrefix}/proprietati/terenuri/${item.id}/edit`,
+    })),
+    ...recentVehicule.map((item) => ({
+      date: item.createdAt,
+      label: t("activityVehicle", { name: formatName(item.contribuabil.nume, item.contribuabil.prenume) }),
+      href: `${localePrefix}/proprietati/vehicule/${item.id}/edit`,
+    })),
+    ...recentPayments.map((item) => ({
+      date: item.dataPlata,
+      label: t("activityPayment", { name: formatName(item.contribuabil.nume, item.contribuabil.prenume) }),
+      href: `${localePrefix}/plati`,
+    })),
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 5);
+
   return (
     <div className="space-y-6">
       <div>
@@ -187,7 +274,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -220,7 +307,7 @@ export default async function DashboardPage() {
       />
 
       {/* Recent Payments & Deadlines */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">{t("recentPayments")}</CardTitle>
@@ -287,6 +374,37 @@ export default async function DashboardPage() {
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t("recentActivity")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activityItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noRecentActivity")}</p>
+            ) : (
+              <div className="space-y-3">
+                {activityItems.map((item, index) => (
+                  <div
+                    key={`${item.label}-${index}`}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div>
+                      <Link
+                        href={item.href}
+                        className="font-medium hover:underline text-primary"
+                      >
+                        {item.label}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(item.date).toLocaleDateString("ro-RO")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

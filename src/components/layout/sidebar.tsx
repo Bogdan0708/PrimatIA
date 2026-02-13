@@ -11,12 +11,9 @@ import {
   Car,
   Calculator,
   CreditCard,
-  Settings,
   Building,
-  UserCog,
   ClipboardList,
   FileDown,
-  ScrollText,
   Shield,
   FileText,
   BarChart3,
@@ -128,24 +125,6 @@ const systemNavItems: NavItem[] = [
     labelKey: "tenants",
     icon: Building,
     roles: ["super_admin"],
-  },
-  {
-    href: "/admin/users",
-    labelKey: "users",
-    icon: UserCog,
-    roles: ["super_admin", "primaria_admin"],
-  },
-  {
-    href: "/audit-log",
-    labelKey: "auditLog",
-    icon: ScrollText,
-    roles: ["super_admin", "primaria_admin"],
-  },
-  {
-    href: "/settings",
-    labelKey: "settings",
-    icon: Settings,
-    roles: ["super_admin", "primaria_admin"],
   },
 ];
 

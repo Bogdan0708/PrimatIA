@@ -5,8 +5,9 @@ import { Plus, ChevronLeft, ChevronRight, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getCladiri } from "./_actions/cladire-actions";
+import { deleteCladire, getCladiri } from "./_actions/cladire-actions";
 import { PropertySearch } from "./_components/property-search";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 
 export default async function CladiriPage({
   searchParams,
@@ -175,6 +176,10 @@ export default async function CladiriPage({
                         <Link href={`${localePrefix}/proprietati/cladiri/${item.id}/edit`}>
                           <Button variant="ghost" size="sm">{tc("edit")}</Button>
                         </Link>
+                        <ConfirmDeleteButton
+                          id={item.id}
+                          onDelete={deleteCladire}
+                        />
                       </div>
                     </td>
                   </tr>

@@ -57,14 +57,21 @@ export async function getContribuabili(params: ContribuabilListParams = {}): Pro
   if (params.tip) where.tip = params.tip;
   if (params.status) where.status = params.status;
 
-  if (params.query) {
-    where.OR = [
-      { nume: { contains: params.query, mode: "insensitive" } },
-      { prenume: { contains: params.query, mode: "insensitive" } },
-      { cui: { contains: params.query, mode: "insensitive" } },
-      { codRol: { contains: params.query, mode: "insensitive" } },
-      { email: { contains: params.query, mode: "insensitive" } },
+  const normalizedQuery = params.query?.trim();
+  if (normalizedQuery) {
+    const orConditions: Record<string, unknown>[] = [
+      { nume: { contains: normalizedQuery, mode: "insensitive" } },
+      { prenume: { contains: normalizedQuery, mode: "insensitive" } },
+      { cui: { contains: normalizedQuery, mode: "insensitive" } },
+      { codRol: { contains: normalizedQuery, mode: "insensitive" } },
+      { email: { contains: normalizedQuery, mode: "insensitive" } },
     ];
+    if (/^\d{13}$/.test(normalizedQuery)) {
+      orConditions.push({
+        cnpHash: hashCnp(normalizedQuery, session.user.tenantId),
+      });
+    }
+    where.OR = orConditions;
   }
 
   const [items, total] = await Promise.all([

@@ -5,8 +5,9 @@ import { Plus, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getContribuabili } from "./_actions/contribuabil-actions";
+import { deleteContribuabil, getContribuabili } from "./_actions/contribuabil-actions";
 import { ContribuabilSearch } from "./_components/contribuabil-search";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 
 export default async function ContribuabiliPage({
   searchParams,
@@ -259,6 +260,10 @@ export default async function ContribuabiliPage({
                             {tc("edit")}
                           </Button>
                         </Link>
+                        <ConfirmDeleteButton
+                          id={item.id}
+                          onDelete={deleteContribuabil}
+                        />
                       </div>
                     </td>
                   </tr>

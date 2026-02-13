@@ -8,7 +8,7 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ContribuabilSearch() {
-  const t = useTranslations("common");
+  const t = useTranslations("taxpayer");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -65,7 +65,7 @@ export function ContribuabilSearch() {
     <div className="relative flex-1 max-w-sm">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       <Input
-        placeholder={t("search") + "..."}
+        placeholder={t("searchPlaceholder")}
         value={value}
         onChange={handleChange}
         className="pl-9 pr-9"

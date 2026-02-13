@@ -5,8 +5,9 @@ import { Plus, ChevronLeft, ChevronRight, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { getVehicule } from "./_actions/vehicul-actions";
+import { deleteVehicul, getVehicule } from "./_actions/vehicul-actions";
 import { PropertySearch } from "./_components/property-search";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 
 export default async function VehiculePage({
   searchParams,
@@ -143,6 +144,10 @@ export default async function VehiculePage({
                         <Link href={`${localePrefix}/proprietati/vehicule/${item.id}/edit`}>
                           <Button variant="ghost" size="sm">{tc("edit")}</Button>
                         </Link>
+                        <ConfirmDeleteButton
+                          id={item.id}
+                          onDelete={deleteVehicul}
+                        />
                       </div>
                     </td>
                   </tr>

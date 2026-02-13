@@ -37,7 +37,16 @@ export default async function PortalDashboardPage() {
   // Fetch summary data
   const currentYear = new Date().getFullYear();
 
-  const [buildings, land, vehicles, taxes, recentPayments] = await Promise.all([
+  const [
+    buildings,
+    land,
+    vehicles,
+    taxes,
+    recentPayments,
+    buildingsList,
+    landList,
+    vehiclesList,
+  ] = await Promise.all([
     prisma.proprietateCladire.count({
       where: { contribuabilId: { in: contribuabilIds }, status: "activ" },
     }),
@@ -62,6 +71,23 @@ export default async function PortalDashboardPage() {
       orderBy: { dataPlata: "desc" },
       take: 5,
     }),
+    prisma.proprietateCladire.findMany({
+      where: { contribuabilId: { in: contribuabilIds }, status: "activ" },
+      include: { adresa: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.proprietateTeren.findMany({
+      where: { contribuabilId: { in: contribuabilIds }, status: "activ" },
+      include: { adresa: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+    prisma.proprietateVehicul.findMany({
+      where: { contribuabilId: { in: contribuabilIds }, status: "activ" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
   ]);
 
   const totalOwed = taxes.reduce(
@@ -72,6 +98,66 @@ export default async function PortalDashboardPage() {
     (sum, tax) => sum + Number(tax.sumaPlatita),
     0
   );
+
+  const formatAddress = (adresa?: {
+    strada?: string | null;
+    numar?: string | null;
+    localitate?: string | null;
+    judet?: string | null;
+  }) => {
+    if (!adresa) return "-";
+    const street = [adresa.strada, adresa.numar].filter(Boolean).join(" ");
+    const locality = [adresa.localitate, adresa.judet].filter(Boolean).join(", ");
+    return [street, locality].filter(Boolean).join(", ") || "-";
+  };
+
+  const localeKey = locale || "ro";
+  const propertyItems = [
+    ...buildingsList.map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      label: t("buildings"),
+      detail: formatAddress(item.adresa ?? undefined),
+    })),
+    ...landList.map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      label: t("land"),
+      detail: formatAddress(item.adresa ?? undefined),
+    })),
+    ...vehiclesList.map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      label: t("vehicles"),
+      detail: [item.marca, item.model, item.numarInmatriculare]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "-",
+    })),
+  ]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, 5);
+
+  const taxObligations = taxes
+    .map((tax) => {
+      const taxName =
+        (tax.taxType.name as Record<string, string>)?.[localeKey] ||
+        (tax.taxType.name as Record<string, string>)?.ro ||
+        tax.taxType.code;
+      const outstanding =
+        Number(tax.sumaDatorata) +
+        Number(tax.sumaPenalitati) -
+        Number(tax.sumaPlatita);
+      return {
+        id: tax.id,
+        name: taxName,
+        outstanding,
+        dueDate: tax.rata1Scadenta,
+      };
+    })
+    .filter((tax) => tax.outstanding > 0)
+    .sort((a, b) => b.outstanding - a.outstanding)
+    .slice(0, 5);
 
   // Upcoming deadlines
   const now = new Date();
@@ -146,6 +232,88 @@ export default async function PortalDashboardPage() {
         </Card>
       </div>
 
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* My properties */}
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="text-lg">{t("myProperties")}</CardTitle>
+            <Link href={`${localePrefix}/portal/proprietati`} className="text-sm text-teal-600 hover:underline">
+              {t("properties")}
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {propertyItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noProperties")}</p>
+            ) : (
+              <div className="space-y-3">
+                {propertyItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tax obligations */}
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="text-lg">{t("myTaxes")}</CardTitle>
+            <Link href={`${localePrefix}/portal/impozite`} className="text-sm text-teal-600 hover:underline">
+              {t("taxes")}
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {taxObligations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noOutstandingDebts")}</p>
+            ) : (
+              <div className="space-y-3">
+                {taxObligations.map((tax) => (
+                  <div key={tax.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{tax.name}</p>
+                      <p className="text-xs text-muted-foreground">{t("installment")} 1: {formatDate(tax.dueDate)}</p>
+                    </div>
+                    <span className="font-semibold text-destructive">{formatLei(tax.outstanding)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment history */}
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="text-lg">{t("paymentHistory")}</CardTitle>
+            <Link href={`${localePrefix}/portal/plati`} className="text-sm text-teal-600 hover:underline">
+              {t("payments")}
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recentPayments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noPayments")}</p>
+            ) : (
+              <div className="space-y-3">
+                {recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{formatLei(Number(payment.suma))}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(payment.dataPlata)}</p>
+                    </div>
+                    <Badge variant="outline">{payment.modalitate}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Upcoming deadlines */}
         <Card>
@@ -164,30 +332,6 @@ export default async function PortalDashboardPage() {
                       <p className="text-xs text-muted-foreground">{formatDate(deadline.date)}</p>
                     </div>
                     <span className="font-semibold">{formatLei(deadline.amount)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent payments */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("recentPayments")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentPayments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noRecentPayments")}</p>
-            ) : (
-              <div className="space-y-3">
-                {recentPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{formatLei(Number(payment.suma))}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(payment.dataPlata)}</p>
-                    </div>
-                    <Badge variant="outline">{payment.modalitate}</Badge>
                   </div>
                 ))}
               </div>
