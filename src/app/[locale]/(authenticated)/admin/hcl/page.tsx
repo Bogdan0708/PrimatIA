@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import Link from "next/link";
 import { Plus, Gavel } from "lucide-react";
@@ -15,6 +15,8 @@ export default async function HclPage({
   await requireAdmin();
   const t = await getTranslations("hcl");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const items = await getHclDecisions({
     fiscalYear: searchParams.fiscalYear ? parseInt(searchParams.fiscalYear) : undefined,
@@ -43,7 +45,7 @@ export default async function HclPage({
     const urlParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => { if (value) urlParams.set(key, value); });
     const qs = urlParams.toString();
-    return `/admin/hcl${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/admin/hcl${qs ? `?${qs}` : ""}`;
   };
 
   // Get unique fiscal years for filter
@@ -53,7 +55,7 @@ export default async function HclPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-        <Link href="/admin/hcl/new">
+        <Link href={`${localePrefix}/admin/hcl/new`}>
           <Button><Plus className="mr-2 h-4 w-4" />{t("addNew")}</Button>
         </Link>
       </div>
@@ -117,7 +119,10 @@ export default async function HclPage({
               {items.map((item) => (
                 <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="p-4 font-medium">
-                    <Link href={`/admin/hcl/${item.id}`} className="hover:underline text-primary">
+                    <Link
+                      href={`${localePrefix}/admin/hcl/${item.id}`}
+                      className="hover:underline text-primary"
+                    >
                       {item.hclNumber}
                     </Link>
                   </td>

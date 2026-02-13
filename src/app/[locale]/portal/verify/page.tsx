@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle, XCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getLocale } from "next-intl/server";
 
 export default async function VerifyPage({
   searchParams,
@@ -15,6 +16,9 @@ export default async function VerifyPage({
   if (token) {
     success = await verifyCitizenEmail(token);
   }
+
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
@@ -38,7 +42,7 @@ export default async function VerifyPage({
         </CardHeader>
         <CardFooter className="justify-center">
           <Button asChild className={success ? "bg-teal-600 hover:bg-teal-700" : ""}>
-            <Link href="/portal/login">
+            <Link href={`${localePrefix}/portal/login`}>
               {success ? "Autentificare" : "Înapoi la înregistrare"}
             </Link>
           </Button>

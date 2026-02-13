@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Role } from "@/lib/constants";
+import { getLocale } from "next-intl/server";
 
 /**
  * Get the current session, redirecting to login if not authenticated.
@@ -8,7 +9,8 @@ import type { Role } from "@/lib/constants";
 export async function requireAuth() {
   const session = await auth();
   if (!session?.user) {
-    redirect("/login");
+    const locale = await getLocale();
+    redirect(`/${locale}/login`);
   }
   return session;
 }
@@ -19,7 +21,8 @@ export async function requireAuth() {
 export async function requireRole(...roles: Role[]) {
   const session = await requireAuth();
   if (!roles.includes(session.user.role)) {
-    redirect("/unauthorized");
+    const locale = await getLocale();
+    redirect(`/${locale}/unauthorized`);
   }
   return session;
 }

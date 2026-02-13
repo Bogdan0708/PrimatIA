@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import Link from "next/link";
 import { Plus, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
@@ -16,6 +16,8 @@ export default async function TerenuriPage({
   await requireStaff();
   const t = await getTranslations("property");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const currentPage = searchParams.page ? parseInt(searchParams.page) : 1;
   const result = await getTerenuri({
@@ -30,7 +32,7 @@ export default async function TerenuriPage({
     if (searchParams.query) urlParams.set("query", searchParams.query);
     Object.entries(params).forEach(([key, value]) => { if (value) urlParams.set(key, value); });
     const qs = urlParams.toString();
-    return `/proprietati/terenuri${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/proprietati/terenuri${qs ? `?${qs}` : ""}`;
   };
 
   const buildPageUrl = (page: number) => {
@@ -40,7 +42,7 @@ export default async function TerenuriPage({
     if (searchParams.categorie) urlParams.set("categorie", searchParams.categorie);
     if (page > 1) urlParams.set("page", page.toString());
     const qs = urlParams.toString();
-    return `/proprietati/terenuri${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/proprietati/terenuri${qs ? `?${qs}` : ""}`;
   };
 
   const from = result.total === 0 ? 0 : (currentPage - 1) * result.perPage + 1;
@@ -56,7 +58,7 @@ export default async function TerenuriPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{t("land")}</h1>
-        <Link href="/proprietati/terenuri/new">
+        <Link href={`${localePrefix}/proprietati/terenuri/new`}>
           <Button><Plus className="mr-2 h-4 w-4" />{t("addLand")}</Button>
         </Link>
       </div>
@@ -105,7 +107,10 @@ export default async function TerenuriPage({
                 {result.items.map((item) => (
                   <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
                     <td className="p-4 font-medium">
-                      <Link href={`/contribuabili/${item.contribuabil.id}`} className="hover:underline text-primary">
+                      <Link
+                        href={`${localePrefix}/contribuabili/${item.contribuabil.id}`}
+                        className="hover:underline text-primary"
+                      >
                         {item.contribuabil.nume} {item.contribuabil.prenume ?? ""}
                       </Link>
                     </td>
@@ -121,8 +126,12 @@ export default async function TerenuriPage({
                     <td className="p-4">{Number(item.cotaParte)}%</td>
                     <td className="p-4">
                       <div className="flex gap-1">
-                        <Link href={`/proprietati/terenuri/${item.id}`}><Button variant="ghost" size="sm">{tc("details")}</Button></Link>
-                        <Link href={`/proprietati/terenuri/${item.id}/edit`}><Button variant="ghost" size="sm">{tc("edit")}</Button></Link>
+                        <Link href={`${localePrefix}/proprietati/terenuri/${item.id}`}>
+                          <Button variant="ghost" size="sm">{tc("details")}</Button>
+                        </Link>
+                        <Link href={`${localePrefix}/proprietati/terenuri/${item.id}/edit`}>
+                          <Button variant="ghost" size="sm">{tc("edit")}</Button>
+                        </Link>
                       </div>
                     </td>
                   </tr>

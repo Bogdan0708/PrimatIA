@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,8 @@ export function TenantForm({ initialData }: TenantFormProps) {
   const t = useTranslations("tenant");
   const tCommon = useTranslations("common");
   const tForm = useTranslations("form");
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +55,7 @@ export function TenantForm({ initialData }: TenantFormProps) {
     if (result.error) {
       setError(result.error);
     } else {
-      router.push("/admin/tenants");
+      router.push(`${localePrefix}/admin/tenants`);
       router.refresh();
     }
   };

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AppShell } from "@/components/layout/app-shell";
 import type { Role } from "@/lib/constants";
+import { getLocale } from "next-intl/server";
 
 export default async function AuthenticatedLayout({
   children,
@@ -12,7 +13,8 @@ export default async function AuthenticatedLayout({
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/login");
+    const locale = await getLocale();
+    redirect(`/${locale}/login`);
   }
 
   let tenantName: string | undefined;

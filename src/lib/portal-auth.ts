@@ -2,6 +2,7 @@ import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.CITIZEN_JWT_SECRET || process.env.NEXTAUTH_SECRET || "citizen-secret-key"
@@ -57,7 +58,8 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
 export async function requireCitizenAuth(): Promise<CitizenSession> {
   const session = await getCitizenSession();
   if (!session) {
-    redirect("/portal/login");
+    const locale = await getLocale();
+    redirect(`/${locale}/portal/login`);
   }
   return session;
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
 import {
   Building2,
@@ -59,6 +59,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("portal");
   const tCommon = useTranslations("common");
   const { data: session } = useSession();
@@ -67,13 +68,20 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   const switchLocale = (locale: Locale) => {
     const currentPath = window.location.pathname;
-    const pathWithoutLocale = currentPath.replace(/^\/(ro|en|hu)/, "");
+    const search = window.location.search;
+    const hash = window.location.hash;
+    const localePattern = new RegExp(`^/(${LOCALES.join("|")})`);
+    const pathWithoutLocale = currentPath.replace(localePattern, "");
+    const normalizedPath = pathWithoutLocale || "/";
     const newPath =
-      locale === "ro"
-        ? pathWithoutLocale || "/"
-        : `/${locale}${pathWithoutLocale || "/"}`;
-    router.push(newPath);
+      normalizedPath === "/" ? `/${locale}` : `/${locale}${normalizedPath}`;
+    router.push(`${newPath}${search}${hash}`);
   };
+
+  const localePattern = new RegExp(`^/(${LOCALES.join("|")})`);
+  const pathWithoutLocale = pathname.replace(localePattern, "");
+  const localePrefix = `/${locale}`;
+  const toLocalePath = (path: string) => `${localePrefix}${path}`;
 
   const initials = session?.user
     ? `${session.user.firstName?.[0] || ""}${session.user.lastName?.[0] || ""}`
@@ -87,7 +95,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/portal" className="flex items-center gap-2">
+            <Link href={toLocalePath("/portal")} className="flex items-center gap-2">
               <Building2 className="h-7 w-7 text-teal-600" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-gray-900">
@@ -104,11 +112,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               <nav className="hidden lg:flex items-center gap-1">
                 {portalNavItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname.startsWith(item.href);
+                  const isActive = pathWithoutLocale.startsWith(item.href);
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={toLocalePath(item.href)}
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                         isActive
@@ -176,14 +184,16 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href="/portal/profil">
+                        <Link href={toLocalePath("/portal/profil")}>
                           <User className="mr-2 h-4 w-4" />
                           {t("profile")}
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => signOut({ callbackUrl: "/portal/login" })}
+                        onClick={() =>
+                          signOut({ callbackUrl: toLocalePath("/portal/login") })
+                        }
                       >
                         <LogOut className="mr-2 h-4 w-4" />
                         {tCommon("logout")}
@@ -206,8 +216,14 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   </Button>
                 </>
               ) : (
-                <Button asChild variant="default" className="bg-teal-600 hover:bg-teal-700">
-                  <Link href="/portal/login">{tCommon("login")}</Link>
+                <Button
+                  asChild
+                  variant="default"
+                  className="bg-teal-600 hover:bg-teal-700"
+                >
+                  <Link href={toLocalePath("/portal/login")}>
+                    {tCommon("login")}
+                  </Link>
                 </Button>
               )}
             </div>
@@ -220,11 +236,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
             <nav className="max-w-7xl mx-auto px-4 py-2 space-y-1">
               {portalNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname.startsWith(item.href);
+                const isActive = pathWithoutLocale.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={toLocalePath(item.href)}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
                       "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md",

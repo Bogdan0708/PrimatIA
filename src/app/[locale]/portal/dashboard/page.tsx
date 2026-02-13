@@ -1,6 +1,6 @@
 import { requireCitizenAuth } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { formatLei, formatDate } from "@/lib/formatting";
 import Link from "next/link";
 import {
@@ -15,6 +15,8 @@ import { Building2, CreditCard, FileText, AlertTriangle } from "lucide-react";
 export default async function PortalDashboardPage() {
   const citizen = await requireCitizenAuth();
   const t = await getTranslations("portal");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
   await setTenantContext(citizen.tenantId);
 
   // Get linked contribuabili
@@ -134,7 +136,10 @@ export default async function PortalDashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Link href="/portal/documente" className="text-teal-600 hover:underline text-sm">
+            <Link
+              href={`${localePrefix}/portal/documente`}
+              className="text-teal-600 hover:underline text-sm"
+            >
               {t("viewDocuments")}
             </Link>
           </CardContent>
@@ -199,21 +204,21 @@ export default async function PortalDashboardPage() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
-              href="/portal/plati/online"
+              href={`${localePrefix}/portal/plati/online`}
               className="flex items-center gap-2 rounded-lg border p-4 hover:bg-teal-50 transition-colors"
             >
               <CreditCard className="h-5 w-5 text-teal-600" />
               <span className="font-medium">{t("payOnline")}</span>
             </Link>
             <Link
-              href="/portal/certificate"
+              href={`${localePrefix}/portal/certificate`}
               className="flex items-center gap-2 rounded-lg border p-4 hover:bg-teal-50 transition-colors"
             >
               <FileText className="h-5 w-5 text-teal-600" />
               <span className="font-medium">{t("requestCertificate")}</span>
             </Link>
             <Link
-              href="/portal/impozite"
+              href={`${localePrefix}/portal/impozite`}
               className="flex items-center gap-2 rounded-lg border p-4 hover:bg-teal-50 transition-colors"
             >
               <AlertTriangle className="h-5 w-5 text-teal-600" />

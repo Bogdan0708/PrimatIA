@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ export default function PortalLoginPage() {
   const router = useRouter();
   const t = useTranslations("portal");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +45,7 @@ export default function PortalLoginPage() {
       if (!res.ok) {
         setError(data.error || t("loginError"));
       } else {
-        router.push("/portal/dashboard");
+        router.push(`${localePrefix}/portal/dashboard`);
         router.refresh();
       }
     } catch {
@@ -106,7 +108,10 @@ export default function PortalLoginPage() {
         <CardFooter className="flex flex-col space-y-2">
           <p className="text-sm text-muted-foreground text-center">
             {t("noAccount")}{" "}
-            <Link href="/portal/register" className="text-teal-600 hover:underline font-medium">
+            <Link
+              href={`${localePrefix}/portal/register`}
+              className="text-teal-600 hover:underline font-medium"
+            >
               {t("registerHere")}
             </Link>
           </p>

@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -19,6 +19,8 @@ export default async function DashboardPage() {
   const t = await getTranslations("dashboard");
   const tpay = await getTranslations("payment");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const session = await auth();
   if (!session?.user?.tenantId) return null;
@@ -222,7 +224,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">{t("recentPayments")}</CardTitle>
-            <Link href="/plati">
+            <Link href={`${localePrefix}/plati`}>
               <Button variant="ghost" size="sm">
                 {tc("viewAll")}
               </Button>
@@ -240,7 +242,7 @@ export default async function DashboardPage() {
                   >
                     <div>
                       <Link
-                        href={`/contribuabili/${p.contribuabil.id}`}
+                        href={`${localePrefix}/contribuabili/${p.contribuabil.id}`}
                         className="font-medium hover:underline text-primary"
                       >
                         {p.contribuabil.nume}{" "}

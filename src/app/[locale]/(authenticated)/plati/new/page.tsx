@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,8 @@ export default function NewPaymentPage() {
   const t = useTranslations("payment");
   const tc = useTranslations("common");
   const router = useRouter();
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
 
   const [isOnline, setIsOnline] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,13 +106,13 @@ export default function NewPaymentPage() {
         setQueued(true);
         setSuccess(t("queuedForSync") || "Payment queued for sync");
         setTimeout(() => {
-          router.push("/plati");
+          router.push(`${localePrefix}/plati`);
         }, 2000);
       } else if (response.ok && data.success) {
         // Payment was successfully recorded
         setSuccess(t("paymentRecorded") || "Payment recorded successfully");
         setTimeout(() => {
-          router.push("/plati");
+          router.push(`${localePrefix}/plati`);
         }, 1500);
       } else {
         setError(data.error || tc("error"));
@@ -126,7 +128,7 @@ export default function NewPaymentPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-4">
-        <Link href="/plati">
+        <Link href={`${localePrefix}/plati`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -317,7 +319,7 @@ export default function NewPaymentPage() {
                   tc("save")
                 )}
               </Button>
-              <Link href="/plati">
+              <Link href={`${localePrefix}/plati`}>
                 <Button type="button" variant="outline">
                   {tc("cancel")}
                 </Button>

@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -36,6 +36,8 @@ export default async function ContribuabilDetailPage({
   const ttax = await getTranslations("tax");
   const tpay = await getTranslations("payment");
   const tex = await getTranslations("exemption");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const contribuabil = await getContribuabilById(params.id);
   if (!contribuabil) notFound();
@@ -135,7 +137,7 @@ export default async function ContribuabilDetailPage({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/contribuabili">
+        <Link href={`${localePrefix}/contribuabili`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -160,7 +162,7 @@ export default async function ContribuabilDetailPage({
             </p>
           )}
         </div>
-        <Link href={`/contribuabili/${params.id}/edit`}>
+        <Link href={`${localePrefix}/contribuabili/${params.id}/edit`}>
           <Button variant="outline">
             <Pencil className="mr-2 h-4 w-4" />
             {tc("edit")}

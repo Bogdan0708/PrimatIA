@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import Link from "next/link";
 import { Plus, Shield } from "lucide-react";
@@ -16,6 +16,8 @@ export default async function ScutiriPage({
   await requireAdmin();
   const t = await getTranslations("exemption");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const isActive = searchParams.isActive === "true" ? true : searchParams.isActive === "false" ? false : undefined;
   const items = await getScutiriReguli({ isActive });
@@ -24,14 +26,14 @@ export default async function ScutiriPage({
     const urlParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => { if (value) urlParams.set(key, value); });
     const qs = urlParams.toString();
-    return `/admin/scutiri${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/admin/scutiri${qs ? `?${qs}` : ""}`;
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-        <Link href="/admin/scutiri/new">
+        <Link href={`${localePrefix}/admin/scutiri/new`}>
           <Button><Plus className="mr-2 h-4 w-4" />{t("addRule")}</Button>
         </Link>
       </div>
@@ -75,7 +77,10 @@ export default async function ScutiriPage({
               {items.map((item) => (
                 <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="p-4 font-medium">
-                    <Link href={`/admin/scutiri/${item.id}`} className="hover:underline text-primary">
+                    <Link
+                      href={`${localePrefix}/admin/scutiri/${item.id}`}
+                      className="hover:underline text-primary"
+                    >
                       {item.nameRo}
                     </Link>
                   </td>
@@ -94,10 +99,10 @@ export default async function ScutiriPage({
                   </td>
                   <td className="p-4">
                     <div className="flex gap-1">
-                      <Link href={`/admin/scutiri/${item.id}`}>
+                      <Link href={`${localePrefix}/admin/scutiri/${item.id}`}>
                         <Button variant="ghost" size="sm">{tc("details")}</Button>
                       </Link>
-                      <Link href={`/admin/scutiri/${item.id}/edit`}>
+                      <Link href={`${localePrefix}/admin/scutiri/${item.id}/edit`}>
                         <Button variant="ghost" size="sm">{tc("edit")}</Button>
                       </Link>
                     </div>

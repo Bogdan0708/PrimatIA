@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -20,6 +20,8 @@ export default function MockGatewayPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useTranslations("portal");
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
 
   const gatewayRef = searchParams.get("ref") || "";
   const amount = searchParams.get("amount") || "0";
@@ -38,14 +40,18 @@ export default function MockGatewayPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gatewayRef }),
       });
-      router.push(`/portal/plati/confirmare?ref=${gatewayRef}&status=success`);
+      router.push(
+        `${localePrefix}/portal/plati/confirmare?ref=${gatewayRef}&status=success`
+      );
     } catch {
-      router.push(`/portal/plati/confirmare?ref=${gatewayRef}&status=failed`);
+      router.push(
+        `${localePrefix}/portal/plati/confirmare?ref=${gatewayRef}&status=failed`
+      );
     }
   };
 
   const handleCancel = () => {
-    router.push("/portal/plati");
+    router.push(`${localePrefix}/portal/plati`);
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
@@ -38,6 +38,7 @@ export function Header({
   const t = useTranslations("common");
   const tRoles = useTranslations("roles");
   const router = useRouter();
+  const currentLocale = useLocale();
 
   const initials = userName
     .split(" ")
@@ -48,11 +49,18 @@ export function Header({
 
   const switchLocale = (locale: Locale) => {
     const currentPath = window.location.pathname;
+    const search = window.location.search;
+    const hash = window.location.hash;
     // Remove existing locale prefix if present
-    const pathWithoutLocale = currentPath.replace(/^\/(ro|en|hu)/, "");
-    const newPath = locale === "ro" ? pathWithoutLocale || "/" : `/${locale}${pathWithoutLocale || "/"}`;
-    router.push(newPath);
+    const localePattern = new RegExp(`^/(${LOCALES.join("|")})`);
+    const pathWithoutLocale = currentPath.replace(localePattern, "");
+    const normalizedPath = pathWithoutLocale || "/";
+    const newPath =
+      normalizedPath === "/" ? `/${locale}` : `/${locale}${normalizedPath}`;
+    router.push(`${newPath}${search}${hash}`);
   };
+
+  const localePrefix = `/${currentLocale}`;
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-6">
@@ -118,7 +126,9 @@ export function Header({
               {t("details")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: `${localePrefix}/login` })}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               {t("logout")}
             </DropdownMenuItem>

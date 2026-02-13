@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireSuperAdmin } from "@/lib/auth-utils";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
@@ -16,6 +16,8 @@ export default async function TenantsPage() {
   await requireSuperAdmin();
   const t = await getTranslations("tenant");
   const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const tenants = await prisma.tenant.findMany({
     where: { deletedAt: null },
@@ -46,7 +48,7 @@ export default async function TenantsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
         </div>
-        <Link href="/admin/tenants/new">
+        <Link href={`${localePrefix}/admin/tenants/new`}>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             {t("addNew")}
@@ -64,7 +66,7 @@ export default async function TenantsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tenants.map((tenant) => (
-            <Link key={tenant.id} href={`/admin/tenants/${tenant.id}`}>
+            <Link key={tenant.id} href={`${localePrefix}/admin/tenants/${tenant.id}`}>
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-base font-medium">

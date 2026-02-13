@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import Link from "next/link";
 import { Plus, ChevronLeft, ChevronRight, Users } from "lucide-react";
@@ -16,6 +16,8 @@ export default async function ContribuabiliPage({
   await requireStaff();
   const t = await getTranslations("taxpayer");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const currentPage = searchParams.page ? parseInt(searchParams.page) : 1;
   const result = await getContribuabili({
@@ -55,7 +57,7 @@ export default async function ContribuabiliPage({
       if (value) urlParams.set(key, value);
     });
     const qs = urlParams.toString();
-    return `/contribuabili${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/contribuabili${qs ? `?${qs}` : ""}`;
   };
 
   // Build pagination URLs
@@ -66,7 +68,7 @@ export default async function ContribuabiliPage({
     if (searchParams.status) urlParams.set("status", searchParams.status);
     if (page > 1) urlParams.set("page", page.toString());
     const qs = urlParams.toString();
-    return `/contribuabili${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/contribuabili${qs ? `?${qs}` : ""}`;
   };
 
   const from = result.total === 0 ? 0 : (currentPage - 1) * result.perPage + 1;
@@ -79,7 +81,7 @@ export default async function ContribuabiliPage({
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
         </div>
-        <Link href="/contribuabili/new">
+        <Link href={`${localePrefix}/contribuabili/new`}>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             {t("addNew")}

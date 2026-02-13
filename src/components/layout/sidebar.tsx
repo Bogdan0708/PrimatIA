@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Users,
@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import type { Role } from "@/lib/constants";
+import { LOCALES, type Role } from "@/lib/constants";
 
 interface NavItem {
   href: string;
@@ -156,6 +156,10 @@ interface SidebarProps {
 
 export function Sidebar({ userRole, className }: SidebarProps) {
   const pathname = usePathname();
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
+  const localePattern = new RegExp(`^/(${LOCALES.join("|")})`);
+  const pathWithoutLocale = pathname.replace(localePattern, "");
   const t = useTranslations("nav");
 
   const filterByRole = (items: NavItem[]) =>
@@ -179,7 +183,8 @@ export function Sidebar({ userRole, className }: SidebarProps) {
             <NavLink
               key={item.href}
               item={item}
-              isActive={pathname.startsWith(item.href)}
+              isActive={pathWithoutLocale.startsWith(item.href)}
+              localePrefix={localePrefix}
               label={t(item.labelKey)}
             />
           ))}
@@ -193,7 +198,8 @@ export function Sidebar({ userRole, className }: SidebarProps) {
                 <NavLink
                   key={item.href}
                   item={item}
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathWithoutLocale.startsWith(item.href)}
+                  localePrefix={localePrefix}
                   label={t(item.labelKey)}
                 />
               ))}
@@ -209,7 +215,8 @@ export function Sidebar({ userRole, className }: SidebarProps) {
                 <NavLink
                   key={item.href}
                   item={item}
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={pathWithoutLocale.startsWith(item.href)}
+                  localePrefix={localePrefix}
                   label={t(item.labelKey)}
                 />
               ))}
@@ -224,16 +231,18 @@ export function Sidebar({ userRole, className }: SidebarProps) {
 function NavLink({
   item,
   isActive,
+  localePrefix,
   label,
 }: {
   item: NavItem;
   isActive: boolean;
+  localePrefix: string;
   label: string;
 }) {
   const Icon = item.icon;
   return (
     <Link
-      href={item.href}
+      href={`${localePrefix}${item.href}`}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
         isActive

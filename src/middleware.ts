@@ -5,7 +5,7 @@ import { LOCALES, DEFAULT_LOCALE } from "@/lib/constants";
 const intlMiddleware = createMiddleware({
   locales: LOCALES,
   defaultLocale: DEFAULT_LOCALE,
-  localePrefix: "as-needed",
+  localePrefix: "always",
 });
 
 // ---------------------------------------------------------------------------
@@ -202,17 +202,18 @@ export default function middleware(request: NextRequest) {
     !pathname.startsWith("/portal/verify");
 
   // Also check for locale-prefixed portal routes (e.g., /ro/portal/dashboard)
-  const localePortalMatch = pathname.match(/^\/(ro|en|hu)\/portal/);
+  const localePattern = LOCALES.join("|");
+  const localePortalMatch = pathname.match(new RegExp(`^/(${localePattern})/portal`));
   const isLocaleProtectedPortalRoute =
     localePortalMatch &&
-    !pathname.match(/^\/(ro|en|hu)\/portal\/(login|register|verify)/);
+    !pathname.match(new RegExp(`^/(${localePattern})/portal/(login|register|verify)`));
 
   if (isProtectedPortalRoute || isLocaleProtectedPortalRoute) {
     const citizenToken = request.cookies.get("citizen-token");
 
     if (!citizenToken) {
-      const locale = localePortalMatch ? localePortalMatch[1] : null;
-      const loginUrl = locale ? `/${locale}/portal/login` : "/portal/login";
+      const locale = localePortalMatch ? localePortalMatch[1] : DEFAULT_LOCALE;
+      const loginUrl = `/${locale}/portal/login`;
       const url = request.nextUrl.clone();
       url.pathname = loginUrl;
       const redirectResponse = NextResponse.redirect(url);

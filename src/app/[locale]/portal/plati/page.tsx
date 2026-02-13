@@ -1,6 +1,6 @@
 import { requireCitizenAuth } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { formatLei, formatDate } from "@/lib/formatting";
 import Link from "next/link";
 import {
@@ -23,6 +23,8 @@ export default async function PortalPaymentsPage() {
   const citizen = await requireCitizenAuth();
   const t = await getTranslations("portal");
   const tPayment = await getTranslations("payment");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
   await setTenantContext(citizen.tenantId);
 
   const links = await prisma.citizenContribuabilLink.findMany({
@@ -50,7 +52,7 @@ export default async function PortalPaymentsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("paymentHistory")}</h1>
         <Button asChild className="bg-teal-600 hover:bg-teal-700">
-          <Link href="/portal/plati/online">
+          <Link href={`${localePrefix}/portal/plati/online`}>
             <CreditCard className="mr-2 h-4 w-4" />
             {t("payOnline")}
           </Link>

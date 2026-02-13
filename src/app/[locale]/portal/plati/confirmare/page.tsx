@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { CheckCircle, XCircle } from "lucide-react";
 import {
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 export default function PaymentConfirmationPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("portal");
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
 
   const status = searchParams.get("status");
   const ref = searchParams.get("ref");
@@ -44,11 +46,15 @@ export default function PaymentConfirmationPage() {
         </CardHeader>
         <CardFooter className="justify-center gap-2">
           <Button asChild variant="outline">
-            <Link href="/portal/plati">{t("viewPayments")}</Link>
+            <Link href={`${localePrefix}/portal/plati`}>
+              {t("viewPayments")}
+            </Link>
           </Button>
           {success && (
             <Button asChild className="bg-teal-600 hover:bg-teal-700">
-              <Link href="/portal/dashboard">{t("backToDashboard")}</Link>
+              <Link href={`${localePrefix}/portal/dashboard`}>
+                {t("backToDashboard")}
+              </Link>
             </Button>
           )}
         </CardFooter>

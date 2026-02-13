@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import Link from "next/link";
 import { Plus, ChevronLeft, ChevronRight, Building2 } from "lucide-react";
@@ -16,6 +16,8 @@ export default async function CladiriPage({
   await requireStaff();
   const t = await getTranslations("property");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const currentPage = searchParams.page ? parseInt(searchParams.page) : 1;
   const result = await getCladiri({
@@ -33,7 +35,7 @@ export default async function CladiriPage({
       if (value) urlParams.set(key, value);
     });
     const qs = urlParams.toString();
-    return `/proprietati/cladiri${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/proprietati/cladiri${qs ? `?${qs}` : ""}`;
   };
 
   const buildPageUrl = (page: number) => {
@@ -43,7 +45,7 @@ export default async function CladiriPage({
     if (searchParams.destinatie) urlParams.set("destinatie", searchParams.destinatie);
     if (page > 1) urlParams.set("page", page.toString());
     const qs = urlParams.toString();
-    return `/proprietati/cladiri${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/proprietati/cladiri${qs ? `?${qs}` : ""}`;
   };
 
   const from = result.total === 0 ? 0 : (currentPage - 1) * result.perPage + 1;
@@ -66,7 +68,7 @@ export default async function CladiriPage({
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("buildings")}</h1>
         </div>
-        <Link href="/proprietati/cladiri/new">
+        <Link href={`${localePrefix}/proprietati/cladiri/new`}>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             {t("addBuilding")}
@@ -146,7 +148,10 @@ export default async function CladiriPage({
                 {result.items.map((item) => (
                   <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
                     <td className="p-4 font-medium">
-                      <Link href={`/contribuabili/${item.contribuabil.id}`} className="hover:underline text-primary">
+                      <Link
+                        href={`${localePrefix}/contribuabili/${item.contribuabil.id}`}
+                        className="hover:underline text-primary"
+                      >
                         {item.contribuabil.nume} {item.contribuabil.prenume ?? ""}
                       </Link>
                     </td>
@@ -164,10 +169,10 @@ export default async function CladiriPage({
                     <td className="p-4">{item.anConstructie}</td>
                     <td className="p-4">
                       <div className="flex gap-1">
-                        <Link href={`/proprietati/cladiri/${item.id}`}>
+                        <Link href={`${localePrefix}/proprietati/cladiri/${item.id}`}>
                           <Button variant="ghost" size="sm">{tc("details")}</Button>
                         </Link>
-                        <Link href={`/proprietati/cladiri/${item.id}/edit`}>
+                        <Link href={`${localePrefix}/proprietati/cladiri/${item.id}/edit`}>
                           <Button variant="ghost" size="sm">{tc("edit")}</Button>
                         </Link>
                       </div>

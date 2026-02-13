@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Building2, CreditCard, FileSearch, FileText, Phone, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,12 @@ export default async function PublicLandingPage() {
 
   // If staff is logged in, redirect to admin dashboard
   if (session?.user && session.user.role !== "cetatean") {
-    redirect("/dashboard");
+    redirect(`${localePrefix}/dashboard`);
   }
 
   const t = await getTranslations("landing");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   // Get the first active tenant for display
   const tenant = await prisma.tenant.findFirst({
@@ -39,10 +41,12 @@ export default async function PublicLandingPage() {
             </div>
             <div className="flex items-center gap-3">
               <Button asChild variant="ghost">
-                <Link href="/portal/login">{t("citizenPortal")}</Link>
+                <Link href={`${localePrefix}/portal/login`}>
+                  {t("citizenPortal")}
+                </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/login">{t("staffLogin")}</Link>
+                <Link href={`${localePrefix}/login`}>{t("staffLogin")}</Link>
               </Button>
             </div>
           </div>
@@ -61,13 +65,13 @@ export default async function PublicLandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button asChild size="lg" className="text-lg">
-                <Link href="/portal/login">
+                <Link href={`${localePrefix}/portal/login`}>
                   <CreditCard className="mr-2 h-5 w-5" />
                   {t("payTaxes")}
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="text-lg">
-                <Link href="/portal/register">
+                <Link href={`${localePrefix}/portal/register`}>
                   <FileSearch className="mr-2 h-5 w-5" />
                   {t("checkStatus")}
                 </Link>
@@ -89,7 +93,9 @@ export default async function PublicLandingPage() {
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">{t("payOnlineDesc")}</p>
                   <Button asChild variant="link" className="p-0">
-                    <Link href="/portal/login">{t("accessPortal")}</Link>
+                    <Link href={`${localePrefix}/portal/login`}>
+                      {t("accessPortal")}
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -102,7 +108,9 @@ export default async function PublicLandingPage() {
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">{t("fiscalCertificateDesc")}</p>
                   <Button asChild variant="link" className="p-0">
-                    <Link href="/portal/certificate">{t("requestOnline")}</Link>
+                    <Link href={`${localePrefix}/portal/certificate`}>
+                      {t("requestOnline")}
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -115,7 +123,9 @@ export default async function PublicLandingPage() {
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">{t("checkFiscalStatusDesc")}</p>
                   <Button asChild variant="link" className="p-0">
-                    <Link href="/portal/register">{t("createAccount")}</Link>
+                    <Link href={`${localePrefix}/portal/register`}>
+                      {t("createAccount")}
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>

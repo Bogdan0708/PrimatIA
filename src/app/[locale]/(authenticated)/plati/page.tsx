@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import Link from "next/link";
 import { Plus, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
@@ -15,6 +15,8 @@ export default async function PlatiPage({
   await requireStaff();
   const t = await getTranslations("payment");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const currentPage = searchParams.page ? parseInt(searchParams.page) : 1;
   const result = await getPlati({
@@ -30,7 +32,7 @@ export default async function PlatiPage({
     if (searchParams.dateTo) urlParams.set("dateTo", searchParams.dateTo);
     Object.entries(params).forEach(([key, value]) => { if (value) urlParams.set(key, value); });
     const qs = urlParams.toString();
-    return `/plati${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/plati${qs ? `?${qs}` : ""}`;
   };
 
   const buildPageUrl = (page: number) => {
@@ -40,7 +42,7 @@ export default async function PlatiPage({
     if (searchParams.dateTo) urlParams.set("dateTo", searchParams.dateTo);
     if (page > 1) urlParams.set("page", page.toString());
     const qs = urlParams.toString();
-    return `/plati${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/plati${qs ? `?${qs}` : ""}`;
   };
 
   const from = result.total === 0 ? 0 : (currentPage - 1) * result.perPage + 1;
@@ -63,7 +65,7 @@ export default async function PlatiPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-        <Link href="/plati/new">
+        <Link href={`${localePrefix}/plati/new`}>
           <Button><Plus className="mr-2 h-4 w-4" />{t("addNew")}</Button>
         </Link>
       </div>
@@ -110,7 +112,10 @@ export default async function PlatiPage({
                 {result.items.map((item) => (
                   <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
                     <td className="p-4 font-medium">
-                      <Link href={`/contribuabili/${item.contribuabil.id}`} className="hover:underline text-primary">
+                      <Link
+                        href={`${localePrefix}/contribuabili/${item.contribuabil.id}`}
+                        className="hover:underline text-primary"
+                      >
                         {item.contribuabil.nume} {item.contribuabil.prenume ?? ""}
                       </Link>
                     </td>
@@ -124,7 +129,7 @@ export default async function PlatiPage({
                       </Badge>
                     </td>
                     <td className="p-4">
-                      <Link href={`/plati/${item.id}`}>
+                      <Link href={`${localePrefix}/plati/${item.id}`}>
                         <Button variant="ghost" size="sm">{tc("details")}</Button>
                       </Link>
                     </td>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { Building2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ export default function PortalRegisterPage() {
   const [tipContribuabil, setTipContribuabil] = useState("PF");
   const t = useTranslations("portal");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -94,7 +96,9 @@ export default function PortalRegisterPage() {
           </CardHeader>
           <CardFooter className="justify-center">
             <Button asChild variant="outline">
-              <Link href="/portal/login">{t("backToLogin")}</Link>
+              <Link href={`${localePrefix}/portal/login`}>
+                {t("backToLogin")}
+              </Link>
             </Button>
           </CardFooter>
         </Card>
@@ -118,7 +122,9 @@ export default function PortalRegisterPage() {
               {t("tryAgain")}
             </Button>
             <Button asChild variant="outline">
-              <Link href="/portal/contact">{t("contactPrimaria")}</Link>
+              <Link href={`${localePrefix}/portal/contact`}>
+                {t("contactPrimaria")}
+              </Link>
             </Button>
           </CardFooter>
         </Card>
@@ -235,7 +241,10 @@ export default function PortalRegisterPage() {
         <CardFooter className="flex flex-col space-y-2">
           <p className="text-sm text-muted-foreground text-center">
             {t("hasAccount")}{" "}
-            <Link href="/portal/login" className="text-teal-600 hover:underline font-medium">
+            <Link
+              href={`${localePrefix}/portal/login`}
+              className="text-teal-600 hover:underline font-medium"
+            >
               {tCommon("login")}
             </Link>
           </p>

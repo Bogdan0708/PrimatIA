@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const localePrefix = `/${locale}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +43,7 @@ export default function LoginPage() {
     if (result?.error) {
       setError(t("invalidCredentials"));
     } else {
-      router.push("/dashboard");
+      router.push(`${localePrefix}/dashboard`);
       router.refresh();
     }
   };
