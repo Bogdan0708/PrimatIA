@@ -78,6 +78,7 @@ model Tenant {
   onlinePayments        OnlinePayment[]
   certificateRequests   CertificateRequest[]
   contactMessages       ContactMessage[]
+  chitantaSequences     ChitantaSequence[]
 
   @@map("tenants")
 }
@@ -1111,4 +1112,16 @@ model ContactMessage {
 
   @@index([tenantId, status, createdAt])
   @@map("contact_messages")
+}
+
+// Atomic sequence for chitanță numbers (avoids race conditions)
+model ChitantaSequence {
+  tenantId   String @map("tenant_id") @db.Uuid
+  year       Int
+  currentVal Int    @default(1) @map("current_val")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, year])
+  @@map("chitanta_sequences")
 }

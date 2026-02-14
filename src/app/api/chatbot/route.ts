@@ -1,6 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CHATBOT_ENTRIES, type ChatbotEntry } from "@/lib/chatbot/knowledge";
 
+// Fix #4: In-memory rate limiter — 10 requests/minute per IP
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+const MAX_MESSAGE_LENGTH = 1000; // Fix #5: Input length limit
+
+const rateLimitMap = new Map<string, number[]>();
+
+// Cleanup stale entries every 5 minutes
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    rateLimitMap.forEach((timestamps, ip) => {
+      const valid = timestamps.filter((t: number) => now - t < RATE_LIMIT_WINDOW_MS);
+      if (valid.length === 0) rateLimitMap.delete(ip);
+      else rateLimitMap.set(ip, valid);
+    });
+  }, 300_000);
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(ip) ?? []).filter(
+    (t) => now - t < RATE_LIMIT_WINDOW_MS
+  );
+  if (timestamps.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(ip, timestamps);
+    return true;
+  }
+  timestamps.push(now);
+  rateLimitMap.set(ip, timestamps);
+  return false;
+}
+
 const normalizeText = (value: string) =>
   value
     .toLowerCase()
@@ -87,6 +120,15 @@ const getLmStudioEndpoint = (baseUrl: string) => {
 };
 
 export async function POST(req: NextRequest) {
+  // Fix #4: Rate limiting
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { answer: "Prea multe cereri. Te rog asteapta un minut." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await req.json();
     const message = typeof body?.message === "string" ? body.message.trim() : "";
@@ -94,6 +136,14 @@ export async function POST(req: NextRequest) {
     if (!message) {
       return NextResponse.json(
         { answer: "Mesajul nu poate fi gol." },
+        { status: 400 }
+      );
+    }
+
+    // Fix #5: Input length limit
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json(
+        { answer: `Mesajul este prea lung. Limita este de ${MAX_MESSAGE_LENGTH} caractere.` },
         { status: 400 }
       );
     }
