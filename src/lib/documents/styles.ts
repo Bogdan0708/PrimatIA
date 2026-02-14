@@ -1,4 +1,5 @@
 import { StyleSheet } from "@react-pdf/renderer";
+import "./fonts"; // Register Roboto for Romanian diacritics
 
 /**
  * Shared PDF styles for all Romanian fiscal documents.
@@ -6,7 +7,7 @@ import { StyleSheet } from "@react-pdf/renderer";
  */
 export const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "Roboto",
     fontSize: 10,
     paddingTop: 40,
     paddingBottom: 60,
@@ -32,7 +33,7 @@ export const styles = StyleSheet.create({
   },
   institutionName: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
     marginBottom: 2,
   },
   headerInfo: {
@@ -43,7 +44,7 @@ export const styles = StyleSheet.create({
   // Document title
   title: {
     fontSize: 14,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
     textAlign: "center",
     marginTop: 15,
     marginBottom: 5,
@@ -62,7 +63,7 @@ export const styles = StyleSheet.create({
   // Section headings
   sectionTitle: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
     marginTop: 12,
     marginBottom: 6,
     borderBottom: "0.5 solid #666",
@@ -75,7 +76,7 @@ export const styles = StyleSheet.create({
     textAlign: "justify",
   },
   boldText: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
   },
   // Tables
   table: {
@@ -107,7 +108,7 @@ export const styles = StyleSheet.create({
   tableCellHeader: {
     padding: 4,
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
   },
   tableCellRight: {
     padding: 4,
@@ -117,7 +118,7 @@ export const styles = StyleSheet.create({
   // Amount display
   amountLarge: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
   },
   // Footer
   footer: {
@@ -144,7 +145,7 @@ export const styles = StyleSheet.create({
   },
   signatureTitle: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
     marginBottom: 4,
   },
   signatureName: {
@@ -195,6 +196,6 @@ export const styles = StyleSheet.create({
   infoValue: {
     width: "60%",
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto", fontWeight: "bold" as const,
   },
 });

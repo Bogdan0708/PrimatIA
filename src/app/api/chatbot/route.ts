@@ -193,11 +193,14 @@ export async function POST(req: NextRequest) {
       }
 
       const data = await response.json();
-      const answer = data?.choices?.[0]?.message?.content?.trim();
+      const rawAnswer = data?.choices?.[0]?.message?.content?.trim();
 
-      if (!answer) {
+      if (!rawAnswer) {
         return NextResponse.json(fallback);
       }
+
+      // Sanitize: strip any HTML tags to prevent XSS
+      const answer = rawAnswer.replace(/<[^>]*>/g, "");
 
       return NextResponse.json({
         answer,

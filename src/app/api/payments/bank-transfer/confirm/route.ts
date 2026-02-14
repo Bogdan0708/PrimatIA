@@ -54,6 +54,14 @@ export async function POST(request: NextRequest) {
     const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
 
     await prisma.$transaction(async (tx) => {
+      // Lock the OnlinePayment row to prevent double-confirm (idempotency)
+      const [lockedPayment] = await tx.$queryRaw<Array<{ status: string }>>(
+        Prisma.sql`SELECT status FROM "OnlinePayment" WHERE id = ${onlinePayment.id} FOR UPDATE`
+      );
+      if (lockedPayment.status !== "initiated" && lockedPayment.status !== "pending") {
+        throw new Error(`Payment already processed (status: ${lockedPayment.status})`);
+      }
+
       // Lock and validate debts inside transaction to prevent concurrent modifications
       if (selectedDebts && selectedDebts.length > 0) {
         const ids = selectedDebts.map((d) => d.impozitId);
