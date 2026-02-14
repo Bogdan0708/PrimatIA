@@ -1,0 +1,17 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA']
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'primaria'
+      - '--image'
+      - 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA'
+      - '--region'
+      - 'europe-central2'
+images:
+  - 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA'

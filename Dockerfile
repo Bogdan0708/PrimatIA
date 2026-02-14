@@ -44,7 +44,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
+ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs && \
@@ -64,6 +64,6 @@ COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "server.js"]
