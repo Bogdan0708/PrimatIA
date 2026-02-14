@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGhiseulMockProvider } from "@/lib/payments/payment-gateway";
+import { getMockGatewayProvider } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mock = getGhiseulMockProvider();
+    const mock = getMockGatewayProvider();
     const confirmed = await mock.confirmMockPayment(gatewayRef);
 
     if (!confirmed) {
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         dataPlata: new Date(),
         modalitate: "card",
         nrChitanta,
-        ghiseulRoRef: gatewayRef,
+        gatewayRef: gatewayRef,
         distribuit: false,
       },
     });

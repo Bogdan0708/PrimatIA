@@ -7,7 +7,7 @@ describe("numberToWordsRo", () => {
   });
 
   it("handles single digits", () => {
-    expect(numberToWordsRo(1)).toBe("unu lei");
+    expect(numberToWordsRo(1)).toBe("un leu");
     expect(numberToWordsRo(5)).toBe("cinci lei");
     expect(numberToWordsRo(9)).toBe("nouă lei");
   });
@@ -65,8 +65,8 @@ describe("numberToWordsRo", () => {
   it("handles bani (decimals)", () => {
     expect(numberToWordsRo(0.5)).toBe("cincizeci bani");
     // Actually let's check: zero lei + bani
-    expect(numberToWordsRo(0.01)).toBe("una bani");
-    expect(numberToWordsRo(1.50)).toBe("unu lei și cincizeci bani");
+    expect(numberToWordsRo(0.01)).toBe("un ban");
+    expect(numberToWordsRo(1.50)).toBe("un leu și cincizeci bani");
     expect(numberToWordsRo(99.99)).toBe(
       "nouăzeci și nouă lei și nouăzeci și nouă bani"
     );

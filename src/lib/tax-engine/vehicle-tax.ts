@@ -174,7 +174,7 @@ const TRAILER_WEIGHT_TABLE: Record<string, WeightBracket[]> = {
   R4_pneumatic: [
     { minTons: 0, maxTons: 29, tax: 291 },
     { minTons: 29, maxTons: 31, tax: 513 },
-    { minTons: 31, maxTons: 33, tax: 510 },
+    { minTons: 31, maxTons: 33, tax: 513 },
     { minTons: 33, maxTons: 36, tax: 751 },
     { minTons: 36, maxTons: 38, tax: 751 },
     { minTons: 38, maxTons: Infinity, tax: 751 },
@@ -285,6 +285,11 @@ export async function calculateVehicleTax(
   exemptions: ExemptionContext[]
 ): Promise<TaxCalculationResult> {
   const taxType = "impozit_mijloace_transport";
+
+  // Validate masaTotalaKg if provided
+  if (input.masaTotalaKg != null && input.masaTotalaKg <= 0) {
+    throw new Error("masaTotalaKg must be a positive number");
+  }
 
   let bazaImpozabila: number;
   let rataAplicata: number;

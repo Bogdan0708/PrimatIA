@@ -597,7 +597,7 @@ model Plata {
   // Reference
   nrChitanta   String? @map("nr_chitanta") @db.VarChar(50)
   nrDocument   String? @map("nr_document") @db.VarChar(50)
-  ghiseulRoRef String? @map("ghiseul_ro_ref") @db.VarChar(100)
+  gatewayRef String? @map("ghiseul_ro_ref") @db.VarChar(100)
 
   // Processing
   distribuit Boolean @default(false)
@@ -1073,6 +1073,8 @@ model OnlinePayment {
 
   // Linked payment (after confirmation)
   plataId String? @map("plata_id") @db.Uuid
+
+  stripeEventId String? @unique @map("stripe_event_id") @db.VarChar(255)
 
   initiatedAt DateTime  @default(now()) @map("initiated_at") @db.Timestamptz
   confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz

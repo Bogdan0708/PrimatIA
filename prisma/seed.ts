@@ -1202,7 +1202,7 @@ async function main() {
       dataPlata: Date;
       modalitate: string;
       nrChitanta: string | null;
-      ghiseulRoRef: string | null;
+      gatewayRef: string | null;
       impozitId: string;
       distribuit: boolean;
     }> = [];
@@ -1220,7 +1220,7 @@ async function main() {
         dataPlata: new Date(dateStr),
         modalitate: modalities[i],
         nrChitanta: modalities[i] === "numerar" ? `CH-2026-${String(i + 1).padStart(4, "0")}` : null,
-        ghiseulRoRef: modalities[i] === "ghiseul_ro" ? `GR-2026-${String(i + 1).padStart(6, "0")}` : null,
+        gatewayRef: modalities[i] === "ghiseul_ro" ? `GR-2026-${String(i + 1).padStart(6, "0")}` : null,
         impozitId: imp.id,
         distribuit: true,
       });
@@ -1235,7 +1235,7 @@ async function main() {
         dataPlata: new Date(`2026-02-${String(10 + i).padStart(2, "0")}`),
         modalitate: i % 2 === 0 ? "numerar" : "virament",
         nrChitanta: i % 2 === 0 ? `CH-2026-P-${String(i + 1).padStart(4, "0")}` : null,
-        ghiseulRoRef: null,
+        gatewayRef: null,
         impozitId: imp.id,
         distribuit: true,
       });
@@ -1252,7 +1252,7 @@ async function main() {
         dataPlata: new Date(`2025-11-${String(10 + idx).padStart(2, "0")}`),
         modalitate: "numerar",
         nrChitanta: `CH-2025-${String(idx + 1).padStart(4, "0")}`,
-        ghiseulRoRef: null,
+        gatewayRef: null,
         impozitId: emis.id,
         distribuit: false,
       });
@@ -1267,7 +1267,7 @@ async function main() {
           dataPlata: pd.dataPlata,
           modalitate: pd.modalitate,
           nrChitanta: pd.nrChitanta,
-          ghiseulRoRef: pd.ghiseulRoRef,
+          gatewayRef: pd.gatewayRef,
           distribuit: pd.distribuit,
           inregistratDeId: operatorId,
         },

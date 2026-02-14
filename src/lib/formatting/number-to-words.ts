@@ -94,7 +94,8 @@ export function numberToWordsRo(amount: number): string {
   if (wholeNum === 0 && bani === 0) return "zero lei";
   if (wholeNum === 0 && bani > 0) {
     const prefix = amount < 0 ? "minus " : "";
-    return prefix + chunk(bani, true) + " bani";
+    const baniText = bani === 1 ? "un ban" : chunk(bani, true) + " bani";
+    return prefix + baniText;
   }
 
   const parts: string[] = [];
@@ -135,15 +136,23 @@ export function numberToWordsRo(amount: number): string {
 
   let result = parts.join(" ") || "zero";
 
+  // "un leu" not "unu leu" — replace standalone "unu" at end when wholeNum is exactly 1
+  if (wholeNum === 1) result = "un";
+
   if (amount < 0) result = "minus " + result;
 
   // "de" connector: used after millions when followed directly by "lei" (no thousands/hundreds)
   const needsDe = wholeNum >= 1000000 && wholeNum % 1000000 === 0;
 
+  // Singular/plural: 1 leu, 2+ lei; 1 ban, 2+ bani
+  const leiWord = wholeNum === 1 ? "leu" : "lei";
+  const baniWord = bani === 1 ? "ban" : "bani";
+
   if (bani > 0) {
-    result += (needsDe ? " de" : "") + " lei și " + chunk(bani, true) + " bani";
+    const baniText = bani === 1 ? "un ban" : chunk(bani, true) + ` ${baniWord}`;
+    result += (needsDe ? " de" : "") + ` ${leiWord} și ` + baniText;
   } else {
-    result += (needsDe ? " de" : "") + " lei";
+    result += (needsDe ? " de" : "") + ` ${leiWord}`;
   }
 
   return result;

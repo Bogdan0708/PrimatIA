@@ -193,7 +193,7 @@ export async function createPlata(
         modalitate,
         nrChitanta: (formData.get("nrChitanta") as string) || undefined,
         nrDocument: (formData.get("nrDocument") as string) || undefined,
-        ghiseulRoRef: (formData.get("ghiseulRoRef") as string) || undefined,
+        gatewayRef: (formData.get("ghiseulRoRef") as string) || undefined,
         nota: (formData.get("nota") as string) || undefined,
         inregistratDeId: session.user.id,
         distribuit: false,

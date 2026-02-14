@@ -78,6 +78,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    // Stripe event ID deduplication
+    const existingEvent = await prisma.onlinePayment.findFirst({
+      where: { stripeEventId: event.id },
+    });
+    if (existingEvent) {
+      return NextResponse.json({ received: true }); // Already processed
+    }
+
     const gatewayRef = session.id;
     const metadata = session.metadata;
 
@@ -102,42 +110,32 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      // Fix #3: Server-side amount validation — verify payment matches actual debts
       const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }>;
-      if (selectedDebts && selectedDebts.length > 0) {
-        const expectedTotal = selectedDebts.reduce((sum, d) => sum + d.amount, 0);
-        const paidAmount = Number(onlinePayment.suma);
-        if (Math.abs(paidAmount - expectedTotal) > 0.01) {
-          console.error(
-            `Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedTotal}`
-          );
-          return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
-        }
-
-        // Validate each debt exists and the amount doesn't exceed what's owed
-        for (const debt of selectedDebts) {
-          const impozit = await prisma.impozit.findUnique({
-            where: { id: debt.impozitId },
-          });
-          if (!impozit) {
-            console.error(`Impozit ${debt.impozitId} not found for ref ${gatewayRef}`);
-            return NextResponse.json({ error: "Invalid debt reference" }, { status: 400 });
-          }
-          const remaining = Number(impozit.sumaDatorata) - Number(impozit.sumaPlatita);
-          if (debt.amount > remaining + 0.01) {
-            console.error(
-              `Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`
-            );
-            return NextResponse.json({ error: "Overpayment detected" }, { status: 400 });
-          }
-        }
-      }
 
       await setTenantContext(metadata.tenantId);
 
-      // Fix #2: Wrap all DB writes in a transaction
-      // Fix #1: Atomic chitanță number via SELECT FOR UPDATE
       await prisma.$transaction(async (tx) => {
+        // Lock and validate debts inside transaction to prevent concurrent modifications
+        if (selectedDebts && selectedDebts.length > 0) {
+          const ids = selectedDebts.map((d) => d.impozitId);
+          await tx.$queryRaw`SELECT id FROM "Impozit" WHERE id::text = ANY(${ids}) FOR UPDATE`;
+
+          const expectedTotal = selectedDebts.reduce((sum, d) => sum + d.amount, 0);
+          const paidAmount = Number(onlinePayment.suma);
+          if (Math.abs(paidAmount - expectedTotal) > 0.01) {
+            throw new Error(`Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedTotal}`);
+          }
+
+          for (const debt of selectedDebts) {
+            const impozit = await tx.impozit.findUnique({ where: { id: debt.impozitId } });
+            if (!impozit) throw new Error(`Impozit ${debt.impozitId} not found`);
+            const remaining = Number(impozit.sumaDatorata) - Number(impozit.sumaPlatita);
+            if (debt.amount > remaining + 0.01) {
+              throw new Error(`Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`);
+            }
+          }
+        }
+
         // Generate chitanță number atomically using row lock
         const year = new Date().getFullYear();
         const seqResult = await tx.$queryRaw<Array<{ next_val: bigint }>>(
@@ -159,7 +157,7 @@ export async function POST(request: NextRequest) {
             dataPlata: new Date(),
             modalitate: "card",
             nrChitanta,
-            ghiseulRoRef: gatewayRef,
+            gatewayRef: gatewayRef,
             distribuit: false,
           },
         });
@@ -171,6 +169,7 @@ export async function POST(request: NextRequest) {
             status: "confirmed",
             confirmedAt: new Date(),
             plataId: plata.id,
+            stripeEventId: event.id,
             gatewayResponse: {
               confirmed: true,
               transactionId: session.payment_intent as string,

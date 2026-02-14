@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     }
 
+    if (onlinePayment.tenantId !== session.user.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     if (onlinePayment.status !== "initiated" && onlinePayment.status !== "pending") {
       return NextResponse.json(
         { error: `Payment is in '${onlinePayment.status}' status, expected 'initiated' or 'pending'` },
@@ -50,6 +54,21 @@ export async function POST(request: NextRequest) {
     const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
 
     await prisma.$transaction(async (tx) => {
+      // Lock and validate debts inside transaction to prevent concurrent modifications
+      if (selectedDebts && selectedDebts.length > 0) {
+        const ids = selectedDebts.map((d) => d.impozitId);
+        await tx.$queryRaw`SELECT id FROM "Impozit" WHERE id::text = ANY(${ids}) FOR UPDATE`;
+
+        for (const debt of selectedDebts) {
+          const impozit = await tx.impozit.findUnique({ where: { id: debt.impozitId } });
+          if (!impozit) throw new Error(`Impozit ${debt.impozitId} not found`);
+          const remaining = Number(impozit.sumaDatorata) - Number(impozit.sumaPlatita);
+          if (debt.amount > remaining + 0.01) {
+            throw new Error(`Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`);
+          }
+        }
+      }
+
       // Generate chitanță number atomically
       const year = new Date().getFullYear();
       const seqResult = await tx.$queryRaw<Array<{ next_val: bigint }>>(
@@ -71,7 +90,7 @@ export async function POST(request: NextRequest) {
           dataPlata: new Date(),
           modalitate: "virament",
           nrChitanta,
-          ghiseulRoRef: bankReference,
+          gatewayRef: bankReference,
           distribuit: false,
         },
       });

@@ -24,7 +24,7 @@ const mockPayments = new Map<
   }
 >();
 
-export class GhiseulMockProvider implements GatewayProvider {
+export class MockGatewayProvider implements GatewayProvider {
   name = "ghiseul_mock";
 
   async initiatePayment(params: InitiatePaymentParams): Promise<InitiatePaymentResult> {
@@ -127,11 +127,11 @@ export class GhiseulMockProvider implements GatewayProvider {
 }
 
 // Singleton instance
-let mockProvider: GhiseulMockProvider | null = null;
+let mockProvider: MockGatewayProvider | null = null;
 
-export function getGhiseulMockProvider(): GhiseulMockProvider {
+export function getMockGatewayProvider(): MockGatewayProvider {
   if (!mockProvider) {
-    mockProvider = new GhiseulMockProvider();
+    mockProvider = new MockGatewayProvider();
   }
   return mockProvider;
 }
@@ -147,5 +147,5 @@ export function getPaymentGateway(): GatewayProvider {
     const { getStripeProvider } = require("./stripe-provider");
     return getStripeProvider();
   }
-  return getGhiseulMockProvider();
+  return getMockGatewayProvider();
 }
