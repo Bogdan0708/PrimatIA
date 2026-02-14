@@ -133,6 +133,7 @@ model Adresa {
   scara       String? @db.VarChar(10)
   etaj        String? @db.VarChar(10)
   apartament  String? @db.VarChar(10)
+  sat         String? @db.VarChar(100)
   localitate  String  @db.VarChar(100)
   judet       String  @db.VarChar(50)
   codPostal   String? @map("cod_postal") @db.VarChar(10)

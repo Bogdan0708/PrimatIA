@@ -191,6 +191,10 @@ export function ContribuabilNewForm() {
                   <Input id="apartament" name="apartament" />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="sat">{tf("village")}</Label>
+                  <Input id="sat" name="sat" />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="localitate">{tf("locality")}</Label>
                   <Input id="localitate" name="localitate" />
                 </div>

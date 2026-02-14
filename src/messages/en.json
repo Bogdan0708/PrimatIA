@@ -177,6 +177,7 @@
     "staircase": "Staircase",
     "floor": "Floor",
     "apartment": "Apartment",
+    "village": "Village",
     "locality": "Locality",
     "county": "County",
     "postalCode": "Postal Code",

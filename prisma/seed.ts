@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { seedTaxRates2025 } from "./seed/tax-rates-2025";
 
 const prisma = new PrismaClient();
 
@@ -1328,6 +1329,12 @@ async function main() {
   } else {
     console.log(`Demo citizen already exists: ${citizenEmail}`);
   }
+
+  // =============================================================================
+  // 16. TAX RATE TABLES 2025 (separate HCL)
+  // =============================================================================
+
+  await seedTaxRates2025(prisma, tenantId);
 
   // =============================================================================
   // DONE

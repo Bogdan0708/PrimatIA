@@ -232,6 +232,7 @@ export async function createContribuabil(formData: FormData): Promise<ActionResu
           scara: (formData.get("scara") as string) || undefined,
           etaj: (formData.get("etaj") as string) || undefined,
           apartament: (formData.get("apartament") as string) || undefined,
+          sat: (formData.get("sat") as string) || undefined,
           localitate,
           judet,
           codPostal: (formData.get("codPostal") as string) || undefined,
