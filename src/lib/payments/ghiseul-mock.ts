@@ -138,9 +138,14 @@ export function getGhiseulMockProvider(): GhiseulMockProvider {
 
 /**
  * Get the active payment gateway provider.
- * Switch between mock and real based on configuration.
+ * Switch between mock and real based on PAYMENT_MODE env var.
  */
 export function getPaymentGateway(): GatewayProvider {
-  // In future: check env for PAYMENT_GATEWAY=ghiseul_ro and return real provider
+  if (process.env.PAYMENT_MODE === "stripe") {
+    // Dynamic import to avoid loading Stripe SDK when not needed
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getStripeProvider } = require("./stripe-provider");
+    return getStripeProvider();
+  }
   return getGhiseulMockProvider();
 }

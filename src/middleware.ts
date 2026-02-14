@@ -71,14 +71,15 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires unsafe-inline/eval in dev
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com", // Next.js requires unsafe-inline/eval in dev
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' https://api.stripe.com",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
-      "form-action 'self'",
+      "form-action 'self' https://checkout.stripe.com",
     ].join("; ")
   );
 
@@ -100,7 +101,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // Permissions policy (restrict browser features)
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()"
+    "camera=(), microphone=(), geolocation=()"
   );
 
   return response;
@@ -169,6 +170,11 @@ export default function middleware(request: NextRequest) {
     const response = new NextResponse(null, { status: 204 });
     addCorsHeaders(response, request);
     return response;
+  }
+
+  // Skip middleware for Stripe webhook (needs raw body, no rate limiting)
+  if (pathname === "/api/payments/webhook") {
+    return NextResponse.next();
   }
 
   // Rate limiting for API routes

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGhiseulMockProvider } from "@/lib/payments/ghiseul-mock";
 import { prisma, setTenantContext } from "@/lib/db";
+import { generateDocumentNumber } from "@/lib/formatting";
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,6 +39,13 @@ export async function POST(request: NextRequest) {
 
     await setTenantContext(onlinePayment.tenantId);
 
+    // Generate chitanță number
+    const year = new Date().getFullYear();
+    const paymentCount = await prisma.plata.count({
+      where: { tenantId: onlinePayment.tenantId },
+    });
+    const nrChitanta = generateDocumentNumber("CHT", year, paymentCount + 1);
+
     // Create actual Plata record
     const plata = await prisma.plata.create({
       data: {
@@ -45,7 +53,8 @@ export async function POST(request: NextRequest) {
         contribuabilId: onlinePayment.contribuabilId,
         suma: onlinePayment.suma,
         dataPlata: new Date(),
-        modalitate: "ghiseul_ro",
+        modalitate: "card",
+        nrChitanta,
         ghiseulRoRef: gatewayRef,
         distribuit: false,
       },
@@ -59,6 +68,64 @@ export async function POST(request: NextRequest) {
         confirmedAt: new Date(),
         plataId: plata.id,
         gatewayResponse: { confirmed: true, transactionId: `TXN-${gatewayRef}` },
+      },
+    });
+
+    // Auto-distribute payment to debts
+    const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }>;
+    if (selectedDebts && selectedDebts.length > 0) {
+      for (const debt of selectedDebts) {
+        await prisma.plataDistributie.create({
+          data: {
+            tenantId: onlinePayment.tenantId,
+            plataId: plata.id,
+            impozitId: debt.impozitId,
+            sumaDebit: debt.amount,
+            sumaPenalitati: 0,
+          },
+        });
+
+        const impozit = await prisma.impozit.findUnique({
+          where: { id: debt.impozitId },
+        });
+
+        if (impozit) {
+          const newPaid = Number(impozit.sumaPlatita) + debt.amount;
+          const totalOwed = Number(impozit.sumaDatorata);
+          const newStatus = newPaid >= totalOwed ? "platit" : "partial_platit";
+
+          await prisma.impozit.update({
+            where: { id: debt.impozitId },
+            data: {
+              sumaPlatita: newPaid,
+              status: newStatus,
+            },
+          });
+        }
+      }
+
+      await prisma.plata.update({
+        where: { id: plata.id },
+        data: { distribuit: true },
+      });
+    }
+
+    // Generate chitanță document
+    await prisma.document.create({
+      data: {
+        tenantId: onlinePayment.tenantId,
+        contribuabilId: onlinePayment.contribuabilId,
+        tip: "chitanta",
+        numarDocument: nrChitanta,
+        dataDocument: new Date(),
+        dataJson: {
+          plataId: plata.id,
+          suma: Number(onlinePayment.suma),
+          modalitate: "card",
+          gatewayRef,
+          items: selectedDebts,
+        },
+        status: "generat",
       },
     });
 

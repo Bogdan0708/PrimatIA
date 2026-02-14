@@ -53,6 +53,7 @@ export const DOCUMENT_TYPES = [
   "somatie",
   "titlu_executoriu",
   "borderou_incasari",
+  "chitanta",
 ] as const;
 
 // Phase 2 additions
