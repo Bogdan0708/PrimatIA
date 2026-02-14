@@ -66,17 +66,71 @@ export function CertificatAtestarePDF({
         {/* Purpose */}
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Scopul eliberării:</Text>
-          <Text style={styles.infoValue}>{data.purpose}</Text>
+          <Text style={styles.infoValue}>
+            {data.purpose}
+            {data.purposeInstitution
+              ? ` — pentru ${data.purposeInstitution}`
+              : ""}
+          </Text>
         </View>
+
+        {/* Property inventory */}
+        {data.properties && (
+          <>
+            <View style={styles.sectionTitle}>
+              <Text>Bunuri deținute în evidențele fiscale</Text>
+            </View>
+
+            {data.properties.buildings && data.properties.buildings.length > 0 && (
+              <>
+                <Text style={[styles.bodyText, { fontWeight: "bold" }]}>
+                  Clădiri:
+                </Text>
+                {data.properties.buildings.map((b, i) => (
+                  <Text style={styles.bodyText} key={`b-${i}`}>
+                    {i + 1}. {b.description} — {b.address}
+                  </Text>
+                ))}
+              </>
+            )}
+
+            {data.properties.lands && data.properties.lands.length > 0 && (
+              <>
+                <Text style={[styles.bodyText, { fontWeight: "bold" }]}>
+                  Terenuri:
+                </Text>
+                {data.properties.lands.map((l, i) => (
+                  <Text style={styles.bodyText} key={`l-${i}`}>
+                    {i + 1}. {l.description} — {l.address} ({l.suprafata})
+                  </Text>
+                ))}
+              </>
+            )}
+
+            {data.properties.vehicles && data.properties.vehicles.length > 0 && (
+              <>
+                <Text style={[styles.bodyText, { fontWeight: "bold" }]}>
+                  Mijloace de transport:
+                </Text>
+                {data.properties.vehicles.map((v, i) => (
+                  <Text style={styles.bodyText} key={`v-${i}`}>
+                    {i + 1}. {v.description} — {v.nrInmatriculare}
+                  </Text>
+                ))}
+              </>
+            )}
+          </>
+        )}
 
         {/* Certification */}
         <View style={styles.sectionTitle}>
           <Text>Situația obligațiilor fiscale</Text>
         </View>
         <Text style={styles.bodyText}>
-          Se certifică prin prezentul document că contribuabilul menționat mai
-          sus figurează în evidențele fiscale ale {data.tenant.name} cu
-          următoarea situație a obligațiilor de plată la bugetul local:
+          Se eliberează prezentul certificat de atestare fiscală pentru
+          contribuabilul menționat mai sus, care figurează în evidențele fiscale
+          ale {data.tenant.name} cu următoarea situație a obligațiilor de plată
+          la bugetul local:
         </Text>
 
         {/* Tax table */}
@@ -160,6 +214,20 @@ export function CertificatAtestarePDF({
             </Text>{" "}
             către bugetul local.
           </Text>
+        )}
+
+        {/* Enforcement status */}
+        {data.enforcements && data.enforcements.length > 0 && (
+          <>
+            <View style={styles.sectionTitle}>
+              <Text>Măsuri de executare silită</Text>
+            </View>
+            {data.enforcements.map((e, i) => (
+              <Text style={styles.bodyText} key={`e-${i}`}>
+                {i + 1}. {e.description} — {e.amount} lei — Status: {e.status}
+              </Text>
+            ))}
+          </>
         )}
 
         {/* Validity */}

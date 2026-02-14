@@ -11,6 +11,30 @@ export function ChitantaPDF({ data }: { data: ChitantaData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Watermark */}
+        {data.watermark && (
+          <View
+            style={{
+              position: "absolute",
+              top: "40%",
+              left: "15%",
+              transform: "rotate(-45deg)",
+              opacity: 0.12,
+              zIndex: 999,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 72,
+                fontWeight: "bold",
+                color: data.watermark === "ANULAT" ? "#cc0000" : "#666666",
+              }}
+            >
+              {data.watermark}
+            </Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -20,6 +44,9 @@ export function ChitantaPDF({ data }: { data: ChitantaData }) {
             <Text style={styles.headerInfo}>Jud. {data.tenant.county}</Text>
           </View>
           <View style={styles.headerRight}>
+            {data.serie && (
+              <Text style={styles.headerInfo}>Seria: {data.serie}</Text>
+            )}
             <Text style={styles.headerInfo}>Nr. {data.documentNumber}</Text>
             <Text style={styles.headerInfo}>Data: {data.documentDate}</Text>
           </View>
@@ -72,62 +99,68 @@ export function ChitantaPDF({ data }: { data: ChitantaData }) {
           <Text style={styles.infoValue}>{data.modalitate}</Text>
         </View>
 
-        {/* Distribution details */}
-        {data.distributions.length > 0 && (
-          <>
-            <View style={styles.sectionTitle}>
-              <Text>Reprezentând:</Text>
-            </View>
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableCellHeader, { width: "8%" }]}>
-                  Nr.
+        {/* Distribution details — 10-line legacy format */}
+        <View style={styles.sectionTitle}>
+          <Text>Reprezentând:</Text>
+        </View>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableCellHeader, { width: "6%" }]}>
+              Nr.
+            </Text>
+            <Text style={[styles.tableCellHeader, { width: "14%" }]}>
+              Cod bugetar
+            </Text>
+            <Text style={[styles.tableCellHeader, { width: "32%" }]}>
+              Descriere
+            </Text>
+            <Text style={[styles.tableCellHeader, { width: "10%" }]}>
+              An
+            </Text>
+            <Text
+              style={[
+                styles.tableCellHeader,
+                { width: "19%", textAlign: "right" },
+              ]}
+            >
+              Debit
+            </Text>
+            <Text
+              style={[
+                styles.tableCellHeader,
+                { width: "19%", textAlign: "right" },
+              ]}
+            >
+              Penalități
+            </Text>
+          </View>
+          {/* Render exactly 10 lines (filled + empty) matching legacy format */}
+          {Array.from({ length: 10 }, (_, i) => {
+            const d = data.distributions[i];
+            return (
+              <View style={styles.tableRow} key={i}>
+                <Text style={[styles.tableCell, { width: "6%" }]}>
+                  {i + 1}
                 </Text>
-                <Text style={[styles.tableCellHeader, { width: "40%" }]}>
-                  Descriere
+                <Text style={[styles.tableCell, { width: "14%" }]}>
+                  {d?.codClasificatieBugetara ?? ""}
                 </Text>
-                <Text style={[styles.tableCellHeader, { width: "12%" }]}>
-                  An
+                <Text style={[styles.tableCell, { width: "32%" }]}>
+                  {d?.description ?? ""}
                 </Text>
-                <Text
-                  style={[
-                    styles.tableCellHeader,
-                    { width: "20%", textAlign: "right" },
-                  ]}
-                >
-                  Debit
+                <Text style={[styles.tableCell, { width: "10%" }]}>
+                  {d?.fiscalYear ?? ""}
                 </Text>
-                <Text
-                  style={[
-                    styles.tableCellHeader,
-                    { width: "20%", textAlign: "right" },
-                  ]}
-                >
-                  Penalități
+                <Text style={[styles.tableCellRight, { width: "19%" }]}>
+                  {d?.sumaDebit ?? ""}
+                </Text>
+                <Text style={[styles.tableCellRight, { width: "19%" }]}>
+                  {d?.sumaPenalitati ?? ""}
                 </Text>
               </View>
-              {data.distributions.map((d, i) => (
-                <View style={styles.tableRow} key={i}>
-                  <Text style={[styles.tableCell, { width: "8%" }]}>
-                    {i + 1}
-                  </Text>
-                  <Text style={[styles.tableCell, { width: "40%" }]}>
-                    {d.description}
-                  </Text>
-                  <Text style={[styles.tableCell, { width: "12%" }]}>
-                    {d.fiscalYear}
-                  </Text>
-                  <Text style={[styles.tableCellRight, { width: "20%" }]}>
-                    {d.sumaDebit}
-                  </Text>
-                  <Text style={[styles.tableCellRight, { width: "20%" }]}>
-                    {d.sumaPenalitati}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+            );
+          })}
+        </View>
 
         {/* Signatures */}
         <View style={styles.signatureArea}>

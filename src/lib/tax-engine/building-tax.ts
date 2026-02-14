@@ -5,6 +5,7 @@ import type {
   TaxRateEntry,
   HclDecisionContext,
   ExemptionContext,
+  CommuneRank,
 } from "./types";
 import {
   calculateTaxableMonths,
@@ -15,13 +16,62 @@ import {
 } from "./utils";
 
 /**
+ * Commune rank zone multipliers per Art. 457 Cod Fiscal.
+ */
+const COMMUNE_RANK_MULTIPLIERS: Record<number, number> = {
+  0: 2.5, // București
+  1: 2.5, // Rang I
+  2: 2.0, // Rang II
+  3: 1.5, // Rang III
+  4: 1.1, // Rang IV
+  5: 1.0, // Rang V
+};
+
+/**
+ * Get commune rank multiplier. Default 1.0 if no rank provided.
+ */
+export function getCommuneRankMultiplier(rank?: CommuneRank): number {
+  if (rank == null) return 1.0;
+  return COMMUNE_RANK_MULTIPLIERS[rank] ?? 1.0;
+}
+
+/**
+ * Get PJ building tax rate based on revaluation date (Art. 460 Cod Fiscal).
+ * - Standard rate: 1.0-1.5% if revalued within 5 years
+ * - Penalty rate: 5% if not revalued in 5+ years
+ * - If revalued within 3 years: standard 1.0%
+ * - If revalued 3-5 years ago: 1.5%
+ */
+export function getPjBuildingRate(
+  fiscalYear: number,
+  dataUltimeiReevaluari?: Date
+): number {
+  if (!dataUltimeiReevaluari) {
+    // No revaluation recorded => penalty rate
+    return 5.0;
+  }
+
+  const revalYear = dataUltimeiReevaluari.getFullYear();
+  const yearsSinceReval = fiscalYear - revalYear;
+
+  if (yearsSinceReval > 5) {
+    return 5.0; // Penalty: not revalued in 5+ years
+  }
+  if (yearsSinceReval <= 3) {
+    return 1.0; // Standard lower bound: revalued recently
+  }
+  // 3 < years <= 5
+  return 1.5; // Standard upper bound
+}
+
+/**
  * Calculate building tax per Art. 457-459 Cod Fiscal.
  *
  * For PF (residential):
- *   Tax = valoare_impozabila x rate x age_coefficient x cota_parte / 100
+ *   Tax = valoare_impozabila x rate x age_coefficient x zone_multiplier x cota_parte / 100
  *
  * For PJ (non-residential):
- *   Tax = valoare_inventar x rate x cota_parte / 100
+ *   Tax = valoare_inventar x pj_rate x zone_multiplier x cota_parte / 100
  *
  * For mixed:
  *   Proportional split between residential and non-residential
@@ -49,22 +99,36 @@ export async function calculateBuildingTax(
 
   // 2. Calculate base
   let bazaImpozabila: number;
-  if (input.destinatie === "rezidentiala") {
-    bazaImpozabila = input.valoareImpozabila ?? 0;
+  let rataAplicata: number;
+
+  if (input.tipContribuabil === "PJ" && input.destinatie === "nerezidentiala") {
+    // PJ path: use valoareInventar with date-bounded rate (Art. 460)
+    bazaImpozabila = input.valoareInventar ?? input.valoareImpozabila ?? 0;
+    rataAplicata = getPjBuildingRate(input.fiscalYear, input.dataUltimeiReevaluari);
   } else if (input.destinatie === "nerezidentiala") {
     bazaImpozabila = input.valoareInventar ?? input.valoareImpozabila ?? 0;
+    rataAplicata = rateEntry.rateValue;
+  } else if (input.destinatie === "rezidentiala") {
+    bazaImpozabila = input.valoareImpozabila ?? 0;
+    rataAplicata = rateEntry.rateValue;
   } else {
     // Mixed: proportional
     bazaImpozabila = input.valoareImpozabila ?? 0;
+    rataAplicata = rateEntry.rateValue;
   }
 
   // 3. Apply rate
-  const rataAplicata = rateEntry.rateValue;
   let sumaCalculata = bazaImpozabila * (rataAplicata / 100);
 
-  // 4. Apply age coefficient (Art. 457)
-  const ageCoeff = getBuildingAgeCoefficient(input.anConstructie, input.fiscalYear);
-  sumaCalculata = sumaCalculata * ageCoeff;
+  // 4. Apply age coefficient (Art. 457) — PF only
+  if (input.tipContribuabil !== "PJ") {
+    const ageCoeff = getBuildingAgeCoefficient(input.anConstructie, input.fiscalYear);
+    sumaCalculata = sumaCalculata * ageCoeff;
+  }
+
+  // 4b. Apply commune rank zone multiplier (Art. 457)
+  const zoneMultiplier = getCommuneRankMultiplier(input.communeRank);
+  sumaCalculata = sumaCalculata * zoneMultiplier;
 
   // 5. Apply co-ownership
   sumaCalculata = sumaCalculata * (input.cotaParte / 100);

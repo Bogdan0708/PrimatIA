@@ -94,6 +94,11 @@ export interface BuildingTaxInput {
   // Mixed building
   suprafataRezidentiala?: number;
   suprafataNerezidentiala?: number;
+  // Zone multiplier (Art. 457)
+  communeRank?: CommuneRank;
+  // PJ revaluation (Art. 460)
+  tipContribuabil?: "PF" | "PJ";
+  dataUltimeiReevaluari?: Date; // date of last revaluation for PJ
 }
 
 export interface LandTaxInput {
@@ -109,6 +114,22 @@ export interface LandTaxInput {
   dataInstrainare?: Date;
 }
 
+// Truck axle categories per Art. 470 Cod Fiscal
+export const TRUCK_AXLE_CATEGORIES = ["C2", "C3", "C4"] as const;
+export type TruckAxleCategory = (typeof TRUCK_AXLE_CATEGORIES)[number];
+
+// Suspension types for trucks/trailers
+export const SUSPENSION_TYPES = ["pneumatic", "other"] as const;
+export type SuspensionType = (typeof SUSPENSION_TYPES)[number];
+
+// Trailer axle categories
+export const TRAILER_AXLE_CATEGORIES = ["R1", "R2", "R3", "R4"] as const;
+export type TrailerAxleCategory = (typeof TRAILER_AXLE_CATEGORIES)[number];
+
+// Commune ranks per Art. 457 for zone multipliers
+export const COMMUNE_RANKS = [0, 1, 2, 3, 4, 5] as const;
+export type CommuneRank = (typeof COMMUNE_RANKS)[number];
+
 export interface VehicleTaxInput {
   vehicleId: string;
   contribuabilId: string;
@@ -119,6 +140,8 @@ export interface VehicleTaxInput {
   putereKw?: number;
   masaTotalaKg?: number;
   nrLocuri?: number;
+  nrAxe?: number; // number of axles for trucks/trailers
+  tipSuspensie?: SuspensionType; // suspension type for trucks/trailers
   normaPoluare?: string;
   anFabricatie: number;
   dataDobandire: Date;

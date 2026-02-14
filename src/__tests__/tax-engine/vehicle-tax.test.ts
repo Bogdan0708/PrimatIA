@@ -322,4 +322,238 @@ describe("calculateVehicleTax", () => {
     expect(result.rata1).toBe(40);
     expect(result.rata2).toBe(40);
   });
+
+  describe("Truck axle-weight calculator (Art. 470)", () => {
+    it("C2 pneumatic, 14.5t -> 148 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 14500,
+          nrAxe: 2,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(14.5);
+      expect(result.rataAplicata).toBe(148);
+      expect(result.sumaCalculata).toBe(148);
+      expect(result.rateTableId).toBe("weight_table_camion_C2_pneumatic");
+    });
+
+    it("C2 other (mechanical), 16t -> 988 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 16000,
+          nrAxe: 2,
+          tipSuspensie: "other",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(16);
+      expect(result.rataAplicata).toBe(988);
+      expect(result.sumaCalculata).toBe(988);
+    });
+
+    it("C3 pneumatic, 20t -> 352 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 20000,
+          nrAxe: 3,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(20);
+      expect(result.rataAplicata).toBe(352);
+      expect(result.sumaCalculata).toBe(352);
+    });
+
+    it("C4 other, 30t -> 3201 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 30000,
+          nrAxe: 5,
+          tipSuspensie: "other",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(30);
+      expect(result.rataAplicata).toBe(3201);
+      expect(result.sumaCalculata).toBe(3201);
+    });
+
+    it("C4 pneumatic, 26t -> 855 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 26000,
+          nrAxe: 4,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(26);
+      expect(result.rataAplicata).toBe(855);
+      expect(result.sumaCalculata).toBe(855);
+    });
+
+    it("prorates truck tax for partial year", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 14500,
+          nrAxe: 2,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+          dataDobandire: new Date(2024, 5, 1), // June 1 -> 6 months (Jul-Dec)
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.nrLuni).toBe(6);
+      // 148 * 6/12 = 74
+      expect(result.sumaCalculata).toBe(74);
+    });
+
+    it("does not apply euro norm to weight-table trucks", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 14500,
+          nrAxe: 2,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "non_euro", // would be 1.5x if applied
+        }),
+        makeHcl(),
+        []
+      );
+
+      // Should still be 148, not 148 * 1.5
+      expect(result.sumaCalculata).toBe(148);
+    });
+
+    it("falls back to DB rate when nrAxe not provided", async () => {
+      mockVehicleRate(30, "camion");
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "camion",
+          masaTotalaKg: 12000,
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+          // no nrAxe → legacy path
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(12);
+      expect(result.rataAplicata).toBe(30);
+      expect(result.sumaCalculata).toBe(360);
+    });
+  });
+
+  describe("Trailer axle-weight calculator (Art. 470)", () => {
+    it("R2 pneumatic, 22t -> 166 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "remorca",
+          masaTotalaKg: 22000,
+          nrAxe: 2,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(22);
+      expect(result.rataAplicata).toBe(166);
+      expect(result.sumaCalculata).toBe(166);
+      expect(result.rateTableId).toBe("weight_table_remorca_R2_pneumatic");
+    });
+
+    it("R3 other, 30t -> 616 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "remorca",
+          masaTotalaKg: 30000,
+          nrAxe: 3,
+          tipSuspensie: "other",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(30);
+      expect(result.rataAplicata).toBe(616);
+      expect(result.sumaCalculata).toBe(616);
+    });
+
+    it("R4 pneumatic, 35t -> 751 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "remorca",
+          masaTotalaKg: 35000,
+          nrAxe: 4,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(35);
+      expect(result.rataAplicata).toBe(751);
+      expect(result.sumaCalculata).toBe(751);
+    });
+
+    it("R1 (1 axle) small trailer -> 0 lei", async () => {
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "remorca",
+          masaTotalaKg: 5000,
+          nrAxe: 1,
+          tipSuspensie: "pneumatic",
+          cilindreeCmc: undefined,
+          normaPoluare: "euro_4",
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(5);
+      expect(result.sumaCalculata).toBe(0);
+    });
+  });
 });

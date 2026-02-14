@@ -1,7 +1,7 @@
 import React from "react";
 import { Document, Page, View, Text } from "@react-pdf/renderer";
 import { styles } from "../styles";
-import type { DecizieImpunereData } from "../types";
+import type { DecizieImpunereData, ImpozitLineEnhanced } from "../types";
 
 /**
  * Decizie de impunere — Tax assessment decision.
@@ -143,12 +143,29 @@ export function DecizieImpunerePDF({ data }: { data: DecizieImpunereData }) {
           </View>
         </View>
 
-        {/* Installments */}
+        {/* Rate justification per line */}
+        {data.lines.some((l: ImpozitLineEnhanced) => l.articleReference || l.hclReference) && (
+          <>
+            <View style={styles.sectionTitle}>
+              <Text>Temei legal per proprietate</Text>
+            </View>
+            {data.lines.map((line: ImpozitLineEnhanced, i: number) => (
+              (line.articleReference || line.hclReference) ? (
+                <Text style={styles.bodyText} key={`ref-${i}`}>
+                  • {line.propertyDescription}: {line.articleReference ?? ""}{" "}
+                  {line.hclReference ? `(${line.hclReference})` : ""}
+                </Text>
+              ) : null
+            ))}
+          </>
+        )}
+
+        {/* Installments — 4-installment schedule */}
         <View style={styles.sectionTitle}>
           <Text>III. Termene de plată</Text>
         </View>
         <Text style={styles.bodyText}>
-          Impozitul se plătește în două rate egale, conform art. 462 Cod Fiscal:
+          Impozitul se plătește în patru rate, conform art. 462 Cod Fiscal:
         </Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Rata I — {data.installments.rata1Scadenta}:</Text>
@@ -158,6 +175,21 @@ export function DecizieImpunerePDF({ data }: { data: DecizieImpunereData }) {
           <Text style={styles.infoLabel}>Rata II — {data.installments.rata2Scadenta}:</Text>
           <Text style={styles.infoValue}>{data.installments.rata2} lei</Text>
         </View>
+        {data.installments.rata3 && data.installments.rata3Scadenta && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Rata III — {data.installments.rata3Scadenta}:</Text>
+            <Text style={styles.infoValue}>{data.installments.rata3} lei</Text>
+          </View>
+        )}
+        {data.installments.rata4 && data.installments.rata4Scadenta && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Rata IV — {data.installments.rata4Scadenta}:</Text>
+            <Text style={styles.infoValue}>{data.installments.rata4} lei</Text>
+          </View>
+        )}
+        <Text style={[styles.bodyText, { marginTop: 5 }]}>
+          <Text style={styles.boldText}>Total anual: {data.totalDatorat} lei</Text>
+        </Text>
         <Text style={styles.bodyText}>
           Bonificație: Dacă plătiți integral până la data de{" "}
           {data.installments.rata1Scadenta}, beneficiați de o reducere de{" "}

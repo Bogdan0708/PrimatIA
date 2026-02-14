@@ -41,7 +41,17 @@ export interface InstallmentInfo {
   rata1Scadenta: string;
   rata2: string;
   rata2Scadenta: string;
+  // 4-installment schedule
+  rata3?: string;
+  rata3Scadenta?: string;
+  rata4?: string;
+  rata4Scadenta?: string;
   bonificatie: string;
+}
+
+export interface ImpozitLineEnhanced extends ImpozitLine {
+  articleReference?: string; // e.g. "Art. 457 Cod Fiscal"
+  hclReference?: string; // e.g. "HCL nr. 123/2024"
 }
 
 // Decizie de impunere
@@ -53,7 +63,7 @@ export interface DecizieImpunereData {
   documentDate: string;
   hclNumber: string;
   hclDate: string;
-  lines: ImpozitLine[];
+  lines: ImpozitLineEnhanced[];
   totalDatorat: string;
   installments: InstallmentInfo;
   legalBasis: string;
@@ -86,12 +96,25 @@ export interface CertificatAtestareData {
   documentNumber: string;
   documentDate: string;
   purpose: string; // scopul eliberării
+  purposeInstitution?: string; // for what institution
   taxes: Array<{
     taxType: string;
     fiscalYear: number;
     sumaDatorata: string;
     sumaPlatita: string;
     sumaRestanta: string;
+  }>;
+  // Property inventory
+  properties?: {
+    buildings?: Array<{ description: string; address: string }>;
+    lands?: Array<{ description: string; address: string; suprafata: string }>;
+    vehicles?: Array<{ description: string; nrInmatriculare: string }>;
+  };
+  // Enforcement status
+  enforcements?: Array<{
+    description: string;
+    amount: string;
+    status: string;
   }>;
   totalRestanta: string;
   hasDebts: boolean;
@@ -104,6 +127,7 @@ export interface ChitantaData {
   contribuabil: ContribuabilInfo;
   documentNumber: string;
   documentDate: string;
+  serie?: string; // serie chitanță
   suma: string;
   sumaInLitere: string; // amount in words
   modalitate: string;
@@ -112,8 +136,10 @@ export interface ChitantaData {
     fiscalYear: number;
     sumaDebit: string;
     sumaPenalitati: string;
+    codClasificatieBugetara?: string; // e.g. "07.02.01.02"
   }>;
   casierName: string;
+  watermark?: "ANULAT" | "COPIE"; // conditional watermark
 }
 
 // Borderou de încasări
