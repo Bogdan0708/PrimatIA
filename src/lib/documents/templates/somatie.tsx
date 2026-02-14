@@ -5,7 +5,7 @@ import type { SomatieData } from "../types";
 
 /**
  * Somație — Payment notice with 15-day deadline.
- * Per CPF Art. 226 (Legea 207/2015).
+ * Per CPF Art. 226-228 (Legea 207/2015).
  * Romanian only (Constituție Art. 13).
  */
 export function SomatiePDF({ data }: { data: SomatieData }) {
@@ -26,11 +26,11 @@ export function SomatiePDF({ data }: { data: SomatieData }) {
           </View>
         </View>
 
-        {/* Title */}
+        {/* Title — official wording */}
         <Text style={styles.title}>SOMAȚIE</Text>
         <Text style={styles.subtitle}>
-          emisă în temeiul art. 226 din Legea nr. 207/2015 privind Codul de
-          procedură fiscală
+          emisă în temeiul art. 226-228 din Legea nr. 207/2015 privind Codul de
+          procedură fiscală, cu modificările și completările ulterioare
         </Text>
 
         {/* Taxpayer info */}
@@ -120,6 +120,35 @@ export function SomatiePDF({ data }: { data: SomatieData }) {
           </View>
         </View>
 
+        {/* Interest calculation breakdown */}
+        {data.interestBreakdown && data.interestBreakdown.length > 0 && (
+          <>
+            <Text style={[styles.bodyText, { marginTop: 10, fontWeight: "bold" }]}>
+              Detaliere calcul accesorii fiscale (dobânzi și penalități de întârziere):
+            </Text>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableCellHeader, { width: "25%" }]}>Obligație</Text>
+                <Text style={[styles.tableCellHeader, { width: "15%", textAlign: "right" }]}>Principal</Text>
+                <Text style={[styles.tableCellHeader, { width: "15%" }]}>Zile întârziere</Text>
+                <Text style={[styles.tableCellHeader, { width: "15%" }]}>Rată (%)</Text>
+                <Text style={[styles.tableCellHeader, { width: "15%", textAlign: "right" }]}>Dobândă</Text>
+                <Text style={[styles.tableCellHeader, { width: "15%", textAlign: "right" }]}>Penalitate</Text>
+              </View>
+              {data.interestBreakdown.map((item, i) => (
+                <View style={styles.tableRow} key={i}>
+                  <Text style={[styles.tableCell, { width: "25%" }]}>{item.description}</Text>
+                  <Text style={[styles.tableCellRight, { width: "15%" }]}>{item.principal}</Text>
+                  <Text style={[styles.tableCell, { width: "15%" }]}>{item.daysOverdue}</Text>
+                  <Text style={[styles.tableCell, { width: "15%" }]}>{item.rate}</Text>
+                  <Text style={[styles.tableCellRight, { width: "15%" }]}>{item.interest}</Text>
+                  <Text style={[styles.tableCellRight, { width: "15%" }]}>{item.penalty}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Deadline */}
         <Text style={[styles.bodyText, { marginTop: 10 }]}>
           În conformitate cu prevederile art. 226 alin. (1) din Legea nr.
@@ -129,6 +158,44 @@ export function SomatiePDF({ data }: { data: SomatieData }) {
           prezentei somații, respectiv până la data de{" "}
           <Text style={styles.boldText}>{data.termenPlata}</Text>.
         </Text>
+
+        {/* Legal basis — Art. 226-228 CPF */}
+        <Text style={[styles.bodyText, { marginTop: 10, fontWeight: "bold" }]}>
+          Temei legal:
+        </Text>
+        <Text style={styles.bodyText}>
+          Art. 226 — Somația: Executarea silită începe prin comunicarea somației.
+          Dacă în termen de 15 zile de la comunicarea somației nu se stinge debitul,
+          se continuă măsurile de executare silită. Somația este însoțită de un
+          exemplar al titlului executoriu emis de organul fiscal.
+        </Text>
+        <Text style={styles.bodyText}>
+          Art. 227 — Titlul executoriu: Titlul de creanță devine titlu executoriu
+          la data la care creanța fiscală este scadentă prin expirarea termenului
+          de plată prevăzut de lege sau stabilit de organul fiscal ori în alt mod
+          prevăzut de lege.
+        </Text>
+        <Text style={styles.bodyText}>
+          Art. 228 — Reguli privind executarea silită: Executarea silită se poate
+          întinde asupra veniturilor și bunurilor proprietate a debitorului, urmăribile
+          potrivit legii, iar valorificarea acestora se efectuează numai în măsura
+          necesară pentru realizarea creanțelor fiscale și a cheltuielilor de executare.
+        </Text>
+
+        {/* Property listing — assets subject to enforcement */}
+        {data.propertyListing && data.propertyListing.length > 0 && (
+          <>
+            <Text style={[styles.bodyText, { marginTop: 10, fontWeight: "bold" }]}>
+              Bunuri identificate în evidențele fiscale care pot face obiectul
+              executării silite:
+            </Text>
+            {data.propertyListing.map((prop, i) => (
+              <Text style={styles.bodyText} key={i}>
+                {i + 1}. {prop}
+              </Text>
+            ))}
+          </>
+        )}
 
         {/* Consequences */}
         <Text style={[styles.bodyText, { marginTop: 10 }]}>

@@ -59,7 +59,8 @@
     "auditLog": "Ellenőrzési napló",
     "somatii": "Felszólítások",
     "patrimven": "PatrimVen",
-    "notifications": "Értesítések"
+    "notifications": "Értesítések",
+    "rateComparison": "Adó összehasonlítás"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -751,5 +752,30 @@
     "oldestDue": "Legrégebbi határidő",
     "generatedAt": "Generálva",
     "monthlyReports": "Havi jelentés"
+  },
+  "chatbot": {
+    "title": "PrimarIA AI",
+    "subtitle": "Helyi adó asszisztens",
+    "welcome": "Üdvözlöm! A PrimarIA virtuális asszisztense vagyok. Kérdezzen helyi adókról, fizetésekről vagy dokumentumokról.",
+    "processing": "Feldolgozás...",
+    "placeholder": "Írja be kérdését...",
+    "poweredBy": "Powered by PrimarIA AI",
+    "cannotAnswer": "Sajnálom, jelenleg nem tudok válaszolni.",
+    "error": "Sajnálom, hiba történt. Kérjük, próbálja újra."
+  },
+  "rateComparison": {
+    "title": "Adóráta összehasonlítás évek között",
+    "description": "Hasonlítsa össze az adórátákat a helyi tanácsi határozatok között",
+    "taxType": "Adó típus",
+    "category": "Kategória",
+    "zone": "Zóna",
+    "previousRate": "Előző ráta",
+    "currentRate": "Jelenlegi ráta",
+    "change": "Változás %",
+    "noData": "Nincs összehasonlítható adat. Adjon hozzá legalább két HCL határozatot adóráta táblázatokkal.",
+    "year": "Pénzügyi év",
+    "increase": "Növekedés",
+    "decrease": "Csökkenés",
+    "unchanged": "Változatlan"
   }
 }

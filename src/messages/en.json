@@ -59,7 +59,8 @@
     "auditLog": "Audit Log",
     "somatii": "Notices",
     "patrimven": "PatrimVen",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "rateComparison": "Rate comparison"
   },
   "auth": {
     "signIn": "Sign In",
@@ -751,5 +752,30 @@
     "oldestDue": "Oldest Due Date",
     "generatedAt": "Generated at",
     "monthlyReports": "Monthly Report"
+  },
+  "chatbot": {
+    "title": "PrimarIA AI",
+    "subtitle": "Local tax assistant",
+    "welcome": "Hello! I'm PrimarIA's virtual assistant. Ask me about local taxes, payments, or documents.",
+    "processing": "Processing...",
+    "placeholder": "Type your question...",
+    "poweredBy": "Powered by PrimarIA AI",
+    "cannotAnswer": "Sorry, I can't answer right now.",
+    "error": "Sorry, an error occurred. Please try again."
+  },
+  "rateComparison": {
+    "title": "Year-over-year rate comparison",
+    "description": "Compare tax rates between local council decisions",
+    "taxType": "Tax type",
+    "category": "Category",
+    "zone": "Zone",
+    "previousRate": "Previous rate",
+    "currentRate": "Current rate",
+    "change": "Change %",
+    "noData": "No data to compare. Add at least two HCL decisions with tax rate tables.",
+    "year": "Fiscal year",
+    "increase": "Increase",
+    "decrease": "Decrease",
+    "unchanged": "Unchanged"
   }
 }

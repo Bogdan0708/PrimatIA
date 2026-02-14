@@ -5,6 +5,9 @@ import { CHATBOT_ENTRIES, type ChatbotEntry } from "@/lib/chatbot/knowledge";
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
 const MAX_MESSAGE_LENGTH = 1000; // Fix #5: Input length limit
+const MAX_HISTORY = 5;
+
+type HistoryMessage = { role: "user" | "assistant"; content: string };
 
 const rateLimitMap = new Map<string, number[]>();
 
@@ -89,7 +92,24 @@ const buildFallbackAnswer = (entries: ChatbotEntry[]) => {
   };
 };
 
-const buildLmStudioPayload = (message: string, entries: ChatbotEntry[]) => {
+function parseHistory(raw: unknown): HistoryMessage[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (h): h is HistoryMessage =>
+        typeof h === "object" &&
+        h !== null &&
+        (h.role === "user" || h.role === "assistant") &&
+        typeof h.content === "string"
+    )
+    .slice(-MAX_HISTORY);
+}
+
+const buildLmStudioPayload = (
+  message: string,
+  entries: ChatbotEntry[],
+  history: HistoryMessage[]
+) => {
   const context = entries
     .map((entry) => `- ${entry.question}: ${entry.answer}`)
     .join("\n");
@@ -106,8 +126,9 @@ const buildLmStudioPayload = (message: string, entries: ChatbotEntry[]) => {
     model: process.env.LM_STUDIO_MODEL || "local-model",
     temperature: 0.2,
     messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: "system" as const, content: systemPrompt },
+      ...history.map((h) => ({ role: h.role, content: h.content })),
+      { role: "user" as const, content: userPrompt },
     ],
   };
 };
@@ -148,6 +169,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const history = parseHistory(body?.history);
     const relevantEntries = getRelevantEntries(message);
     const fallback = buildFallbackAnswer(relevantEntries);
     const lmStudioUrl = process.env.LM_STUDIO_URL;
@@ -162,7 +184,7 @@ export async function POST(req: NextRequest) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildLmStudioPayload(message, relevantEntries)),
+        body: JSON.stringify(buildLmStudioPayload(message, relevantEntries, history)),
         signal: AbortSignal.timeout(10_000),
       });
 

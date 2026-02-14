@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Database,
   Bell,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -115,6 +116,12 @@ const adminNavItems: NavItem[] = [
     href: "/admin/notificari",
     labelKey: "notifications",
     icon: Bell,
+    roles: ["super_admin", "primaria_admin"],
+  },
+  {
+    href: "/admin/comparatie-taxe",
+    labelKey: "rateComparison",
+    icon: TrendingUp,
     roles: ["super_admin", "primaria_admin"],
   },
 ];

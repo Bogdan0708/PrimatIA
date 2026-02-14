@@ -59,7 +59,8 @@
     "auditLog": "Jurnal audit",
     "somatii": "Somații",
     "patrimven": "PatrimVen",
-    "notifications": "Notificări"
+    "notifications": "Notificări",
+    "rateComparison": "Comparație taxe"
   },
   "auth": {
     "signIn": "Autentificare",
@@ -751,5 +752,30 @@
     "oldestDue": "Cea mai veche scadență",
     "generatedAt": "Generat la",
     "monthlyReports": "Raport lunar"
+  },
+  "chatbot": {
+    "title": "PrimarIA AI",
+    "subtitle": "Asistent taxe locale",
+    "welcome": "Bună! Sunt asistentul virtual PrimarIA. Întreabă-mă despre taxe locale, plăți sau documente.",
+    "processing": "Se procesează...",
+    "placeholder": "Scrie întrebarea ta...",
+    "poweredBy": "Powered by PrimarIA AI",
+    "cannotAnswer": "Îmi pare rău, nu pot răspunde acum.",
+    "error": "Îmi pare rău, a apărut o eroare. Încearcă din nou."
+  },
+  "rateComparison": {
+    "title": "Comparație taxe între ani",
+    "description": "Comparați ratele de impozitare între hotărârile de consiliu local",
+    "taxType": "Tip impozit",
+    "category": "Categorie",
+    "zone": "Zonă",
+    "previousRate": "Rată anterioară",
+    "currentRate": "Rată curentă",
+    "change": "Variație %",
+    "noData": "Nu există date de comparat. Adăugați cel puțin două hotărâri CL cu tabele de impozitare.",
+    "year": "An fiscal",
+    "increase": "Creștere",
+    "decrease": "Scădere",
+    "unchanged": "Neschimbat"
   }
 }

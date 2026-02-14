@@ -87,6 +87,15 @@ export interface SomatieData {
   totalSuma: string;
   termenPlata: string; // 15 days deadline
   legalBasis: string;
+  interestBreakdown?: Array<{
+    description: string;
+    principal: string;
+    daysOverdue: number;
+    rate: string;
+    interest: string;
+    penalty: string;
+  }>;
+  propertyListing?: string[];
 }
 
 // Certificat de atestare fiscală

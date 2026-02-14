@@ -1126,3 +1126,21 @@ model ChitantaSequence {
   @@id([tenantId, year])
   @@map("chitanta_sequences")
 }
+
+// =============================================================================
+// 15. BUDGET CLASSIFICATION CODES
+// =============================================================================
+
+model BudgetCode {
+  id         String  @id @default(uuid()) @db.Uuid
+  code       String  @unique @db.VarChar(20)
+  nameRo     String  @map("name_ro") @db.VarChar(255)
+  category   String  @db.VarChar(20) // venituri | cheltuieli
+  parentCode String? @map("parent_code") @db.VarChar(20)
+  isActive   Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([category, isActive])
+  @@map("budget_codes")
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,21 +15,22 @@ type ChatMessage = {
   content: string;
 };
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: "welcome",
-    role: "bot",
-    content:
-      "Buna! Sunt asistentul virtual PrimarIA. Intreaba-ma despre taxe locale, plati sau documente.",
-  },
-];
-
 export function ChatbotWidget() {
+  const t = useTranslations("chatbot");
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Initialize welcome message with translation
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        { id: "welcome", role: "bot", content: t("welcome") },
+      ]);
+    }
+  }, [t, messages.length]);
 
   useEffect(() => {
     if (open) {
@@ -51,17 +53,25 @@ export function ChatbotWidget() {
     setLoading(true);
 
     try {
+      // Build history from existing messages (exclude welcome)
+      const history = messages
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({
+          role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+          content: m.content,
+        }));
+
       const response = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, history }),
       });
 
       const data = await response.json();
       const answer =
         typeof data?.answer === "string" && data.answer.trim().length > 0
           ? data.answer
-          : "Imi pare rau, nu pot raspunde acum.";
+          : t("cannotAnswer");
 
       const botMessage: ChatMessage = {
         id: `${Date.now()}-bot`,
@@ -76,7 +86,7 @@ export function ChatbotWidget() {
         {
           id: `${Date.now()}-error`,
           role: "bot",
-          content: "Imi pare rau, a aparut o eroare. Incearca din nou.",
+          content: t("error"),
         },
       ]);
     } finally {
@@ -97,8 +107,8 @@ export function ChatbotWidget() {
         <Card className="flex h-[70vh] max-h-[520px] flex-col overflow-hidden border-teal-100 shadow-xl">
           <div className="flex items-center justify-between border-b bg-teal-600 px-4 py-3 text-white">
             <div>
-              <p className="text-sm font-semibold">PrimarIA AI</p>
-              <p className="text-xs text-teal-50">Asistent taxe locale</p>
+              <p className="text-sm font-semibold">{t("title")}</p>
+              <p className="text-xs text-teal-50">{t("subtitle")}</p>
             </div>
             <Button
               type="button"
@@ -137,7 +147,7 @@ export function ChatbotWidget() {
                 <div className="flex justify-start">
                   <div className="flex items-center gap-2 rounded-2xl border bg-white px-3 py-2 text-sm text-slate-600">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Se proceseaza...
+                    {t("processing")}
                   </div>
                 </div>
               )}
@@ -150,7 +160,7 @@ export function ChatbotWidget() {
               <Input
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
-                placeholder="Scrie intrebarea ta..."
+                placeholder={t("placeholder")}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
@@ -169,7 +179,7 @@ export function ChatbotWidget() {
               </Button>
             </div>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Powered by PrimarIA AI
+              {t("poweredBy")}
             </p>
           </div>
         </Card>

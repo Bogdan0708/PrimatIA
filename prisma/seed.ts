@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { seedTaxRates2025 } from "./seed/tax-rates-2025";
+import { seedBudgetCodes } from "./seed/budget-codes";
 
 const prisma = new PrismaClient();
 
@@ -1335,6 +1336,12 @@ async function main() {
   // =============================================================================
 
   await seedTaxRates2025(prisma, tenantId);
+
+  // =============================================================================
+  // 17. BUDGET CLASSIFICATION CODES
+  // =============================================================================
+
+  await seedBudgetCodes(prisma);
 
   // =============================================================================
   // DONE
