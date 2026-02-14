@@ -26,6 +26,51 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // Handle expired checkout sessions
+  if (event.type === "checkout.session.expired") {
+    const session = event.data.object;
+    try {
+      await prisma.onlinePayment.updateMany({
+        where: { gatewayRef: session.id, status: { not: "confirmed" } },
+        data: { status: "expired" },
+      });
+    } catch (error) {
+      console.error("Error handling expired session:", error);
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  // Handle failed payment intents
+  if (event.type === "payment_intent.payment_failed") {
+    const paymentIntent = event.data.object;
+    try {
+      // Find by gateway response containing this payment intent
+      const onlinePayments = await prisma.onlinePayment.findMany({
+        where: { status: "initiated" },
+      });
+      for (const op of onlinePayments) {
+        const resp = op.gatewayResponse as Record<string, unknown> | null;
+        if (resp?.paymentIntentId === paymentIntent.id) {
+          await prisma.onlinePayment.update({
+            where: { id: op.id },
+            data: { status: "failed" },
+          });
+          break;
+        }
+      }
+      // Also try matching via Stripe session lookup
+      if (paymentIntent.latest_charge) {
+        await prisma.onlinePayment.updateMany({
+          where: { gatewayRef: paymentIntent.id, status: { not: "confirmed" } },
+          data: { status: "failed" },
+        });
+      }
+    } catch (error) {
+      console.error("Error handling failed payment intent:", error);
+    }
+    return NextResponse.json({ received: true });
+  }
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 

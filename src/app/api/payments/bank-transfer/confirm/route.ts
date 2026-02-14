@@ -1,0 +1,157 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma, setTenantContext } from "@/lib/db";
+import { generateDocumentNumber } from "@/lib/formatting";
+import { Prisma } from "@prisma/client";
+
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user || !["admin", "operator"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { onlinePaymentId, confirmedAmount, bankReference } = body;
+
+    if (!onlinePaymentId || !confirmedAmount || !bankReference) {
+      return NextResponse.json(
+        { error: "onlinePaymentId, confirmedAmount, and bankReference are required" },
+        { status: 400 }
+      );
+    }
+
+    const onlinePayment = await prisma.onlinePayment.findUnique({
+      where: { id: onlinePaymentId },
+    });
+
+    if (!onlinePayment) {
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    }
+
+    if (onlinePayment.status !== "initiated" && onlinePayment.status !== "pending") {
+      return NextResponse.json(
+        { error: `Payment is in '${onlinePayment.status}' status, expected 'initiated' or 'pending'` },
+        { status: 400 }
+      );
+    }
+
+    // Validate amount matches (with small tolerance)
+    if (Math.abs(Number(onlinePayment.suma) - confirmedAmount) > 0.01) {
+      return NextResponse.json(
+        { error: `Amount mismatch: expected ${onlinePayment.suma}, got ${confirmedAmount}` },
+        { status: 400 }
+      );
+    }
+
+    const tenantId = onlinePayment.tenantId;
+    await setTenantContext(tenantId);
+
+    const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
+
+    await prisma.$transaction(async (tx) => {
+      // Generate chitanță number atomically
+      const year = new Date().getFullYear();
+      const seqResult = await tx.$queryRaw<Array<{ next_val: bigint }>>(
+        Prisma.sql`INSERT INTO "ChitantaSequence" ("tenantId", "year", "currentVal")
+                   VALUES (${tenantId}, ${year}, 1)
+                   ON CONFLICT ("tenantId", "year")
+                   DO UPDATE SET "currentVal" = "ChitantaSequence"."currentVal" + 1
+                   RETURNING "currentVal" AS next_val`
+      );
+      const seqNum = Number(seqResult[0].next_val);
+      const nrChitanta = generateDocumentNumber("CHT", year, seqNum);
+
+      // Create Plata record
+      const plata = await tx.plata.create({
+        data: {
+          tenantId,
+          contribuabilId: onlinePayment.contribuabilId,
+          suma: onlinePayment.suma,
+          dataPlata: new Date(),
+          modalitate: "virament",
+          nrChitanta,
+          ghiseulRoRef: bankReference,
+          distribuit: false,
+        },
+      });
+
+      // Update OnlinePayment status
+      await tx.onlinePayment.update({
+        where: { id: onlinePayment.id },
+        data: {
+          status: "confirmed",
+          confirmedAt: new Date(),
+          plataId: plata.id,
+          gatewayResponse: {
+            confirmed: true,
+            bankReference,
+            confirmedBy: session.user.id,
+          },
+        },
+      });
+
+      // Distribute payment to debts
+      if (selectedDebts && selectedDebts.length > 0) {
+        for (const debt of selectedDebts) {
+          await tx.plataDistributie.create({
+            data: {
+              tenantId,
+              plataId: plata.id,
+              impozitId: debt.impozitId,
+              sumaDebit: debt.amount,
+              sumaPenalitati: 0,
+            },
+          });
+
+          const impozit = await tx.impozit.findUnique({
+            where: { id: debt.impozitId },
+          });
+
+          if (impozit) {
+            const newPaid = Number(impozit.sumaPlatita) + debt.amount;
+            const totalOwed = Number(impozit.sumaDatorata);
+            const newStatus = newPaid >= totalOwed ? "platit" : "partial_platit";
+
+            await tx.impozit.update({
+              where: { id: debt.impozitId },
+              data: {
+                sumaPlatita: newPaid,
+                status: newStatus,
+              },
+            });
+          }
+        }
+
+        await tx.plata.update({
+          where: { id: plata.id },
+          data: { distribuit: true },
+        });
+      }
+
+      // Generate chitanță document
+      await tx.document.create({
+        data: {
+          tenantId,
+          contribuabilId: onlinePayment.contribuabilId,
+          tip: "chitanta",
+          numarDocument: nrChitanta,
+          dataDocument: new Date(),
+          dataJson: {
+            plataId: plata.id,
+            suma: Number(onlinePayment.suma),
+            modalitate: "virament",
+            bankReference,
+            items: selectedDebts,
+          },
+          status: "generat",
+        },
+      });
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Bank transfer confirmation error:", error);
+    return NextResponse.json({ error: "Confirmation failed" }, { status: 500 });
+  }
+}

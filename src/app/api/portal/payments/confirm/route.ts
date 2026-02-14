@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGhiseulMockProvider } from "@/lib/payments/ghiseul-mock";
+import { getGhiseulMockProvider } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 

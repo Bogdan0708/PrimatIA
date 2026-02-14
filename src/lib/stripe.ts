@@ -17,7 +17,9 @@ export function getStripeClient(): Stripe {
   return _stripe;
 }
 
-// Re-export as lazy getter for convenience
+/**
+ * @deprecated Use `getStripeClient()` instead. This proxy export will be removed in a future version.
+ */
 export const stripe = new Proxy({} as Stripe, {
   get(_target, prop) {
     return (getStripeClient() as unknown as Record<string | symbol, unknown>)[prop];

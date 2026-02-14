@@ -103,7 +103,7 @@ const buildLmStudioPayload = (message: string, entries: ChatbotEntry[]) => {
       : `Intrebare: ${message}`;
 
   return {
-    model: "local-model",
+    model: process.env.LM_STUDIO_MODEL || "local-model",
     temperature: 0.2,
     messages: [
       { role: "system", content: systemPrompt },
@@ -163,6 +163,7 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(buildLmStudioPayload(message, relevantEntries)),
+        signal: AbortSignal.timeout(10_000),
       });
 
       if (!response.ok) {

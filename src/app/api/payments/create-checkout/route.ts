@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
-import { getPaymentGateway } from "@/lib/payments/ghiseul-mock";
+import { getPaymentGateway } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
