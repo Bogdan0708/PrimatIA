@@ -6,6 +6,12 @@ export {
   generateBordeRouIncasari,
 } from "./generator";
 
+export {
+  generateDocument,
+  generateBatch,
+  getRecentDocuments,
+} from "./auto-generator";
+
 export type {
   TenantInfo,
   ContribuabilInfo,
@@ -15,3 +21,10 @@ export type {
   ChitantaData,
   BordeRouIncasariData,
 } from "./types";
+
+export type {
+  GeneratableDocType,
+  GenerateRequest,
+  BatchRequest,
+  BatchResult,
+} from "./auto-generator";

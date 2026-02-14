@@ -21,6 +21,7 @@ import {
   Database,
   Bell,
   TrendingUp,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -78,6 +79,11 @@ const mainNavItems: NavItem[] = [
     href: "/somatii",
     labelKey: "somatii",
     icon: AlertTriangle,
+  },
+  {
+    href: "/reglementari",
+    labelKey: "regulations",
+    icon: BookOpen,
   },
 ];
 
