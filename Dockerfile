@@ -31,7 +31,14 @@ COPY . .
 
 # Generate Prisma client (schema must be present before generate)
 COPY prisma/schema.prisma ./prisma/schema.prisma
-RUN npx prisma generate && npm run build
+RUN npx prisma generate
+
+# Dummy DATABASE_URL for build-time static page generation (Prisma needs it to compile)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV NEXTAUTH_SECRET="build-time-secret"
+ENV NEXTAUTH_URL="http://localhost:3000"
+
+RUN npm run build
 
 # ---------------------------------------------------------------------------
 # Stage 3: runtime — minimal production image
