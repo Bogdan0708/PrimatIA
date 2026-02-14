@@ -60,7 +60,9 @@
     "somatii": "Felszólítások",
     "patrimven": "PatrimVen",
     "notifications": "Értesítések",
-    "rateComparison": "Adó összehasonlítás"
+    "rateComparison": "Adó összehasonlítás",
+    "anomalies": "Anomáliák",
+    "forecast": "Előrejelzés"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -777,5 +779,36 @@
     "increase": "Növekedés",
     "decrease": "Csökkenés",
     "unchanged": "Változatlan"
+  },
+  "anomaly": {
+    "title": "Anomália-észlelés",
+    "description": "Automatikusan észlelt anomáliák az adóadatokban.",
+    "total": "Összes anomália",
+    "critical": "Kritikus",
+    "high": "Magas",
+    "medium": "Közepes",
+    "low": "Alacsony",
+    "anomalyList": "Anomáliák listája",
+    "anomalyListDesc": "Az összes észlelt anomália, súlyosság szerint rendezve.",
+    "noAnomalies": "Nem észleltek anomáliát. Az adóadatok helyesek.",
+    "severity": "Súlyosság",
+    "type": "Típus",
+    "entity": "Entitás",
+    "descriptionCol": "Leírás",
+    "action": "Javasolt művelet"
+  },
+  "forecast": {
+    "title": "Bevételi előrejelzés",
+    "description": "Bevételelemzés és beszedési előrejelzés.",
+    "totalAssessed": "Összes kivetett adó",
+    "totalCollected": "Összes beszedett",
+    "collectionRate": "Beszedési arány",
+    "growthVsLastYear": "Növekedés az előző évhez",
+    "byTaxType": "Adótípus szerint",
+    "monthlyTrend": "Havi trend",
+    "projected": "Tervezett",
+    "collected": "Beszedett",
+    "nextYearEstimate": "Jövő évi becslés",
+    "nextYearNote": "Becslés a HCL inflációs index alapján."
   }
 }

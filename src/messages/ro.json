@@ -60,7 +60,9 @@
     "somatii": "Somații",
     "patrimven": "PatrimVen",
     "notifications": "Notificări",
-    "rateComparison": "Comparație taxe"
+    "rateComparison": "Comparație taxe",
+    "anomalies": "Anomalii",
+    "forecast": "Previziuni"
   },
   "auth": {
     "signIn": "Autentificare",
@@ -777,5 +779,36 @@
     "increase": "Creștere",
     "decrease": "Scădere",
     "unchanged": "Neschimbat"
+  },
+  "anomaly": {
+    "title": "Detectare anomalii",
+    "description": "Anomalii detectate automat în datele fiscale.",
+    "total": "Total anomalii",
+    "critical": "Critice",
+    "high": "Ridicate",
+    "medium": "Medii",
+    "low": "Scăzute",
+    "anomalyList": "Lista anomaliilor",
+    "anomalyListDesc": "Toate anomaliile detectate, sortate după severitate.",
+    "noAnomalies": "Nu au fost detectate anomalii. Datele fiscale sunt corecte.",
+    "severity": "Severitate",
+    "type": "Tip",
+    "entity": "Entitate",
+    "descriptionCol": "Descriere",
+    "action": "Acțiune sugerată"
+  },
+  "forecast": {
+    "title": "Previziuni venituri",
+    "description": "Analiza veniturilor și prognoza colectării.",
+    "totalAssessed": "Total impozite stabilite",
+    "totalCollected": "Total încasat",
+    "collectionRate": "Rată de colectare",
+    "growthVsLastYear": "Creștere vs. anul anterior",
+    "byTaxType": "Pe tip de impozit",
+    "monthlyTrend": "Tendință lunară",
+    "projected": "Proiectat",
+    "collected": "Încasat",
+    "nextYearEstimate": "Estimare anul următor",
+    "nextYearNote": "Estimare bazată pe indicele de inflație din HCL."
   }
 }

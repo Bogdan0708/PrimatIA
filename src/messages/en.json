@@ -60,7 +60,9 @@
     "somatii": "Notices",
     "patrimven": "PatrimVen",
     "notifications": "Notifications",
-    "rateComparison": "Rate comparison"
+    "rateComparison": "Rate comparison",
+    "anomalies": "Anomalies",
+    "forecast": "Forecast"
   },
   "auth": {
     "signIn": "Sign In",
@@ -777,5 +779,36 @@
     "increase": "Increase",
     "decrease": "Decrease",
     "unchanged": "Unchanged"
+  },
+  "anomaly": {
+    "title": "Anomaly Detection",
+    "description": "Automatically detected anomalies in tax data.",
+    "total": "Total anomalies",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "anomalyList": "Anomaly List",
+    "anomalyListDesc": "All detected anomalies, sorted by severity.",
+    "noAnomalies": "No anomalies detected. Tax data is correct.",
+    "severity": "Severity",
+    "type": "Type",
+    "entity": "Entity",
+    "descriptionCol": "Description",
+    "action": "Suggested Action"
+  },
+  "forecast": {
+    "title": "Revenue Forecast",
+    "description": "Revenue analysis and collection forecast.",
+    "totalAssessed": "Total assessed taxes",
+    "totalCollected": "Total collected",
+    "collectionRate": "Collection rate",
+    "growthVsLastYear": "Growth vs. last year",
+    "byTaxType": "By tax type",
+    "monthlyTrend": "Monthly trend",
+    "projected": "Projected",
+    "collected": "Collected",
+    "nextYearEstimate": "Next year estimate",
+    "nextYearNote": "Estimate based on HCL inflation index."
   }
 }

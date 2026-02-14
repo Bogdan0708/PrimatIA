@@ -124,6 +124,18 @@ const adminNavItems: NavItem[] = [
     icon: TrendingUp,
     roles: ["super_admin", "primaria_admin"],
   },
+  {
+    href: "/admin/anomalii",
+    labelKey: "anomalies",
+    icon: AlertTriangle,
+    roles: ["super_admin", "primaria_admin"],
+  },
+  {
+    href: "/admin/previziuni",
+    labelKey: "forecast",
+    icon: BarChart3,
+    roles: ["super_admin", "primaria_admin"],
+  },
 ];
 
 const systemNavItems: NavItem[] = [
