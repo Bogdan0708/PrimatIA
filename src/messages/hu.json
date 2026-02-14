@@ -62,7 +62,8 @@
     "notifications": "Értesítések",
     "rateComparison": "Adó összehasonlítás",
     "anomalies": "Anomáliák",
-    "forecast": "Előrejelzés"
+    "forecast": "Előrejelzés",
+    "regulations": "Jogszabályok"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -73,7 +74,11 @@
     "invalidCredentials": "Érvénytelen hitelesítő adatok",
     "sessionExpired": "A munkamenet lejárt",
     "accessDenied": "Hozzáférés megtagadva",
-    "welcomeBack": "Üdv újra!"
+    "welcomeBack": "Üdv újra!",
+    "roeidLogin": "Bejelentkezés ROeID-vel",
+    "roeidComingSoon": "Hamarosan",
+    "roeidDescription": "Elektronikus hitelesítés román digitális személyazonosítóval (eIDAS)",
+    "identityVerified": "Azonosság igazolva ✓"
   },
   "dashboard": {
     "title": "Irányítópult",
@@ -857,5 +862,18 @@
     "total": "Összesen",
     "success": "Sikeres",
     "failed": "Sikertelen"
+  },
+  "regulations": {
+    "title": "Adójogi szabályozás",
+    "description": "Keresés a román adójogszabályokban — Adótörvénykönyv és Adóeljárási törvénykönyv",
+    "searchPlaceholder": "Keresés az adójogszabályokban...",
+    "search": "Keresés",
+    "searching": "Keresés...",
+    "searchHint": "Példa: épületadó számítás, fogyatékossági mentesség, késedelmi pótlék",
+    "noResults": "Nincs találat. Próbáljon más keresési kifejezéseket.",
+    "showMore": "Több mutatása",
+    "showLess": "Kevesebb mutatása",
+    "welcomeTitle": "Keresés az adójogszabályokban",
+    "welcomeDescription": "Írjon be keresési kifejezéseket a releváns cikkek megtalálásához az Adótörvénykönyvből és az Adóeljárási törvénykönyvből."
   }
 }

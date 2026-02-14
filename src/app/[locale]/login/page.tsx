@@ -93,6 +93,36 @@ export default function LoginPage() {
               {loading ? tCommon("loading") : t("signIn")}
             </Button>
           </form>
+
+          {/* ROeID Integration — Coming Soon */}
+          <div className="mt-6 border-t pt-4">
+            <div className="relative">
+              <Button
+                variant="outline"
+                className="w-full border-blue-300 bg-gradient-to-r from-blue-50 to-yellow-50 text-blue-800 hover:from-blue-100 hover:to-yellow-100 dark:from-blue-950 dark:to-yellow-950 dark:text-blue-300"
+                disabled
+              >
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <circle cx="12" cy="11" r="3" />
+                  <path d="M7 20v-1a5 5 0 0 1 10 0v1" />
+                </svg>
+                {t("roeidLogin")}
+              </Button>
+              <span className="absolute -top-2 right-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">
+                {t("roeidComingSoon")}
+              </span>
+            </div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {t("roeidDescription")}
+            </p>
+            <div className="mt-1 flex items-center justify-center gap-1 text-[10px] text-muted-foreground">
+              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              eIDAS compliant
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

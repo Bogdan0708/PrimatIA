@@ -62,7 +62,8 @@
     "notifications": "Notifications",
     "rateComparison": "Rate comparison",
     "anomalies": "Anomalies",
-    "forecast": "Forecast"
+    "forecast": "Forecast",
+    "regulations": "Legislation"
   },
   "auth": {
     "signIn": "Sign In",
@@ -73,7 +74,11 @@
     "invalidCredentials": "Invalid credentials",
     "sessionExpired": "Session expired",
     "accessDenied": "Access denied",
-    "welcomeBack": "Welcome back!"
+    "welcomeBack": "Welcome back!",
+    "roeidLogin": "Sign in with ROeID",
+    "roeidComingSoon": "Coming soon",
+    "roeidDescription": "Electronic authentication via Romanian digital identity (eIDAS)",
+    "identityVerified": "Identity verified ✓"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -857,5 +862,18 @@
     "total": "Total",
     "success": "Success",
     "failed": "Failed"
+  },
+  "regulations": {
+    "title": "Fiscal Legislation",
+    "description": "Search Romanian fiscal legislation — Fiscal Code and Fiscal Procedure Code",
+    "searchPlaceholder": "Search fiscal legislation...",
+    "search": "Search",
+    "searching": "Searching...",
+    "searchHint": "Example: building tax calculation, disability exemption, late penalties",
+    "noResults": "No results found. Try different search terms.",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "welcomeTitle": "Search fiscal legislation",
+    "welcomeDescription": "Enter search terms to find relevant articles from the Fiscal Code and Fiscal Procedure Code."
   }
 }

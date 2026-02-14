@@ -926,6 +926,7 @@ model CitizenUser {
 
   // Verification
   emailVerified   Boolean   @default(false) @map("email_verified")
+  roeidVerified   Boolean   @default(false) @map("roeid_verified")
   verificationToken String? @map("verification_token") @db.VarChar(255)
   verificationExpires DateTime? @map("verification_expires") @db.Timestamptz
 

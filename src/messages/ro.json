@@ -62,7 +62,8 @@
     "notifications": "Notificări",
     "rateComparison": "Comparație taxe",
     "anomalies": "Anomalii",
-    "forecast": "Previziuni"
+    "forecast": "Previziuni",
+    "regulations": "Legislație"
   },
   "auth": {
     "signIn": "Autentificare",
@@ -73,7 +74,11 @@
     "invalidCredentials": "Credențiale invalide",
     "sessionExpired": "Sesiunea a expirat",
     "accessDenied": "Acces interzis",
-    "welcomeBack": "Bine ai revenit!"
+    "welcomeBack": "Bine ai revenit!",
+    "roeidLogin": "Autentificare cu ROeID",
+    "roeidComingSoon": "În curând",
+    "roeidDescription": "Autentificare electronică prin identitate digitală românească (eIDAS)",
+    "identityVerified": "Identitate verificată ✓"
   },
   "dashboard": {
     "title": "Panou principal",
@@ -857,5 +862,18 @@
     "total": "Total",
     "success": "Reușite",
     "failed": "Eșuate"
+  },
+  "regulations": {
+    "title": "Legislație Fiscală",
+    "description": "Căutați în legislația fiscală românească — Codul Fiscal și Codul de Procedură Fiscală",
+    "searchPlaceholder": "Căutați în legislația fiscală...",
+    "search": "Caută",
+    "searching": "Se caută...",
+    "searchHint": "Exemplu: cum se calculează impozitul pe clădiri, scutire handicap, penalități întârziere",
+    "noResults": "Nu s-au găsit rezultate. Încercați alți termeni de căutare.",
+    "showMore": "Arată mai mult",
+    "showLess": "Arată mai puțin",
+    "welcomeTitle": "Căutați în legislația fiscală",
+    "welcomeDescription": "Introduceți termeni de căutare pentru a găsi articole relevante din Codul Fiscal și Codul de Procedură Fiscală."
   }
 }

@@ -89,7 +89,7 @@ export function searchRegulations(
       results.push({
         entry,
         score,
-        matchedKeywords: [...new Set(matchedKeywords)],
+        matchedKeywords: Array.from(new Set(matchedKeywords)),
       });
     }
   }
