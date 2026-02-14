@@ -1,0 +1,38 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { generateMonthlyReport } from "@/lib/reports/monthly-report";
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const now = new Date();
+    const year = parseInt(searchParams.get("year") ?? String(now.getFullYear()));
+    const month = parseInt(searchParams.get("month") ?? String(now.getMonth() + 1));
+
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+      return NextResponse.json(
+        { error: "Invalid year or month parameter" },
+        { status: 400 }
+      );
+    }
+
+    const report = await generateMonthlyReport({
+      tenantId: session.user.tenantId,
+      year,
+      month,
+    });
+
+    return NextResponse.json({ success: true, data: report });
+  } catch (error) {
+    console.error("Error generating monthly report:", error);
+    return NextResponse.json(
+      { error: "Failed to generate monthly report" },
+      { status: 500 }
+    );
+  }
+}

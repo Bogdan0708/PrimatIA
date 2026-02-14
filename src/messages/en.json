@@ -141,7 +141,8 @@
     "createdSuccessfully": "Taxpayer created successfully",
     "updatedSuccessfully": "Taxpayer updated successfully",
     "showingResults": "Showing {from}-{to} of {total} taxpayers",
-    "page": "Page {current} of {totalPages}"
+    "page": "Page {current} of {totalPages}",
+    "complianceScore": "Compliance"
   },
   "tenant": {
     "title": "Municipalities",
@@ -716,5 +717,38 @@
     "email": "Email",
     "footerText": "Local tax administration platform",
     "copyright": "Local Tax Administration"
+  },
+  "compliance": {
+    "title": "Compliance Score",
+    "timeliness": "Payment Timeliness",
+    "completeness": "Declaration Completeness",
+    "consistency": "Payment Consistency",
+    "disputes": "Dispute History",
+    "avgDaysLate": "Avg. days late"
+  },
+  "monthlyReport": {
+    "title": "Monthly Report",
+    "description": "Automatically generated report with collection and compliance metrics",
+    "totalCollected": "Total Collected",
+    "totalOutstanding": "Total Outstanding",
+    "collectionRate": "Collection Rate",
+    "paymentsCount": "Payments Count",
+    "activeTaxpayers": "Active Taxpayers",
+    "byCategory": "By Tax Category",
+    "byCategoryDesc": "Collections, outstanding and overdue amounts by tax type",
+    "taxCategory": "Tax Category",
+    "collected": "Collected",
+    "outstanding": "Outstanding",
+    "overdue": "Overdue",
+    "collectedChart": "Collections by Category",
+    "topOverdue": "Top 10 Overdue Taxpayers",
+    "topOverdueDesc": "Taxpayers with the largest overdue amounts",
+    "noOverdue": "No taxpayers with overdue debts",
+    "taxpayer": "Taxpayer",
+    "type": "Type",
+    "overdueAmount": "Overdue Amount",
+    "oldestDue": "Oldest Due Date",
+    "generatedAt": "Generated at",
+    "monthlyReports": "Monthly Report"
   }
 }

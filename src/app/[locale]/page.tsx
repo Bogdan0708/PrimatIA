@@ -14,6 +14,8 @@ import {
 
 export default async function PublicLandingPage() {
   const session = await auth();
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   // If staff is logged in, redirect to admin dashboard
   if (session?.user && session.user.role !== "cetatean") {
@@ -21,8 +23,6 @@ export default async function PublicLandingPage() {
   }
 
   const t = await getTranslations("landing");
-  const locale = await getLocale();
-  const localePrefix = `/${locale}`;
 
   // Get the first active tenant for display
   const tenant = await prisma.tenant.findFirst({

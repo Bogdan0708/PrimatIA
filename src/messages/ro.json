@@ -141,7 +141,8 @@
     "createdSuccessfully": "Contribuabil creat cu succes",
     "updatedSuccessfully": "Contribuabil actualizat cu succes",
     "showingResults": "Afișare {from}-{to} din {total} contribuabili",
-    "page": "Pagina {current} din {totalPages}"
+    "page": "Pagina {current} din {totalPages}",
+    "complianceScore": "Scor conformitate"
   },
   "tenant": {
     "title": "Primării",
@@ -716,5 +717,38 @@
     "email": "Email",
     "footerText": "Platformă de administrare a impozitelor și taxelor locale",
     "copyright": "Administrare Taxe Locale"
+  },
+  "compliance": {
+    "title": "Scor conformitate",
+    "timeliness": "Promptitudine plăți",
+    "completeness": "Declarații complete",
+    "consistency": "Consistență plăți",
+    "disputes": "Istoric contestații",
+    "avgDaysLate": "Zile întârziere medie"
+  },
+  "monthlyReport": {
+    "title": "Raport lunar",
+    "description": "Raport automat generat cu indicatori de colectare și conformitate",
+    "totalCollected": "Total încasat",
+    "totalOutstanding": "Restanțe totale",
+    "collectionRate": "Rată de colectare",
+    "paymentsCount": "Nr. plăți",
+    "activeTaxpayers": "Contribuabili activi",
+    "byCategory": "Pe categorii de impozit",
+    "byCategoryDesc": "Încasări, restanțe și întârzieri defalcate pe tip de impozit",
+    "taxCategory": "Categorie impozit",
+    "collected": "Încasat",
+    "outstanding": "Restanțe",
+    "overdue": "Întârziat",
+    "collectedChart": "Încasări pe categorii",
+    "topOverdue": "Top 10 contribuabili restanțieri",
+    "topOverdueDesc": "Contribuabilii cu cele mai mari sume restante",
+    "noOverdue": "Nu există contribuabili cu restanțe",
+    "taxpayer": "Contribuabil",
+    "type": "Tip",
+    "overdueAmount": "Sumă restantă",
+    "oldestDue": "Cea mai veche scadență",
+    "generatedAt": "Generat la",
+    "monthlyReports": "Raport lunar"
   }
 }

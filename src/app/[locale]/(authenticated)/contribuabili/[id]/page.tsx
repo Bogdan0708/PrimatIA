@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getContribuabilById } from "../_actions/contribuabil-actions";
+import { ComplianceScoreBadge } from "../_components/compliance-score-badge";
 
 export default async function ContribuabilDetailPage({
   params,
@@ -155,6 +156,7 @@ export default async function ContribuabilDetailPage({
                 ? t("statusActive")
                 : t("statusInactive")}
             </Badge>
+            <ComplianceScoreBadge contribuabilId={params.id} />
           </div>
           {contribuabil.codRol && (
             <p className="text-sm text-muted-foreground mt-1">

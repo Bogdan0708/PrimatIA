@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
-import { FileDown, BarChart3, Loader2 } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import Link from "next/link";
+import { FileDown, BarChart3, Loader2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ const REPORT_TYPES: { value: ReportType; labelKey: string; icon: string }[] = [
 export default function RapoartePage() {
   const t = useTranslations("report");
   const tc = useTranslations("common");
+  const tm = useTranslations("monthlyReport");
+  const locale = useLocale();
   const [isPending, startTransition] = useTransition();
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
   const [report, setReport] = useState<ReportResult | null>(null);
@@ -118,6 +121,19 @@ export default function RapoartePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Monthly Report Card */}
+      <Link href={`/${locale}/rapoarte/lunar`}>
+        <Card className="hover:border-primary transition-colors cursor-pointer">
+          <CardHeader className="flex flex-row items-center gap-3 pb-3">
+            <Calendar className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">{tm("title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{tm("description")}</p>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Report Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

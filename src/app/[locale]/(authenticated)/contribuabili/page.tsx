@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { deleteContribuabil, getContribuabili } from "./_actions/contribuabil-actions";
 import { ContribuabilSearch } from "./_components/contribuabil-search";
 import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
+import { ComplianceScoreBadge } from "./_components/compliance-score-badge";
 
 export default async function ContribuabiliPage({
   searchParams,
@@ -213,6 +214,9 @@ export default async function ContribuabiliPage({
                   <th className="h-12 px-4 text-left font-medium">
                     {tc("status")}
                   </th>
+                  <th className="h-12 px-4 text-center font-medium">
+                    {t("complianceScore")}
+                  </th>
                   <th className="h-12 px-4 text-left font-medium">
                     {tc("actions")}
                   </th>
@@ -247,6 +251,9 @@ export default async function ContribuabiliPage({
                       <Badge variant={statusVariant(item.status)}>
                         {statusLabel(item.status)}
                       </Badge>
+                    </td>
+                    <td className="p-4 text-center">
+                      <ComplianceScoreBadge contribuabilId={item.id} compact />
                     </td>
                     <td className="p-4">
                       <div className="flex gap-1">

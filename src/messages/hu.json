@@ -141,7 +141,8 @@
     "createdSuccessfully": "Adófizető sikeresen létrehozva",
     "updatedSuccessfully": "Adófizető sikeresen frissítve",
     "showingResults": "{from}-{to} a(z) {total} adófizetőből",
-    "page": "{current}. oldal / {totalPages}"
+    "page": "{current}. oldal / {totalPages}",
+    "complianceScore": "Megfelelőség"
   },
   "tenant": {
     "title": "Önkormányzatok",
@@ -716,5 +717,38 @@
     "email": "E-mail",
     "footerText": "Helyi adókezelési platform",
     "copyright": "Helyi Adókezelés"
+  },
+  "compliance": {
+    "title": "Megfelelőségi pontszám",
+    "timeliness": "Fizetési pontosság",
+    "completeness": "Bevallás teljessége",
+    "consistency": "Fizetési következetesség",
+    "disputes": "Vitaelőzmények",
+    "avgDaysLate": "Átl. késés napokban"
+  },
+  "monthlyReport": {
+    "title": "Havi jelentés",
+    "description": "Automatikusan generált jelentés beszedési és megfelelőségi mutatókkal",
+    "totalCollected": "Összesen beszedve",
+    "totalOutstanding": "Fennálló tartozások",
+    "collectionRate": "Beszedési arány",
+    "paymentsCount": "Fizetések száma",
+    "activeTaxpayers": "Aktív adófizetők",
+    "byCategory": "Adókategória szerint",
+    "byCategoryDesc": "Beszedések, tartozások és késedelmek adótípusonként",
+    "taxCategory": "Adókategória",
+    "collected": "Beszedve",
+    "outstanding": "Fennálló",
+    "overdue": "Lejárt",
+    "collectedChart": "Beszedések kategóriánként",
+    "topOverdue": "Top 10 késedelmes adófizető",
+    "topOverdueDesc": "A legnagyobb késedelmes összegekkel rendelkező adófizetők",
+    "noOverdue": "Nincs késedelmes adófizető",
+    "taxpayer": "Adófizető",
+    "type": "Típus",
+    "overdueAmount": "Késedelmes összeg",
+    "oldestDue": "Legrégebbi határidő",
+    "generatedAt": "Generálva",
+    "monthlyReports": "Havi jelentés"
   }
 }
