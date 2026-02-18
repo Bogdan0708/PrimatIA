@@ -10,6 +10,7 @@ import {
   generateBordeRouIncasari,
 } from "@/lib/documents";
 import { downloadFile, getPresignedUrl } from "@/lib/storage";
+import { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -59,7 +60,7 @@ export async function getDocuments(
   const perPage = params.perPage ?? 20;
   const skip = (page - 1) * perPage;
 
-  const where: Record<string, unknown> = { tenantId: session.user.tenantId };
+  const where: Prisma.DocumentWhereInput = { tenantId: session.user.tenantId };
   if (params.tip) where.tip = params.tip;
   if (params.contribuabilId) where.contribuabilId = params.contribuabilId;
 
@@ -72,7 +73,7 @@ export async function getDocuments(
 
   const [items, total] = await Promise.all([
     prisma.document.findMany({
-      where: where as any,
+      where,
       include: {
         contribuabil: { select: { id: true, nume: true, prenume: true } },
       },
@@ -80,7 +81,7 @@ export async function getDocuments(
       skip,
       take: perPage,
     }),
-    prisma.document.count({ where: where as any }),
+    prisma.document.count({ where }),
   ]);
 
   return {

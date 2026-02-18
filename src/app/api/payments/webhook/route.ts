@@ -3,6 +3,16 @@ import { getStripeClient } from "@/lib/stripe";
 import { prisma, setTenantContext } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
+import {
+  fetchSubscriptionFromInvoice,
+  markTenantInvoiceOutcome,
+  syncTenantFromStripeSubscription,
+} from "@/lib/billing/tenant-subscription";
+
+function getInvoiceSubscriptionId(invoice: unknown): string | undefined {
+  const obj = invoice as { subscription?: string | null };
+  return typeof obj.subscription === "string" ? obj.subscription : undefined;
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -36,6 +46,62 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error("Error handling expired session:", error);
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  if (
+    event.type === "customer.subscription.created" ||
+    event.type === "customer.subscription.updated" ||
+    event.type === "customer.subscription.deleted"
+  ) {
+    const subscription = event.data.object;
+    try {
+      await syncTenantFromStripeSubscription(
+        subscription,
+        typeof subscription.customer === "string" ? subscription.customer : undefined
+      );
+    } catch (error) {
+      console.error("Error syncing tenant subscription status:", error);
+      return NextResponse.json({ error: "Subscription sync failed" }, { status: 500 });
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object;
+    try {
+      await markTenantInvoiceOutcome({
+        customerId: typeof invoice.customer === "string" ? invoice.customer : undefined,
+        subscriptionId: getInvoiceSubscriptionId(invoice),
+        invoiceStatus: invoice.status || "failed",
+        paid: false,
+      });
+    } catch (error) {
+      console.error("Error handling tenant invoice failure:", error);
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  if (event.type === "invoice.payment_succeeded") {
+    const invoice = event.data.object;
+    try {
+      await markTenantInvoiceOutcome({
+        customerId: typeof invoice.customer === "string" ? invoice.customer : undefined,
+        subscriptionId: getInvoiceSubscriptionId(invoice),
+        invoiceStatus: invoice.status || "paid",
+        paid: true,
+      });
+
+      const subscription = await fetchSubscriptionFromInvoice(invoice);
+      if (subscription) {
+        await syncTenantFromStripeSubscription(
+          subscription,
+          typeof invoice.customer === "string" ? invoice.customer : undefined
+        );
+      }
+    } catch (error) {
+      console.error("Error handling tenant invoice success:", error);
     }
     return NextResponse.json({ received: true });
   }

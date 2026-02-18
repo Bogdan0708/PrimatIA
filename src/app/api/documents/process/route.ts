@@ -10,7 +10,7 @@ const VALID_TYPES: DocumentType[] = [
 ];
 
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin();
+  await requireAdmin();
 
   try {
     const contentType = request.headers.get("content-type") || "";

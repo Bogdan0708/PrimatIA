@@ -1,5 +1,5 @@
-import { getLocale, getTranslations } from "next-intl/server";
-import { requireStaff } from "@/lib/auth-utils";
+import { getTranslations } from "next-intl/server";
+import { requireAdmin } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import { getHclDecisionById } from "../../_actions/hcl-actions";
 import { HclEditForm } from "./_components/hcl-edit-form";
@@ -9,9 +9,8 @@ export default async function HclEditPage({
 }: {
   params: { id: string };
 }) {
-  await requireStaff();
+  await requireAdmin();
   const t = await getTranslations("hcl");
-  const locale = await getLocale();
 
   const hcl = await getHclDecisionById(params.id);
   if (!hcl) notFound();

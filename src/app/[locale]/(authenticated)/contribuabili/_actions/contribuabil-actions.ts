@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { setTenantContext } from "@/lib/db";
 import { encryptCnp, hashCnp } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 // Type for the result of actions
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
@@ -49,7 +50,7 @@ export async function getContribuabili(params: ContribuabilListParams = {}): Pro
   const perPage = params.perPage ?? 20;
   const skip = (page - 1) * perPage;
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.ContribuabilWhereInput = {
     tenantId: session.user.tenantId,
     deletedAt: null,
   };
@@ -59,7 +60,7 @@ export async function getContribuabili(params: ContribuabilListParams = {}): Pro
 
   const normalizedQuery = params.query?.trim();
   if (normalizedQuery) {
-    const orConditions: Record<string, unknown>[] = [
+    const orConditions: Prisma.ContribuabilWhereInput[] = [
       { nume: { contains: normalizedQuery, mode: "insensitive" } },
       { prenume: { contains: normalizedQuery, mode: "insensitive" } },
       { cui: { contains: normalizedQuery, mode: "insensitive" } },
@@ -76,7 +77,7 @@ export async function getContribuabili(params: ContribuabilListParams = {}): Pro
 
   const [items, total] = await Promise.all([
     prisma.contribuabil.findMany({
-      where: where as any,
+      where,
       select: {
         id: true,
         tip: true,
@@ -93,7 +94,7 @@ export async function getContribuabili(params: ContribuabilListParams = {}): Pro
       skip,
       take: perPage,
     }),
-    prisma.contribuabil.count({ where: where as any }),
+    prisma.contribuabil.count({ where }),
   ]);
 
   return {
@@ -301,7 +302,7 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
     const statusVal = (formData.get("status") as string) || "activ";
     const note = formData.get("note") as string | null;
 
-    const updateData: Record<string, unknown> = {
+    const updateData: Prisma.ContribuabilUpdateInput = {
       tip,
       nume,
       prenume: prenume || null,
@@ -325,7 +326,7 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
 
     await prisma.contribuabil.update({
       where: { id },
-      data: updateData as any,
+      data: updateData,
     });
 
     revalidatePath("/contribuabili");

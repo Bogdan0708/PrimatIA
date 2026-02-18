@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import { requireStaff } from "@/lib/auth-utils";
+import { requireAdmin } from "@/lib/auth-utils";
 import { HclNewForm } from "./_components/hcl-new-form";
 
 export default async function HclNewPage() {
-  await requireStaff();
+  await requireAdmin();
   const t = await getTranslations("hcl");
 
   return (

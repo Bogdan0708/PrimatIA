@@ -1,8 +1,10 @@
 import { getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 import { getImportBatches } from "./_actions/import-actions";
 import { ImportUpload } from "./_components/import-upload";
 
@@ -10,6 +12,8 @@ export default async function ImportPage() {
   await requireAdmin();
   const t = await getTranslations("import");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const batches = await getImportBatches();
 
@@ -78,7 +82,14 @@ export default async function ImportPage() {
               {batches.map((batch) => (
                 <tr key={batch.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="p-4">{entityLabel(batch.entityType)}</td>
-                  <td className="p-4 font-mono text-xs">{batch.filename}</td>
+                  <td className="p-4 font-mono text-xs">
+                    <Link
+                      href={`${localePrefix}/admin/import/${batch.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {batch.filename}
+                    </Link>
+                  </td>
                   <td className="p-4">{batch.totalRows}</td>
                   <td className="p-4">{batch.importedRows}</td>
                   <td className="p-4">{batch.errorRows > 0 ? <span className="text-destructive font-medium">{batch.errorRows}</span> : "0"}</td>

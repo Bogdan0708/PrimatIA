@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Role } from "@/lib/constants";
 import { getLocale } from "next-intl/server";
+import { prisma } from "@/lib/db";
 
 /**
  * Get the current session, redirecting to login if not authenticated.
@@ -12,6 +13,18 @@ export async function requireAuth() {
     const locale = await getLocale();
     redirect(`/${locale}/login`);
   }
+
+  if (session.user.tenantId) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.user.tenantId },
+      select: { status: true },
+    });
+    if (!tenant || !["active", "trial"].includes(tenant.status)) {
+      const locale = await getLocale();
+      redirect(`/${locale}/unauthorized`);
+    }
+  }
+
   return session;
 }
 

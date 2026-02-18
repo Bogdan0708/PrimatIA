@@ -205,14 +205,18 @@ export default function middleware(request: NextRequest) {
     pathname.startsWith("/portal") &&
     !pathname.startsWith("/portal/login") &&
     !pathname.startsWith("/portal/register") &&
-    !pathname.startsWith("/portal/verify");
+    !pathname.startsWith("/portal/verify") &&
+    !pathname.startsWith("/portal/forgot-password") &&
+    !pathname.startsWith("/portal/reset-password");
 
   // Also check for locale-prefixed portal routes (e.g., /ro/portal/dashboard)
   const localePattern = LOCALES.join("|");
   const localePortalMatch = pathname.match(new RegExp(`^/(${localePattern})/portal`));
   const isLocaleProtectedPortalRoute =
     localePortalMatch &&
-    !pathname.match(new RegExp(`^/(${localePattern})/portal/(login|register|verify)`));
+    !pathname.match(
+      new RegExp(`^/(${localePattern})/portal/(login|register|verify|forgot-password|reset-password)`)
+    );
 
   if (isProtectedPortalRoute || isLocaleProtectedPortalRoute) {
     const citizenToken = request.cookies.get("citizen-token");

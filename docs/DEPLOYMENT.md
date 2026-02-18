@@ -33,10 +33,20 @@ Editați `.env` și completați **toate** valorile:
 | `NEXTAUTH_SECRET` | Secret sesiuni NextAuth | `openssl rand -base64 32` |
 | `AUTH_SECRET` | Identic cu NEXTAUTH_SECRET | — |
 | `JWT_SECRET` | Secret JWT portal cetățeni | `openssl rand -base64 32` |
+| `PAYMENT_MODE` | Mod plată (`stripe` în producție) | — |
+| `STRIPE_MUNICIPAL_PRICE_ID` | Price ID Stripe pentru abonament primărie | Dashboard Stripe |
+| `STRIPE_PRICE_COMUNA_ID` | Price ID Stripe pentru tier comuna | Dashboard Stripe |
+| `STRIPE_PRICE_ORAS_ID` | Price ID Stripe pentru tier oras | Dashboard Stripe |
+| `STRIPE_PRICE_MUNICIPIU_ID` | Price ID Stripe pentru tier municipiu | Dashboard Stripe |
+| `ROEID_ENABLED` | Feature flag ROeID (`false` până la integrare certificată) | — |
+| `NEXT_PUBLIC_ROEID_ENABLED` | Feature flag UI ROeID (țineți în sync cu `ROEID_ENABLED`) | — |
+| `ROEID_CLIENT_ID` | Client ID ROeID (doar când activați integrarea) | Furnizor ROeID |
+| `ROEID_CLIENT_SECRET` | Client secret ROeID (doar când activați integrarea) | Furnizor ROeID |
 | `REDIS_PASSWORD` | Parola Redis | `openssl rand -base64 24` |
 | `MINIO_ACCESS_KEY` | Cheie acces MinIO | `openssl rand -hex 16` |
 | `MINIO_SECRET_KEY` | Cheie secretă MinIO | `openssl rand -hex 32` |
-| `ENCRYPTION_KEY` | Cheie criptare CNP (AES-256) | `openssl rand -hex 32` |
+| `CNP_ENCRYPTION_KEY` | Cheie criptare CNP (AES-256) | `openssl rand -hex 32` |
+| `CNP_TENANT_SALT_SECRET` | Salt hash CNP per tenant | `openssl rand -base64 32` |
 | `NEXTAUTH_URL` | URL-ul public al aplicației | `https://primaria.exemplu.ro` |
 | `SUPER_ADMIN_EMAIL` | Email super admin | — |
 | `SUPER_ADMIN_PASSWORD` | Parola super admin | — |
@@ -96,6 +106,9 @@ docker compose -f docker-compose.production.yml logs -f app
 ## 5. Migrarea Bazei de Date
 
 ```bash
+# Preflight (schema, client, migration status, optional drift check)
+docker compose -f docker-compose.production.yml exec app npm run db:preflight
+
 # Rulare migrări Prisma
 docker compose -f docker-compose.production.yml exec app npx prisma migrate deploy
 
@@ -104,6 +117,28 @@ docker compose -f docker-compose.production.yml exec app npm run db:seed
 ```
 
 **Important:** `prisma migrate deploy` rulează migrările fără a crea noi migrări. Utilizați `prisma migrate dev` doar în mediul de dezvoltare.
+
+Pentru verificare strictă de drift (migrations vs schema), setați `SHADOW_DATABASE_URL` și rulați:
+
+```bash
+docker compose -f docker-compose.production.yml exec app npm run db:preflight:strict
+```
+
+Repetiție import/rollback pe staging (după deploy, înainte de producție):
+
+```bash
+docker compose -f docker-compose.production.yml exec app npm run ops:import-rehearsal -- --mode checklist --tenant-id <TENANT_ID>
+```
+
+Gate script local/CI:
+
+```bash
+npm run ops:staging-gate
+# opțional, cu verificare import:
+TENANT_ID=<TENANT_ID> IMPORT_BATCH_ID=<BATCH_ID> npm run ops:staging-gate -- --verify-import
+# opțional, cu verificare rollback:
+TENANT_ID=<TENANT_ID> ROLLBACK_BATCH_ID=<BATCH_ID> npm run ops:staging-gate -- --verify-rollback
+```
 
 ## 6. Verificare Health Check
 

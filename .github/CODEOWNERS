@@ -1,0 +1,9 @@
+# Release governance and go-live controls
+/.github/workflows/staging-release-gate.yml @Bogdan0708
+/.github/pull_request_template.md @Bogdan0708
+/docs/DB_RELEASE_RUNBOOK.md @Bogdan0708
+/docs/RELEASE_EVIDENCE.md @Bogdan0708
+/docs/PRODUCTION_READINESS_PLAN.md @Bogdan0708
+/scripts/staging-release-gate.sh @Bogdan0708
+/scripts/import-rollback-rehearsal.mjs @Bogdan0708
+/scripts/new-release-evidence.sh @Bogdan0708

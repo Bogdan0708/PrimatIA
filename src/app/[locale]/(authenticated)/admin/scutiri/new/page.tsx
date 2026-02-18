@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import { requireStaff } from "@/lib/auth-utils";
+import { requireAdmin } from "@/lib/auth-utils";
 import { ScutireNewForm } from "./_components/scutire-new-form";
 
 export default async function ScutireNewPage() {
-  await requireStaff();
+  await requireAdmin();
   const t = await getTranslations("exemption");
 
   return (

@@ -4,6 +4,7 @@ import type {
   HclDecisionContext,
   ExemptionContext,
 } from "@/lib/tax-engine/types";
+import type { TaxRateTable } from "@prisma/client";
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -64,7 +65,7 @@ function mockVehicleRate(rateValue: number, category?: string) {
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
-  } as any);
+  } as unknown as TaxRateTable);
 }
 
 // --- Tests ---

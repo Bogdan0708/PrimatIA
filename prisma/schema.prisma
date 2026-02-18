@@ -71,6 +71,7 @@ model Tenant {
   penalitati            Penalitate[]
   proprietatiDetinatori ProprietateDetinator[]
   importBatches         ImportBatch[]
+  importRowLedgers      ImportRowLedger[]
   auditLogs             AuditLog[]
   exportJobs            ExportJob[]
   citizenUsers          CitizenUser[]
@@ -79,6 +80,7 @@ model Tenant {
   certificateRequests   CertificateRequest[]
   contactMessages       ContactMessage[]
   chitantaSequences     ChitantaSequence[]
+  passwordResetTokens   PasswordResetToken[]
 
   @@map("tenants")
 }
@@ -114,6 +116,7 @@ model TenantUser {
   importBatchesImported   ImportBatch[]         @relation("ImportedByUser")
   importBatchesRolledBack ImportBatch[]         @relation("RolledBackByUser")
   exportJobsRequested    ExportJob[]           @relation("ExportRequestedByUser")
+  passwordResetTokens     PasswordResetToken[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -838,8 +841,31 @@ model ImportBatch {
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   importedBy TenantUser? @relation("ImportedByUser", fields: [importedById], references: [id])
   rollbackBy TenantUser? @relation("RolledBackByUser", fields: [rollbackById], references: [id])
+  rowLedgers  ImportRowLedger[]
 
   @@map("import_batches")
+}
+
+model ImportRowLedger {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  batchId  String @map("batch_id") @db.Uuid
+
+  entityType     String  @map("entity_type") @db.VarChar(50)
+  rowHash        String  @map("row_hash") @db.VarChar(64)
+  entityRecordId String? @map("entity_record_id") @db.Uuid
+  status         String  @default("imported") @db.VarChar(20) // imported, skipped, failed, rolled_back
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  rolledBackAt DateTime? @map("rolled_back_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  batch  ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entityType, rowHash])
+  @@index([tenantId, batchId])
+  @@index([tenantId, entityType, status])
+  @@map("import_row_ledgers")
 }
 
 model AuditLog {
@@ -949,10 +975,33 @@ model CitizenUser {
   certificateRequests CertificateRequest[]
   onlinePayments      OnlinePayment[]
   contactMessages     ContactMessage[]
+  passwordResetTokens PasswordResetToken[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("citizen_users")
+}
+
+model PasswordResetToken {
+  id           String  @id @default(uuid()) @db.Uuid
+  tenantId     String  @map("tenant_id") @db.Uuid
+  userType     String  @map("user_type") @db.VarChar(20) // staff, citizen
+  tenantUserId String? @map("tenant_user_id") @db.Uuid
+  citizenUserId String? @map("citizen_user_id") @db.Uuid
+  email        String  @db.VarChar(255)
+  tokenHash    String  @unique @map("token_hash") @db.VarChar(64)
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+  usedAt       DateTime? @map("used_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantUser  TenantUser? @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
+  citizenUser CitizenUser? @relation(fields: [citizenUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, userType, email])
+  @@index([tenantUserId])
+  @@index([citizenUserId])
+  @@map("password_reset_tokens")
 }
 
 model CitizenContribuabilLink {

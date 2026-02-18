@@ -141,7 +141,17 @@ export function getMockGatewayProvider(): MockGatewayProvider {
  * Switch between mock and real based on PAYMENT_MODE env var.
  */
 export function getPaymentGateway(): GatewayProvider {
-  if (process.env.PAYMENT_MODE === "stripe") {
+  const paymentMode =
+    process.env.PAYMENT_MODE ??
+    (process.env.NODE_ENV === "production" ? "stripe" : "mock");
+
+  if (process.env.NODE_ENV === "production" && paymentMode !== "stripe") {
+    throw new Error(
+      `Invalid PAYMENT_MODE '${paymentMode}' in production. Set PAYMENT_MODE=stripe.`
+    );
+  }
+
+  if (paymentMode === "stripe") {
     // Dynamic import to avoid loading Stripe SDK when not needed
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getStripeProvider } = require("./stripe-provider");

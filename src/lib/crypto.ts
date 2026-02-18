@@ -5,8 +5,8 @@ const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
 function getEncryptionKey(): Buffer {
-  const key = process.env.CNP_ENCRYPTION_KEY;
-  if (!key) throw new Error("CNP_ENCRYPTION_KEY is not set");
+  const key = process.env.CNP_ENCRYPTION_KEY || process.env.ENCRYPTION_KEY;
+  if (!key) throw new Error("CNP_ENCRYPTION_KEY/ENCRYPTION_KEY is not set");
   return Buffer.from(key, "hex");
 }
 
@@ -50,8 +50,13 @@ export function decryptCnp(encryptedData: Buffer): string {
  * Generate a SHA-256 hash of CNP with per-tenant salt for lookup.
  */
 export function hashCnp(cnp: string, tenantId: string): string {
-  const salt = process.env.CNP_TENANT_SALT_SECRET;
-  if (!salt) throw new Error("CNP_TENANT_SALT_SECRET is not set");
+  const salt =
+    process.env.CNP_TENANT_SALT_SECRET || process.env.TENANT_SALT_SECRET;
+  if (!salt) {
+    throw new Error(
+      "CNP_TENANT_SALT_SECRET/TENANT_SALT_SECRET is not set"
+    );
+  }
 
   return createHash("sha256")
     .update(`${tenantId}:${salt}:${cnp}`)

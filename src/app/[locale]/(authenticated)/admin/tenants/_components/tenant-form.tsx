@@ -169,6 +169,17 @@ export function TenantForm({ initialData }: TenantFormProps) {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="admin_password">Admin Password *</Label>
+              <Input
+                id="admin_password"
+                name="admin_password"
+                type="password"
+                required
+                minLength={12}
+                placeholder="Minimum 12 characters"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="phone">{tForm("number")}</Label>
               <Input
                 id="phone"

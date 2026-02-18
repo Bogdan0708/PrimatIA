@@ -36,6 +36,15 @@ export class RoeidNotImplementedError extends Error {
   }
 }
 
+export class RoeidDisabledError extends Error {
+  constructor() {
+    super(
+      "ROeID integration is disabled. Set ROEID_ENABLED=true and configure ROEID_CLIENT_ID / ROEID_CLIENT_SECRET to enable it."
+    );
+    this.name = "RoeidDisabledError";
+  }
+}
+
 export class RoeidProvider {
   private discoveryUrl: string;
   private clientId: string;
@@ -53,7 +62,17 @@ export class RoeidProvider {
    * Check if ROeID integration is enabled via environment variable.
    */
   static isEnabled(): boolean {
-    return process.env.ROEID_ENABLED === "true";
+    return (
+      process.env.ROEID_ENABLED === "true" &&
+      Boolean(process.env.ROEID_CLIENT_ID) &&
+      Boolean(process.env.ROEID_CLIENT_SECRET)
+    );
+  }
+
+  private assertEnabled() {
+    if (!RoeidProvider.isEnabled()) {
+      throw new RoeidDisabledError();
+    }
   }
 
   /**
@@ -64,6 +83,7 @@ export class RoeidProvider {
    */
   async initiateAuth(redirectUri: string): Promise<string> {
     void redirectUri;
+    this.assertEnabled();
     throw new RoeidNotImplementedError("initiateAuth");
   }
 
@@ -75,6 +95,7 @@ export class RoeidProvider {
    */
   async handleCallback(code: string): Promise<RoeidProfile> {
     void code;
+    this.assertEnabled();
     throw new RoeidNotImplementedError("handleCallback");
   }
 
@@ -85,6 +106,7 @@ export class RoeidProvider {
    */
   async verifyIdentity(cnp: string): Promise<boolean> {
     void cnp;
+    this.assertEnabled();
     throw new RoeidNotImplementedError("verifyIdentity");
   }
 
@@ -97,6 +119,7 @@ export class RoeidProvider {
     void this.discoveryUrl;
     void this.clientId;
     void this.clientSecret;
+    this.assertEnabled();
     throw new RoeidNotImplementedError("getDiscoveryDocument");
   }
 }

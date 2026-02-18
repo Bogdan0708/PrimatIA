@@ -1,5 +1,5 @@
-import { getLocale, getTranslations } from "next-intl/server";
-import { requireStaff } from "@/lib/auth-utils";
+import { getTranslations } from "next-intl/server";
+import { requireAdmin } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import { getScutireRegulaById } from "../../_actions/scutire-actions";
 import { ScutireEditForm } from "./_components/scutire-edit-form";
@@ -9,9 +9,8 @@ export default async function ScutireEditPage({
 }: {
   params: { id: string };
 }) {
-  await requireStaff();
+  await requireAdmin();
   const t = await getTranslations("exemption");
-  const locale = await getLocale();
 
   const regula = await getScutireRegulaById(params.id);
   if (!regula) notFound();

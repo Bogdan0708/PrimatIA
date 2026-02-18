@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 // Type for the result of actions
 type ActionResult<T = void> =
@@ -32,7 +33,7 @@ export async function getCladiri(params: CladireListParams = {}) {
   const perPage = params.perPage ?? 20;
   const skip = (page - 1) * perPage;
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.ProprietateCladireWhereInput = {
     tenantId: session.user.tenantId,
     deletedAt: null,
   };
@@ -63,7 +64,7 @@ export async function getCladiri(params: CladireListParams = {}) {
 
   const [items, total] = await Promise.all([
     prisma.proprietateCladire.findMany({
-      where: where as any,
+      where,
       include: {
         contribuabil: {
           select: { id: true, nume: true, prenume: true, tip: true },
@@ -74,7 +75,7 @@ export async function getCladiri(params: CladireListParams = {}) {
       skip,
       take: perPage,
     }),
-    prisma.proprietateCladire.count({ where: where as any }),
+    prisma.proprietateCladire.count({ where }),
   ]);
 
   return {

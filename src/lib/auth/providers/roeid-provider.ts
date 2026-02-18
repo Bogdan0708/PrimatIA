@@ -54,10 +54,13 @@ export class RoeidAuthProvider {
    * Used when a citizen authenticates via ROeID for the first time.
    */
   async linkToContribuabil(
-    _tenantId: string,
-    _citizenUserId: string,
-    _profile: RoeidProfile
+    tenantId: string,
+    citizenUserId: string,
+    profile: RoeidProfile
   ): Promise<{ linked: boolean; contribuabilId?: string }> {
+    void tenantId;
+    void citizenUserId;
+    void profile;
     throw new RoeidNotImplementedError("linkToContribuabil");
   }
 }

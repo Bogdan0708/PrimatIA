@@ -1,0 +1,88 @@
+name: Staging Release Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant_id:
+        description: "Tenant ID for import/rollback verification"
+        required: false
+        type: string
+      import_batch_id:
+        description: "Batch ID to verify import invariants"
+        required: false
+        type: string
+      rollback_batch_id:
+        description: "Batch ID to verify rollback invariants"
+        required: false
+        type: string
+
+jobs:
+  staging-gate:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      DIRECT_DATABASE_URL: ${{ secrets.STAGING_DIRECT_DATABASE_URL }}
+      SHADOW_DATABASE_URL: ${{ secrets.STAGING_SHADOW_DATABASE_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.STAGING_NEXTAUTH_SECRET }}
+      JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
+      CNP_ENCRYPTION_KEY: ${{ secrets.STAGING_CNP_ENCRYPTION_KEY }}
+      CNP_TENANT_SALT_SECRET: ${{ secrets.STAGING_CNP_TENANT_SALT_SECRET }}
+      TENANT_ID: ${{ inputs.tenant_id }}
+      IMPORT_BATCH_ID: ${{ inputs.import_batch_id }}
+      ROLLBACK_BATCH_ID: ${{ inputs.rollback_batch_id }}
+      RC_ID: RC-${{ github.run_number }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run staging release gate
+        shell: bash
+        run: |
+          FLAGS=""
+          if [[ -n "${IMPORT_BATCH_ID}" ]]; then
+            FLAGS="${FLAGS} --verify-import"
+          fi
+          if [[ -n "${ROLLBACK_BATCH_ID}" ]]; then
+            FLAGS="${FLAGS} --verify-rollback"
+          fi
+          npm run ops:staging-gate -- ${FLAGS} | tee staging-gate.log
+
+      - name: Generate release evidence draft
+        shell: bash
+        run: |
+          npm run ops:release-evidence:new -- --rc "${RC_ID}" --env staging --author "${{ github.actor }}"
+          EVIDENCE_FILE="$(ls -1t docs/releases/*.md | head -n 1)"
+          {
+            echo ""
+            echo "## 7. CI Autofill"
+            echo "- Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Commit: ${{ github.sha }}"
+            echo "- Actor: ${{ github.actor }}"
+            echo "- Tenant ID input: ${TENANT_ID:-<none>}"
+            echo "- Import batch ID input: ${IMPORT_BATCH_ID:-<none>}"
+            echo "- Rollback batch ID input: ${ROLLBACK_BATCH_ID:-<none>}"
+            echo ""
+            echo "### Staging Gate Output (tail)"
+            echo '```text'
+            tail -n 120 staging-gate.log || true
+            echo '```'
+          } >> "${EVIDENCE_FILE}"
+
+      - name: Upload release evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-${{ github.run_number }}
+          path: |
+            docs/releases/*.md
+            staging-gate.log

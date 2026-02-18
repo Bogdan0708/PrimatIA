@@ -25,7 +25,7 @@ export const QUEUE_NAMES = {
   NOTIFICATION_BATCH: "notification-batch",
 } as const;
 
-let queues: Map<string, Queue> = new Map();
+const queues: Map<string, Queue> = new Map();
 
 export function getQueue(name: string): Queue {
   if (!queues.has(name)) {

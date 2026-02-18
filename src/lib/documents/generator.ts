@@ -1,5 +1,6 @@
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
+import type { DocumentProps } from "@react-pdf/renderer";
 import { prisma, setTenantContext } from "@/lib/db";
 import { uploadFile, buildDocumentPath } from "@/lib/storage";
 import { formatNumber, formatLei, formatDate, numberToWords, generateDocumentNumber } from "@/lib/formatting";
@@ -20,6 +21,7 @@ import type {
   ChitantaData,
   BordeRouIncasariData,
 } from "./types";
+import { Prisma } from "@prisma/client";
 
 // ============================================================================
 // Helper: get tenant info for document header
@@ -120,7 +122,7 @@ async function storeDocument(
   contribuabilId: string | null,
   tip: string,
   documentNumber: string,
-  dataJson: Record<string, unknown>,
+  dataJson: Prisma.InputJsonValue,
   pdfBuffer: Buffer,
   relatedIds?: { impozitId?: string; somatieId?: string }
 ): Promise<string> {
@@ -139,7 +141,7 @@ async function storeDocument(
       numarDocument: documentNumber,
       dataDocument: new Date(),
       templateId: tip,
-      dataJson: dataJson as any,
+      dataJson,
       fileUrl: path,
       fileSizeBytes: pdfBuffer.length,
       status: "generat",
@@ -229,14 +231,16 @@ export async function generateDecizieImpunere(
   };
 
   const element = React.createElement(DecizieImpunerePDF, { data });
-  const pdfBuffer = await renderToBuffer(element as any);
+  const pdfBuffer = await renderToBuffer(
+    element as unknown as React.ReactElement<DocumentProps>
+  );
 
   return storeDocument(
     tenantId,
     contribuabilId,
     "decizie_impunere",
     documentNumber,
-    data as unknown as Record<string, unknown>,
+    data as unknown as Prisma.InputJsonValue,
     Buffer.from(pdfBuffer)
   );
 }
@@ -298,14 +302,16 @@ export async function generateSomatie(
   };
 
   const element = React.createElement(SomatiePDF, { data });
-  const pdfBuffer = await renderToBuffer(element as any);
+  const pdfBuffer = await renderToBuffer(
+    element as unknown as React.ReactElement<DocumentProps>
+  );
 
   return storeDocument(
     tenantId,
     somatie.contribuabilId,
     "somatie",
     documentNumber,
-    data as unknown as Record<string, unknown>,
+    data as unknown as Prisma.InputJsonValue,
     Buffer.from(pdfBuffer),
     { somatieId }
   );
@@ -372,14 +378,16 @@ export async function generateCertificatAtestare(
   };
 
   const element = React.createElement(CertificatAtestarePDF, { data });
-  const pdfBuffer = await renderToBuffer(element as any);
+  const pdfBuffer = await renderToBuffer(
+    element as unknown as React.ReactElement<DocumentProps>
+  );
 
   return storeDocument(
     tenantId,
     contribuabilId,
     "certificat_atestare",
     documentNumber,
-    data as unknown as Record<string, unknown>,
+    data as unknown as Prisma.InputJsonValue,
     Buffer.from(pdfBuffer)
   );
 }
@@ -446,14 +454,16 @@ export async function generateChitanta(
   };
 
   const element = React.createElement(ChitantaPDF, { data });
-  const pdfBuffer = await renderToBuffer(element as any);
+  const pdfBuffer = await renderToBuffer(
+    element as unknown as React.ReactElement<DocumentProps>
+  );
 
   return storeDocument(
     tenantId,
     plata.contribuabilId,
     "chitanta",
     documentNumber,
-    data as unknown as Record<string, unknown>,
+    data as unknown as Prisma.InputJsonValue,
     Buffer.from(pdfBuffer)
   );
 }
@@ -532,14 +542,16 @@ export async function generateBordeRouIncasari(
   };
 
   const element = React.createElement(BordeRouIncasariPDF, { data });
-  const pdfBuffer = await renderToBuffer(element as any);
+  const pdfBuffer = await renderToBuffer(
+    element as unknown as React.ReactElement<DocumentProps>
+  );
 
   return storeDocument(
     tenantId,
     null,
     "borderou_incasari",
     documentNumber,
-    data as unknown as Record<string, unknown>,
+    data as unknown as Prisma.InputJsonValue,
     Buffer.from(pdfBuffer)
   );
 }

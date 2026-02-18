@@ -3,9 +3,18 @@ import { authenticateCitizen } from "@/lib/citizen-auth";
 import { prisma } from "@/lib/db";
 import { SignJWT } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.CITIZEN_JWT_SECRET || process.env.NEXTAUTH_SECRET || "citizen-secret-key"
-);
+const citizenJwtSecret =
+  process.env.JWT_SECRET ||
+  process.env.CITIZEN_JWT_SECRET ||
+  process.env.NEXTAUTH_SECRET;
+
+if (!citizenJwtSecret) {
+  throw new Error(
+    "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
+  );
+}
+
+const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,7 +92,7 @@ export async function POST(request: NextRequest) {
 
 async function getDefaultTenantId(): Promise<string | null> {
   const tenant = await prisma.tenant.findFirst({
-    where: { status: "active", deletedAt: null },
+    where: { status: { in: ["active", "trial"] }, deletedAt: null },
     select: { id: true },
   });
   return tenant?.id || null;

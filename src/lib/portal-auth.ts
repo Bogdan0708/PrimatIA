@@ -3,10 +3,20 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
+import { prisma } from "@/lib/db";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.CITIZEN_JWT_SECRET || process.env.NEXTAUTH_SECRET || "citizen-secret-key"
-);
+const citizenJwtSecret =
+  process.env.JWT_SECRET ||
+  process.env.CITIZEN_JWT_SECRET ||
+  process.env.NEXTAUTH_SECRET;
+
+if (!citizenJwtSecret) {
+  throw new Error(
+    "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
+  );
+}
+
+const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);
 
 export interface CitizenSession {
   sub: string;
@@ -16,6 +26,24 @@ export interface CitizenSession {
   lastName: string;
   role: "cetatean";
   isCitizen: true;
+}
+
+async function isCitizenSessionValid(session: CitizenSession): Promise<boolean> {
+  const user = await prisma.citizenUser.findFirst({
+    where: {
+      id: session.sub,
+      tenantId: session.tenantId,
+      isActive: true,
+      emailVerified: true,
+      deletedAt: null,
+      tenant: {
+        status: { in: ["active", "trial"] },
+        deletedAt: null,
+      },
+    },
+    select: { id: true },
+  });
+  return Boolean(user);
 }
 
 /**
@@ -29,7 +57,9 @@ export async function getCitizenSession(): Promise<CitizenSession | null> {
 
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as CitizenSession;
+    const session = payload as unknown as CitizenSession;
+    if (!(await isCitizenSessionValid(session))) return null;
+    return session;
   } catch {
     return null;
   }
@@ -45,7 +75,9 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
 
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as CitizenSession;
+    const session = payload as unknown as CitizenSession;
+    if (!(await isCitizenSessionValid(session))) return null;
+    return session;
   } catch {
     return null;
   }

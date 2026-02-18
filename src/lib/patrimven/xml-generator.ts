@@ -450,7 +450,8 @@ export async function generateF3101(
 // XSD Validation stub
 // ============================================================================
 
-export function validateXml(xml: string, _formType: string): { valid: boolean; errors: string[] } {
+export function validateXml(xml: string, formType: string): { valid: boolean; errors: string[] } {
+  void formType;
   // Stub: actual XSD validation requires ANAF-provided XSD schema files.
   // When XSD files are available, integrate with a library like libxmljs or fast-xml-parser's validator.
   const errors: string[] = [];

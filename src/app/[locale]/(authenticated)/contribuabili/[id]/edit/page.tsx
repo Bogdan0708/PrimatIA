@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import { getContribuabilById } from "../../_actions/contribuabil-actions";
@@ -11,7 +11,6 @@ export default async function ContribuabilEditPage({
 }) {
   await requireStaff();
   const t = await getTranslations("taxpayer");
-  const locale = await getLocale();
 
   const contribuabil = await getContribuabilById(params.id);
   if (!contribuabil) notFound();

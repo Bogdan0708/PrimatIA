@@ -1,9 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth-utils";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -16,16 +17,16 @@ type ActionResult<T = void> =
 export async function getScutiriReguli(
   params: { isActive?: boolean; taxType?: string } = {}
 ) {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
   await setTenantContext(session.user.tenantId);
 
-  const where: Record<string, unknown> = { tenantId: session.user.tenantId };
+  const where: Prisma.ScutireRegulaWhereInput = { tenantId: session.user.tenantId };
   if (params.isActive !== undefined) where.isActive = params.isActive;
   if (params.taxType) where.taxTypes = { has: params.taxType };
 
   return prisma.scutireRegula.findMany({
-    where: where as any,
+    where,
     include: {
       _count: { select: { scutiriContribuabil: true } },
     },
@@ -38,7 +39,7 @@ export async function getScutiriReguli(
 // ============================================================================
 
 export async function getScutireRegulaById(id: string) {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
   await setTenantContext(session.user.tenantId);
 
@@ -67,7 +68,7 @@ export async function getScutireRegulaById(id: string) {
 export async function createScutireRegula(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -100,7 +101,7 @@ export async function createScutireRegula(
       : [];
 
     // Parse conditions JSON
-    let conditions = {};
+    let conditions: Prisma.InputJsonValue = {};
     const conditionsRaw = formData.get("conditions") as string;
     if (conditionsRaw) {
       try {
@@ -112,7 +113,7 @@ export async function createScutireRegula(
 
     // Parse required documents array
     const requiredDocsRaw = formData.get("requiredDocuments") as string;
-    const requiredDocuments = requiredDocsRaw
+    const requiredDocuments: string[] = requiredDocsRaw
       ? requiredDocsRaw.split(",").map((d) => d.trim()).filter(Boolean)
       : [];
 
@@ -124,8 +125,8 @@ export async function createScutireRegula(
         legalBasis,
         taxTypes,
         discountPercent,
-        conditions: conditions as any,
-        requiredDocuments: requiredDocuments as any,
+        conditions,
+        requiredDocuments,
         autoRenewable: formData.get("autoRenewable") === "true",
         isActive: true,
         validFrom: formData.get("validFrom")
@@ -153,7 +154,7 @@ export async function updateScutireRegula(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -180,7 +181,7 @@ export async function updateScutireRegula(
       ? taxTypesRaw.split(",").map((t) => t.trim()).filter(Boolean)
       : [];
 
-    let conditions = existing.conditions;
+    let conditions: Prisma.InputJsonValue = existing.conditions as Prisma.InputJsonValue;
     const conditionsRaw = formData.get("conditions") as string;
     if (conditionsRaw) {
       try {
@@ -191,7 +192,7 @@ export async function updateScutireRegula(
     }
 
     const requiredDocsRaw = formData.get("requiredDocuments") as string;
-    const requiredDocuments = requiredDocsRaw
+    const requiredDocuments: string[] = requiredDocsRaw
       ? requiredDocsRaw.split(",").map((d) => d.trim()).filter(Boolean)
       : existing.requiredDocuments;
 
@@ -203,8 +204,8 @@ export async function updateScutireRegula(
         legalBasis: formData.get("legalBasis") as string,
         taxTypes,
         discountPercent,
-        conditions: conditions as any,
-        requiredDocuments: requiredDocuments as any,
+        conditions,
+        requiredDocuments,
         autoRenewable: formData.get("autoRenewable") === "true",
         validFrom: formData.get("validFrom")
           ? new Date(formData.get("validFrom") as string)
@@ -232,7 +233,7 @@ export async function updateScutireRegula(
 // ============================================================================
 
 export async function toggleScutireRegula(id: string): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -265,18 +266,18 @@ export async function getScutiriContribuabil(
   contribuabilId: string,
   fiscalYear?: number
 ) {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
   await setTenantContext(session.user.tenantId);
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.ScutireContribuabilWhereInput = {
     tenantId: session.user.tenantId,
     contribuabilId,
   };
   if (fiscalYear) where.fiscalYear = fiscalYear;
 
   return prisma.scutireContribuabil.findMany({
-    where: where as any,
+    where,
     include: {
       scutireRegula: {
         select: {
@@ -302,7 +303,7 @@ export async function getScutiriContribuabil(
 export async function applyScutire(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -352,11 +353,11 @@ export async function applyScutire(
     }
 
     // Parse verified documents JSON
-    let documenteVerificate: unknown[] = [];
+    let documenteVerificate: Prisma.JsonArray = [];
     const docsRaw = formData.get("documenteVerificate") as string;
     if (docsRaw) {
       try {
-        documenteVerificate = JSON.parse(docsRaw);
+        documenteVerificate = JSON.parse(docsRaw) as Prisma.JsonArray;
       } catch {
         documenteVerificate = [];
       }
@@ -375,7 +376,7 @@ export async function applyScutire(
         proprietateType:
           (formData.get("proprietateType") as string) || undefined,
         proprietateId: (formData.get("proprietateId") as string) || undefined,
-        documenteVerificate: documenteVerificate as any,
+        documenteVerificate,
         note: (formData.get("note") as string) || undefined,
         status: "pending",
       },
@@ -395,7 +396,7 @@ export async function applyScutire(
 // ============================================================================
 
 export async function approveScutire(id: string): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -440,7 +441,7 @@ export async function rejectScutire(
   id: string,
   note?: string
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);

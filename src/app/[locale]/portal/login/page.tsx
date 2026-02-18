@@ -24,6 +24,7 @@ export default function PortalLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const t = useTranslations("portal");
+  const tAuth = useTranslations("auth");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const localePrefix = `/${locale}`;
@@ -115,6 +116,12 @@ export default function PortalLoginPage() {
               {t("registerHere")}
             </Link>
           </p>
+          <Link
+            href={`${localePrefix}/portal/forgot-password`}
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            {tAuth("forgotPassword")}
+          </Link>
         </CardFooter>
       </Card>
     </div>

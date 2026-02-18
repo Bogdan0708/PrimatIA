@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
 async function getDefaultTenantId(): Promise<string | null> {
   const tenant = await prisma.tenant.findFirst({
-    where: { status: "active", deletedAt: null },
+    where: { status: { in: ["active", "trial"] }, deletedAt: null },
     select: { id: true },
   });
   return tenant?.id || null;

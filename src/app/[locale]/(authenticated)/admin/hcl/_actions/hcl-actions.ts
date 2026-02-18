@@ -1,9 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth-utils";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -16,16 +17,16 @@ type ActionResult<T = void> =
 export async function getHclDecisions(
   params: { fiscalYear?: number; status?: string } = {}
 ) {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
   await setTenantContext(session.user.tenantId);
 
-  const where: Record<string, unknown> = { tenantId: session.user.tenantId };
+  const where: Prisma.HclDecisionWhereInput = { tenantId: session.user.tenantId };
   if (params.fiscalYear) where.fiscalYear = params.fiscalYear;
   if (params.status) where.status = params.status;
 
   return prisma.hclDecision.findMany({
-    where: where as any,
+    where,
     include: { _count: { select: { taxRateTables: true } } },
     orderBy: [{ fiscalYear: "desc" }, { createdAt: "desc" }],
   });
@@ -36,7 +37,7 @@ export async function getHclDecisions(
 // ============================================================================
 
 export async function getHclDecisionById(id: string) {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
   await setTenantContext(session.user.tenantId);
 
@@ -55,7 +56,7 @@ export async function getHclDecisionById(id: string) {
 export async function createHclDecision(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -96,7 +97,7 @@ export async function updateHclDecision(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -134,7 +135,7 @@ export async function updateHclDecision(
 // ============================================================================
 
 export async function activateHclDecision(id: string): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -176,7 +177,7 @@ export async function activateHclDecision(id: string): Promise<ActionResult> {
 export async function createRateTableEntry(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -241,7 +242,7 @@ export async function updateRateTableEntry(
   id: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -304,7 +305,7 @@ export async function deleteRateTableEntry(
   id: string,
   hclDecisionId: string
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);

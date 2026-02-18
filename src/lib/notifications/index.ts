@@ -174,6 +174,8 @@ export async function sendBatchNotifications(
       else if (notif?.status === "failed" && notif) {
         // Check if it was a consent issue
         failed++;
+      } else {
+        skipped++;
       }
     } catch {
       failed++;

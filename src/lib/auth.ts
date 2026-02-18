@@ -51,6 +51,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user) return null;
+        if (!["active", "trial"].includes(user.tenant.status)) return null;
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
           return null;

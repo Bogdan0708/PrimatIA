@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth-utils";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import {
@@ -24,7 +24,7 @@ interface TaxResultWithProperty {
 export async function runMassCalculation(
   fiscalYear: number
 ): Promise<ActionResult<{ processed: number; taxes: number; errors: number }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);

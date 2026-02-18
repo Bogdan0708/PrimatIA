@@ -4,6 +4,7 @@ import { prisma, setTenantContext } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { generateSomatie } from "@/lib/documents";
+import { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -53,13 +54,13 @@ export async function getSomatii(
   const perPage = params.perPage ?? 20;
   const skip = (page - 1) * perPage;
 
-  const where: Record<string, unknown> = { tenantId: session.user.tenantId };
+  const where: Prisma.SomatieWhereInput = { tenantId: session.user.tenantId };
   if (params.status) where.status = params.status;
   if (params.contribuabilId) where.contribuabilId = params.contribuabilId;
 
   const [items, total] = await Promise.all([
     prisma.somatie.findMany({
-      where: where as any,
+      where,
       include: {
         contribuabil: { select: { id: true, nume: true, prenume: true } },
       },
@@ -67,7 +68,7 @@ export async function getSomatii(
       skip,
       take: perPage,
     }),
-    prisma.somatie.count({ where: where as any }),
+    prisma.somatie.count({ where }),
   ]);
 
   return {

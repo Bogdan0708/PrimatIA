@@ -1,5 +1,6 @@
 import { prisma, setTenantContext } from "@/lib/db";
 import { formatNumber, formatDate } from "@/lib/formatting";
+import { Prisma } from "@prisma/client";
 
 // ============================================================================
 // Types
@@ -33,7 +34,7 @@ export interface ReportResult {
 export async function reportVenituriIncasate(params: ReportParams): Promise<ReportResult> {
   await setTenantContext(params.tenantId);
 
-  const where: Record<string, unknown> = { tenantId: params.tenantId };
+  const where: Prisma.PlataWhereInput = { tenantId: params.tenantId };
   if (params.dateFrom || params.dateTo) {
     const dateFilter: Record<string, Date> = {};
     if (params.dateFrom) dateFilter.gte = new Date(params.dateFrom);
@@ -42,7 +43,7 @@ export async function reportVenituriIncasate(params: ReportParams): Promise<Repo
   }
 
   const plati = await prisma.plata.findMany({
-    where: where as any,
+    where,
     include: {
       platiDistributie: {
         include: {
@@ -111,14 +112,14 @@ export async function reportVenituriIncasate(params: ReportParams): Promise<Repo
 export async function reportRestante(params: ReportParams): Promise<ReportResult> {
   await setTenantContext(params.tenantId);
 
-  const where: Record<string, unknown> = {
+  const where: Prisma.ImpozitWhereInput = {
     tenantId: params.tenantId,
     status: { in: ["calculat", "emis", "partial_platit", "executare"] },
   };
   if (params.fiscalYear) where.fiscalYear = params.fiscalYear;
 
   const impozite = await prisma.impozit.findMany({
-    where: where as any,
+    where,
     include: { taxType: true },
     orderBy: [{ fiscalYear: "asc" }],
   });

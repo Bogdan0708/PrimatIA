@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import { getTerenById } from "../../_actions/teren-actions";
@@ -11,7 +11,6 @@ export default async function TerenEditPage({
 }) {
   await requireStaff();
   const t = await getTranslations("property");
-  const locale = await getLocale();
 
   const teren = await getTerenById(params.id);
   if (!teren) notFound();

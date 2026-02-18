@@ -35,11 +35,14 @@ export default function MockGatewayPage() {
   const handleConfirm = async () => {
     setProcessing(true);
     try {
-      await fetch("/api/portal/payments/confirm", {
+      const response = await fetch("/api/portal/payments/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gatewayRef }),
       });
+      if (!response.ok) {
+        throw new Error("Payment confirmation failed");
+      }
       router.push(
         `${localePrefix}/portal/plati/confirmare?ref=${gatewayRef}&status=success`
       );

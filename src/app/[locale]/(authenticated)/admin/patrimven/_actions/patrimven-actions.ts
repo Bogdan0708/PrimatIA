@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma, setTenantContext } from "@/lib/db";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import {
   generateF3001,
@@ -27,7 +27,7 @@ export async function triggerPatrimvenExport(
   formType: PatrimVenFormType,
   fiscalYear: number
 ): Promise<ActionResult<{ exportJobId: string }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
   await setTenantContext(session.user.tenantId);
@@ -137,7 +137,7 @@ export async function getExportJobs(
   page = 1,
   perPage = 20
 ): Promise<ExportJobListResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
   await setTenantContext(session.user.tenantId);
 
@@ -181,7 +181,7 @@ export async function getExportJobs(
 // ============================================================================
 
 export async function seedCodeMappings(): Promise<ActionResult<{ count: number }>> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
 
@@ -243,7 +243,7 @@ export async function updateCodeMapping(
   id: string,
   patrimvenCode: string
 ): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
 

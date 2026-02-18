@@ -4,6 +4,7 @@ import type {
   HclDecisionContext,
   ExemptionContext,
 } from "@/lib/tax-engine/types";
+import type { TaxRateTable } from "@prisma/client";
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -64,7 +65,7 @@ function mockLandRate(
     updatedAt: new Date(),
     deletedAt: null,
     ...extras,
-  } as any);
+  } as unknown as TaxRateTable);
 }
 
 // --- Tests ---
@@ -114,7 +115,7 @@ describe("calculateLandTax", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
-    } as any);
+    } as unknown as TaxRateTable);
 
     const result = await calculateLandTax(
       makeInput({ categorie: "extravilan_arabil", suprafataMp: 20000 }),
@@ -170,7 +171,7 @@ describe("calculateLandTax", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       deletedAt: null,
-    } as any);
+    } as unknown as TaxRateTable);
 
     await calculateLandTax(
       makeInput({ categorie: "intravilan_arabil" }),

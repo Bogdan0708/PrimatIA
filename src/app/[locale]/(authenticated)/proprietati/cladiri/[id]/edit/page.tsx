@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { notFound } from "next/navigation";
 import { getCladireById } from "../../_actions/cladire-actions";
@@ -11,7 +11,6 @@ export default async function CladireEditPage({
 }) {
   await requireStaff();
   const t = await getTranslations("property");
-  const locale = await getLocale();
 
   const cladire = await getCladireById(params.id);
   if (!cladire) notFound();

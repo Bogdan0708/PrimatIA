@@ -2,8 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMockGatewayProvider } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
+import { getCitizenFromRequest } from "@/lib/portal-auth";
 
 export async function POST(request: NextRequest) {
+  const paymentMode =
+    process.env.PAYMENT_MODE ??
+    (process.env.NODE_ENV === "production" ? "stripe" : "mock");
+  if (paymentMode !== "mock") {
+    return NextResponse.json(
+      { error: "Mock payment confirmation is disabled" },
+      { status: 403 }
+    );
+  }
+
+  const citizen = await getCitizenFromRequest(request);
+  if (!citizen) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { gatewayRef } = body;
@@ -35,6 +51,13 @@ export async function POST(request: NextRequest) {
         { error: "Payment record not found" },
         { status: 404 }
       );
+    }
+
+    if (
+      onlinePayment.citizenUserId !== citizen.sub ||
+      onlinePayment.tenantId !== citizen.tenantId
+    ) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     await setTenantContext(onlinePayment.tenantId);

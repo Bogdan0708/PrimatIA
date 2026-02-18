@@ -12,6 +12,14 @@ export async function authenticateCitizen(
   password: string,
   tenantId: string
 ) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { status: true },
+  });
+  if (!tenant || !["active", "trial"].includes(tenant.status)) {
+    return null;
+  }
+
   const citizen = await prisma.citizenUser.findUnique({
     where: { tenantId_email: { tenantId, email } },
   });
@@ -78,6 +86,14 @@ export async function registerCitizen(params: {
   | { success: false; error: "email_exists" | "no_match" | "internal_error" }
 > {
   const { tenantId, email, password, firstName, lastName, phone, cnpHash, cui, limbaPreferata } = params;
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { status: true },
+  });
+  if (!tenant || !["active", "trial"].includes(tenant.status)) {
+    return { success: false, error: "internal_error" };
+  }
 
   // Check if email already registered
   const existing = await prisma.citizenUser.findUnique({

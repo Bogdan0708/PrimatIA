@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Building2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/card";
 
 export default function LoginPage() {
+  const roeidEnabled = process.env.NEXT_PUBLIC_ROEID_ENABLED === "true";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -92,6 +94,14 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? tCommon("loading") : t("signIn")}
             </Button>
+            <div className="text-center">
+              <Link
+                href={`${localePrefix}/forgot-password`}
+                className="text-sm text-muted-foreground hover:underline"
+              >
+                {t("forgotPassword")}
+              </Link>
+            </div>
           </form>
 
           {/* ROeID Integration — Coming Soon */}
@@ -110,7 +120,7 @@ export default function LoginPage() {
                 {t("roeidLogin")}
               </Button>
               <span className="absolute -top-2 right-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">
-                {t("roeidComingSoon")}
+                {roeidEnabled ? t("roeidComingSoon") : t("roeidDisabled")}
               </span>
             </div>
             <p className="mt-2 text-center text-xs text-muted-foreground">
@@ -120,7 +130,7 @@ export default function LoginPage() {
               <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              eIDAS compliant
+              {t("eidasCompliant")}
             </div>
           </div>
         </CardContent>

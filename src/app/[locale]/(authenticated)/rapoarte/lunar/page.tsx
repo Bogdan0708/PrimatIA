@@ -99,16 +99,14 @@ function TrendBadge({ value, suffix = "%" }: { value: number; suffix?: string })
   );
 }
 
-// Simple SVG bar chart
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function BarChart({
+function BarChart<T extends object>({
   data,
   labelKey,
   valueKey,
 }: {
-  data: any[];
-  labelKey: string;
-  valueKey: string;
+  data: ReadonlyArray<T>;
+  labelKey: keyof T;
+  valueKey: keyof T;
 }) {
   if (data.length === 0) return null;
   const max = Math.max(...data.map((d) => Number(d[valueKey]) || 0), 1);
