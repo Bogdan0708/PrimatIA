@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Building2, CreditCard, FileSearch, FileText, Phone, Clock, MapPin } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,6 +41,7 @@ export default async function PublicLandingPage() {
               <span className="text-xl font-bold">PrimărIA</span>
             </div>
             <div className="flex items-center gap-3">
+              <LanguageSwitcher />
               <Button asChild variant="ghost">
                 <Link href={`${localePrefix}/portal/login`}>
                   {t("citizenPortal")}
