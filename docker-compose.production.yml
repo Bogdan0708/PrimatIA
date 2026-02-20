@@ -37,6 +37,7 @@ services:
       MINIO_USE_SSL: ${MINIO_USE_SSL}
       MINIO_BUCKET: ${MINIO_BUCKET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      TENANT_ID: ${TENANT_ID}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -66,6 +67,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: build
     container_name: primaria-migrate
     env_file:
       - .env
