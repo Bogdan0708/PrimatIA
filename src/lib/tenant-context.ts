@@ -1,9 +1,20 @@
 import { auth } from "@/lib/auth";
-import { setTenantContext } from "@/lib/db";
+import { withTenantScope } from "@/lib/db";
 
 /**
- * Middleware-like function to set tenant context from the authenticated session.
- * Call this at the start of any server action or API route that accesses tenant-scoped data.
+ * Execute a function with RLS tenant context from the authenticated session.
+ * All database queries inside the callback automatically use the tenant-scoped
+ * transaction via the global `prisma` proxy — just use `prisma.xxx` as usual.
+ *
+ * This is safe with PgBouncer transaction pooling because SET LOCAL and all queries
+ * share the same database transaction.
+ *
+ * @example
+ * ```ts
+ * const result = await withTenantContext(async () => {
+ *   return prisma.plata.findMany({ where: { ... } });
+ * });
+ * ```
  */
 export async function withTenantContext<T>(
   fn: () => Promise<T>
@@ -13,17 +24,16 @@ export async function withTenantContext<T>(
     throw new Error("No tenant context available");
   }
 
-  await setTenantContext(session.user.tenantId);
-  return fn();
+  return withTenantScope(session.user.tenantId, fn);
 }
 
 /**
- * Set tenant context for a specific tenant ID (used by super_admin).
+ * Execute a function with RLS tenant context for a specific tenant ID.
+ * Used by super_admin operations and background jobs.
  */
 export async function withSpecificTenant<T>(
   tenantId: string,
   fn: () => Promise<T>
 ): Promise<T> {
-  await setTenantContext(tenantId);
-  return fn();
+  return withTenantScope(tenantId, fn);
 }

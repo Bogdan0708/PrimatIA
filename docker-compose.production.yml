@@ -37,9 +37,10 @@ services:
       MINIO_USE_SSL: ${MINIO_USE_SSL}
       MINIO_BUCKET: ${MINIO_BUCKET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      TENANT_ID: ${TENANT_ID}
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       pgbouncer:
         condition: service_healthy
       redis:
@@ -60,14 +61,33 @@ services:
       - primaria-network
 
   # ──────────────────────────────────────────────
+  # Database migrations (runs once before app starts)
+  # ──────────────────────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    container_name: primaria-migrate
+    env_file:
+      - .env
+    environment:
+      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL}
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - primaria-network
+
+  # ──────────────────────────────────────────────
   # PostgreSQL 16 with Row-Level Security support
   # ──────────────────────────────────────────────
   postgres:
     image: postgres:16
     container_name: primaria-postgres
     restart: always
-    ports:
-      - "5433:5432"
+    # Ports not exposed to host in production — accessible only via Docker network
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-primaria_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
@@ -94,8 +114,7 @@ services:
     image: edoburu/pgbouncer:latest
     container_name: primaria-pgbouncer
     restart: always
-    ports:
-      - "6432:6432"
+    # No ports exposed to host in production
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,8 +136,7 @@ services:
     image: redis:7-alpine
     container_name: primaria-redis
     restart: always
-    ports:
-      - "6379:6379"
+    # No ports exposed to host in production
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-CHANGE_ME}
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-CHANGE_ME}
@@ -143,9 +161,7 @@ services:
     image: minio/minio:latest
     container_name: primaria-minio
     restart: always
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    # No ports exposed to host in production
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-CHANGE_ME}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-CHANGE_ME}
