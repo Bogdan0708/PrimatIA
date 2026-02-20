@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeClient } from "@/lib/stripe";
-import { prisma, setTenantContext } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
 import {
@@ -178,9 +178,9 @@ export async function POST(request: NextRequest) {
 
       const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }>;
 
-      await setTenantContext(metadata.tenantId);
-
-      await prisma.$transaction(async (tx) => {
+      // Use withTenantScope to ensure SET LOCAL + all queries share one transaction.
+      await withTenantScope(metadata.tenantId, async () => {
+        const tx = prisma; // prisma proxy routes to the withTenantScope transaction
         // Lock and validate debts inside transaction to prevent concurrent modifications
         if (selectedDebts && selectedDebts.length > 0) {
           const ids = selectedDebts.map((d) => d.impozitId);

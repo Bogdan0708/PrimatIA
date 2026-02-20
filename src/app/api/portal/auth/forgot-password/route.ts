@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestCitizenPasswordReset } from "@/lib/password-reset";
-import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const email = typeof body?.email === "string" ? body.email : "";
 
-    const tenantId = request.headers.get("x-tenant-id") || (await getDefaultTenantId());
+    // Tenant must be explicitly identified (P0-SEC-3)
+    const tenantId = request.headers.get("x-tenant-id");
 
     if (email && tenantId) {
       try {
@@ -17,16 +17,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Always return success to prevent email enumeration
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ success: true });
   }
 }
 
-async function getDefaultTenantId(): Promise<string | null> {
-  const tenant = await prisma.tenant.findFirst({
-    where: { status: { in: ["active", "trial"] }, deletedAt: null },
-    select: { id: true },
-  });
-  return tenant?.id || null;
-}
+// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).

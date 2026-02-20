@@ -1,8 +1,7 @@
 "use server";
 
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
@@ -47,56 +46,57 @@ export async function getPlati(
 ): Promise<PlataListResult> {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
-  await setTenantContext(session.user.tenantId);
 
-  const page = params.page ?? 1;
-  const perPage = params.perPage ?? 20;
-  const skip = (page - 1) * perPage;
+  return withTenantScope(session.user.tenantId, async () => {
+    const page = params.page ?? 1;
+    const perPage = params.perPage ?? 20;
+    const skip = (page - 1) * perPage;
 
-  const where: Prisma.PlataWhereInput = { tenantId: session.user.tenantId };
-  if (params.contribuabilId) where.contribuabilId = params.contribuabilId;
-  if (params.modalitate) where.modalitate = params.modalitate;
+    const where: Prisma.PlataWhereInput = { tenantId: session.user.tenantId };
+    if (params.contribuabilId) where.contribuabilId = params.contribuabilId;
+    if (params.modalitate) where.modalitate = params.modalitate;
 
-  if (params.dateFrom || params.dateTo) {
-    const dataPlataFilter: Record<string, Date> = {};
-    if (params.dateFrom) dataPlataFilter.gte = new Date(params.dateFrom);
-    if (params.dateTo) dataPlataFilter.lte = new Date(params.dateTo);
-    where.dataPlata = dataPlataFilter;
-  }
+    if (params.dateFrom || params.dateTo) {
+      const dataPlataFilter: Record<string, Date> = {};
+      if (params.dateFrom) dataPlataFilter.gte = new Date(params.dateFrom);
+      if (params.dateTo) dataPlataFilter.lte = new Date(params.dateTo);
+      where.dataPlata = dataPlataFilter;
+    }
 
-  const [items, total] = await Promise.all([
-    prisma.plata.findMany({
-      where,
-      include: {
-        contribuabil: {
-          select: { id: true, nume: true, prenume: true, cui: true },
+    const [items, total] = await Promise.all([
+      prisma.plata.findMany({
+        where,
+        include: {
+          contribuabil: {
+            select: { id: true, nume: true, prenume: true, cui: true },
+          },
         },
-      },
-      orderBy: { dataPlata: "desc" },
-      skip,
-      take: perPage,
-    }),
-    prisma.plata.count({ where }),
-  ]);
+        orderBy: { dataPlata: "desc" },
+        skip,
+        take: perPage,
+      }),
+      prisma.plata.count({ where }),
+    ]);
 
-  return {
-    items: items.map((p) => ({
-      id: p.id,
-      contribuabilId: p.contribuabilId,
-      contribuabil: p.contribuabil,
-      suma: Number(p.suma),
-      dataPlata: p.dataPlata,
-      modalitate: p.modalitate,
-      nrChitanta: p.nrChitanta,
-      nrDocument: p.nrDocument,
-      distribuit: p.distribuit,
-      createdAt: p.createdAt,
-    })),
-    total,
-    page,
-    perPage,
-    totalPages: Math.ceil(total / perPage),
-  };
+    return {
+      items: items.map((p) => ({
+        id: p.id,
+        contribuabilId: p.contribuabilId,
+        contribuabil: p.contribuabil,
+        suma: Number(p.suma),
+        dataPlata: p.dataPlata,
+        modalitate: p.modalitate,
+        nrChitanta: p.nrChitanta,
+        nrDocument: p.nrDocument,
+        distribuit: p.distribuit,
+        createdAt: p.createdAt,
+      })),
+      total,
+      page,
+      perPage,
+      totalPages: Math.ceil(total / perPage),
+    };
+  });
 }
 
 // ============================================================================
@@ -106,41 +106,42 @@ export async function getPlati(
 export async function getPlataById(id: string) {
   const session = await auth();
   if (!session?.user?.tenantId) throw new Error("No tenant context");
-  await setTenantContext(session.user.tenantId);
 
-  const plata = await prisma.plata.findFirst({
-    where: { id, tenantId: session.user.tenantId },
-    include: {
-      contribuabil: {
-        select: { id: true, nume: true, prenume: true, cui: true, codRol: true },
-      },
-      inregistratDe: {
-        select: { id: true, firstName: true, lastName: true },
-      },
-      platiDistributie: {
-        include: {
-          impozit: {
-            include: {
-              taxType: { select: { code: true, name: true } },
+  return withTenantScope(session.user.tenantId, async () => {
+    const plata = await prisma.plata.findFirst({
+      where: { id, tenantId: session.user.tenantId },
+      include: {
+        contribuabil: {
+          select: { id: true, nume: true, prenume: true, cui: true, codRol: true },
+        },
+        inregistratDe: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        platiDistributie: {
+          include: {
+            impozit: {
+              include: {
+                taxType: { select: { code: true, name: true } },
+              },
             },
           },
+          orderBy: { createdAt: "asc" },
         },
-        orderBy: { createdAt: "asc" },
       },
-    },
+    });
+
+    if (!plata) return null;
+
+    return {
+      ...plata,
+      suma: Number(plata.suma),
+      platiDistributie: plata.platiDistributie.map((d) => ({
+        ...d,
+        sumaDebit: Number(d.sumaDebit),
+        sumaPenalitati: Number(d.sumaPenalitati),
+      })),
+    };
   });
-
-  if (!plata) return null;
-
-  return {
-    ...plata,
-    suma: Number(plata.suma),
-    platiDistributie: plata.platiDistributie.map((d) => ({
-      ...d,
-      sumaDebit: Number(d.sumaDebit),
-      sumaPenalitati: Number(d.sumaPenalitati),
-    })),
-  };
 }
 
 // ============================================================================
@@ -153,68 +154,69 @@ export async function createPlata(
   const session = await auth();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
-  await setTenantContext(session.user.tenantId);
 
   try {
-    const contribuabilId = formData.get("contribuabilId") as string;
-    const suma = parseFloat(formData.get("suma") as string);
-    const modalitate = formData.get("modalitate") as string;
-    const dataPlata = formData.get("dataPlata") as string;
+    return await withTenantScope(session.user.tenantId, async () => {
+      const contribuabilId = formData.get("contribuabilId") as string;
+      const suma = parseFloat(formData.get("suma") as string);
+      const modalitate = formData.get("modalitate") as string;
+      const dataPlata = formData.get("dataPlata") as string;
 
-    if (!contribuabilId || !suma || !modalitate || !dataPlata) {
-      return {
-        success: false,
-        error: "Contribuabilul, suma, modalitatea si data platii sunt obligatorii",
-      };
-    }
+      if (!contribuabilId || !suma || !modalitate || !dataPlata) {
+        return {
+          success: false as const,
+          error: "Contribuabilul, suma, modalitatea si data platii sunt obligatorii",
+        };
+      }
 
-    if (suma <= 0) {
-      return { success: false, error: "Suma trebuie sa fie pozitiva" };
-    }
+      if (suma <= 0) {
+        return { success: false as const, error: "Suma trebuie sa fie pozitiva" };
+      }
 
-    // Verify the taxpayer exists
-    const contribuabil = await prisma.contribuabil.findFirst({
-      where: {
-        id: contribuabilId,
-        tenantId: session.user.tenantId,
-        deletedAt: null,
-      },
-    });
-    if (!contribuabil) {
-      return { success: false, error: "Contribuabilul nu a fost gasit" };
-    }
+      // Verify the taxpayer exists
+      const contribuabil = await prisma.contribuabil.findFirst({
+        where: {
+          id: contribuabilId,
+          tenantId: session.user.tenantId,
+          deletedAt: null,
+        },
+      });
+      if (!contribuabil) {
+        return { success: false as const, error: "Contribuabilul nu a fost gasit" };
+      }
 
-    // Create the payment record
-    const plata = await prisma.plata.create({
-      data: {
-        tenantId: session.user.tenantId,
+      // Create the payment record
+      const plata = await prisma.plata.create({
+        data: {
+          tenantId: session.user.tenantId,
+          contribuabilId,
+          suma,
+          dataPlata: new Date(dataPlata),
+          modalitate,
+          nrChitanta: (formData.get("nrChitanta") as string) || undefined,
+          nrDocument: (formData.get("nrDocument") as string) || undefined,
+          gatewayRef: (formData.get("ghiseulRoRef") as string) || undefined,
+          nota: (formData.get("nota") as string) || undefined,
+          inregistratDeId: session.user.id,
+          distribuit: false,
+        },
+      });
+
+      // Auto-distribute payment to outstanding debts (already inside withTenantScope)
+      const remainder = await distributePayment(
+        session.user.tenantId,
+        plata.id,
         contribuabilId,
-        suma,
-        dataPlata: new Date(dataPlata),
-        modalitate,
-        nrChitanta: (formData.get("nrChitanta") as string) || undefined,
-        nrDocument: (formData.get("nrDocument") as string) || undefined,
-        gatewayRef: (formData.get("ghiseulRoRef") as string) || undefined,
-        nota: (formData.get("nota") as string) || undefined,
-        inregistratDeId: session.user.id,
-        distribuit: false,
-      },
+        suma
+      );
+
+      revalidatePath(`/contribuabili/${contribuabilId}`);
+      revalidatePath("/plati");
+      return {
+        success: true as const,
+        data: { id: plata.id, distributed: true, remainder },
+      };
     });
-
-    // Auto-distribute payment to outstanding debts
-    const remainder = await distributePayment(
-      session.user.tenantId,
-      plata.id,
-      contribuabilId,
-      suma
-    );
-
-    revalidatePath(`/contribuabili/${contribuabilId}`);
-    revalidatePath("/plati");
-    return {
-      success: true,
-      data: { id: plata.id, distributed: true, remainder },
-    };
   } catch (error) {
     console.error("Error creating plata:", error);
     return { success: false, error: "Eroare la inregistrarea platii" };
@@ -224,6 +226,8 @@ export async function createPlata(
 // ============================================================================
 // PAYMENT AUTO-DISTRIBUTION LOGIC
 // Per Cod Procedura Fiscala: oldest debts first, penalties before principal
+// NOTE: This function MUST be called from within a withTenantScope() context.
+// The prisma proxy will route queries through the tenant-scoped transaction.
 // ============================================================================
 
 async function distributePayment(
@@ -262,8 +266,6 @@ async function distributePayment(
 
     const toApply = Math.min(remaining, outstanding);
 
-    // Apply to penalties first per fiscal code, then to principal
-    // Calculate how much of alreadyPaid has gone to penalties vs principal
     const penaltiesCoveredSoFar = Math.min(alreadyPaid, totalPenalties);
     const penaltiesRemaining = totalPenalties - penaltiesCoveredSoFar;
 
@@ -276,7 +278,6 @@ async function distributePayment(
       sumaPenalitati: toPenalties,
     });
 
-    // Update the tax record
     const newPaid = alreadyPaid + toApply;
     const newStatus =
       newPaid >= totalOwed
@@ -296,7 +297,6 @@ async function distributePayment(
     remaining -= toApply;
   }
 
-  // Create distribution records
   if (distributions.length > 0) {
     await prisma.plataDistributie.createMany({
       data: distributions.map((d) => ({
@@ -309,13 +309,11 @@ async function distributePayment(
     });
   }
 
-  // Mark payment as distributed
   await prisma.plata.update({
     where: { id: plataId },
     data: { distribuit: true },
   });
 
-  // Return any remainder (overpayment / credit)
   return Math.max(0, remaining);
 }
 
@@ -327,55 +325,54 @@ export async function redistributePlata(id: string): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
-  await setTenantContext(session.user.tenantId);
 
   try {
-    const plata = await prisma.plata.findFirst({
-      where: { id, tenantId: session.user.tenantId },
-      include: { platiDistributie: true },
-    });
-    if (!plata) return { success: false, error: "Plata nu a fost gasita" };
-
-    // Reverse existing distributions — restore impozit paid amounts
-    for (const dist of plata.platiDistributie) {
-      const totalReversed = Number(dist.sumaDebit) + Number(dist.sumaPenalitati);
-      const impozit = await prisma.impozit.findUnique({
-        where: { id: dist.impozitId },
+    return await withTenantScope(session.user.tenantId, async () => {
+      const plata = await prisma.plata.findFirst({
+        where: { id, tenantId: session.user.tenantId },
+        include: { platiDistributie: true },
       });
-      if (impozit) {
-        const newPaid = Math.max(0, Number(impozit.sumaPlatita) - totalReversed);
-        const totalOwed = Number(impozit.sumaDatorata) + Number(impozit.sumaPenalitati);
-        const newStatus =
-          newPaid >= totalOwed
-            ? "platit"
-            : newPaid > 0
-              ? "partial_platit"
-              : "emis";
+      if (!plata) return { success: false as const, error: "Plata nu a fost gasita" };
 
-        await prisma.impozit.update({
-          where: { id: impozit.id },
-          data: { sumaPlatita: newPaid, status: newStatus },
+      // Reverse existing distributions
+      for (const dist of plata.platiDistributie) {
+        const totalReversed = Number(dist.sumaDebit) + Number(dist.sumaPenalitati);
+        const impozit = await prisma.impozit.findUnique({
+          where: { id: dist.impozitId },
         });
+        if (impozit) {
+          const newPaid = Math.max(0, Number(impozit.sumaPlatita) - totalReversed);
+          const totalOwed = Number(impozit.sumaDatorata) + Number(impozit.sumaPenalitati);
+          const newStatus =
+            newPaid >= totalOwed
+              ? "platit"
+              : newPaid > 0
+                ? "partial_platit"
+                : "emis";
+
+          await prisma.impozit.update({
+            where: { id: impozit.id },
+            data: { sumaPlatita: newPaid, status: newStatus },
+          });
+        }
       }
-    }
 
-    // Delete old distribution records
-    await prisma.plataDistributie.deleteMany({
-      where: { plataId: id },
+      await prisma.plataDistributie.deleteMany({
+        where: { plataId: id },
+      });
+
+      await distributePayment(
+        session.user.tenantId,
+        id,
+        plata.contribuabilId,
+        Number(plata.suma)
+      );
+
+      revalidatePath(`/contribuabili/${plata.contribuabilId}`);
+      revalidatePath("/plati");
+      revalidatePath(`/plati/${id}`);
+      return { success: true as const };
     });
-
-    // Re-distribute
-    await distributePayment(
-      session.user.tenantId,
-      id,
-      plata.contribuabilId,
-      Number(plata.suma)
-    );
-
-    revalidatePath(`/contribuabili/${plata.contribuabilId}`);
-    revalidatePath("/plati");
-    revalidatePath(`/plati/${id}`);
-    return { success: true };
   } catch (error) {
     console.error("Error redistributing plata:", error);
     return { success: false, error: "Eroare la redistribuirea platii" };

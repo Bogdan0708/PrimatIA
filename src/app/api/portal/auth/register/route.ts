@@ -30,11 +30,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve tenant
-    const tenantId = request.headers.get("x-tenant-id") || await getDefaultTenantId();
+    // Tenant must be explicitly identified (P0-SEC-3)
+    const tenantId = request.headers.get("x-tenant-id");
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant not found" },
+        { error: "Tenant identification required. Set x-tenant-id header." },
         { status: 400 }
       );
     }
@@ -108,10 +108,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function getDefaultTenantId(): Promise<string | null> {
-  const tenant = await prisma.tenant.findFirst({
-    where: { status: { in: ["active", "trial"] }, deletedAt: null },
-    select: { id: true },
-  });
-  return tenant?.id || null;
-}
+// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).

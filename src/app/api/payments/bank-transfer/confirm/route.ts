@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma, setTenantContext } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
 
@@ -49,11 +49,12 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = onlinePayment.tenantId;
-    await setTenantContext(tenantId);
-
     const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
 
-    await prisma.$transaction(async (tx) => {
+    // Use withTenantScope to ensure SET LOCAL + all queries share one transaction.
+    // This replaces the old setTenantContext() + $transaction() pattern.
+    await withTenantScope(tenantId, async () => {
+      const tx = prisma; // prisma proxy routes to the withTenantScope transaction
       // Lock the OnlinePayment row to prevent double-confirm (idempotency)
       const [lockedPayment] = await tx.$queryRaw<Array<{ status: string }>>(
         Prisma.sql`SELECT status FROM "OnlinePayment" WHERE id = ${onlinePayment.id} FOR UPDATE`
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
           status: "generat",
         },
       });
-    });
+    });  // end withTenantScope
 
     return NextResponse.json({ success: true });
   } catch (error) {

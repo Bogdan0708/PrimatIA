@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,25 +15,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve tenant
-    const tenantId = citizen?.tenantId || await getDefaultTenantId();
+    // Tenant must be explicitly identified (P0-SEC-3)
+    const tenantId = citizen?.tenantId || request.headers.get("x-tenant-id");
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant not found" },
+        { error: "Tenant identification required" },
         { status: 400 }
       );
     }
 
-    await prisma.contactMessage.create({
-      data: {
-        tenantId,
-        citizenUserId: citizen?.sub || null,
-        name,
-        email,
-        phone: phone || null,
-        subject,
-        message,
-      },
+    await withTenantScope(tenantId, async () => {
+      await prisma.contactMessage.create({
+        data: {
+          tenantId,
+          citizenUserId: citizen?.sub || null,
+          name,
+          email,
+          phone: phone || null,
+          subject,
+          message,
+        },
+      });
     });
 
     return NextResponse.json({ success: true });
@@ -46,10 +48,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function getDefaultTenantId(): Promise<string | null> {
-  const tenant = await prisma.tenant.findFirst({
-    where: { status: { in: ["active", "trial"] }, deletedAt: null },
-    select: { id: true },
-  });
-  return tenant?.id || null;
-}
+// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).
