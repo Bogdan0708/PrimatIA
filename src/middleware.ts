@@ -171,6 +171,7 @@ function checkRequestSize(request: NextRequest): boolean {
  * municipality's tenant UUID. This keeps client-side code tenant-agnostic —
  * the middleware injects the header automatically.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function resolveTenantId(_request: NextRequest): string | null {
   return process.env.TENANT_ID ?? null;
 }

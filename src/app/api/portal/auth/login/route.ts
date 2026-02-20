@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
-import { prisma } from "@/lib/db";
 import { SignJWT } from "jose";
 
 const citizenJwtSecret =
