@@ -67,11 +67,13 @@ if (typeof globalThis !== "undefined") {
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
   // Content Security Policy
+  const isDev = process.env.NODE_ENV === "development";
   response.headers.set(
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com", // Next.js requires unsafe-inline/eval in dev
+      // unsafe-eval only in dev (Next.js HMR); production uses strict-dynamic with unsafe-inline fallback
+      `script-src 'self' https://js.stripe.com${isDev ? " 'unsafe-inline' 'unsafe-eval'" : " 'unsafe-inline'"}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
