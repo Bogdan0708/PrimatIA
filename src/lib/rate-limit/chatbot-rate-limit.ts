@@ -41,12 +41,22 @@ interface RateLimitRedisGlobals {
   _chatbotRateLimitRedis?: IORedis;
   _chatbotRateLimitRedisFailed?: boolean;
   _chatbotRateLimitRedisErrorLogged?: boolean;
+  _chatbotRateLimitFallbackWarningLogged?: boolean;
 }
 
 const fallbackWindow = new Map<string, number[]>();
 
 function getGlobalStore(): RateLimitRedisGlobals {
   return globalThis as unknown as RateLimitRedisGlobals;
+}
+
+function logRedisFallbackWarning(reason: string): void {
+  const store = getGlobalStore();
+  if (store._chatbotRateLimitFallbackWarningLogged) {
+    return;
+  }
+  console.warn(`Chatbot rate limiter Redis unavailable (${reason}). Using in-memory fallback.`);
+  store._chatbotRateLimitFallbackWarningLogged = true;
 }
 
 function getRedisClient(): IORedis | null {
@@ -67,10 +77,14 @@ function getRedisClient(): IORedis | null {
       lazyConnect: true,
     });
 
-    redis.on("error", () => {
+    redis.on("error", (error) => {
       const store = getGlobalStore();
       if (!store._chatbotRateLimitRedisErrorLogged) {
-        console.error("Chatbot rate limiter Redis connection error. Falling back.");
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "connection error";
+        logRedisFallbackWarning(message);
         store._chatbotRateLimitRedisErrorLogged = true;
       }
       if (process.env.NODE_ENV === "production") {
@@ -82,6 +96,7 @@ function getRedisClient(): IORedis | null {
     return redis;
   } catch {
     globalStore._chatbotRateLimitRedisFailed = true;
+    logRedisFallbackWarning("initialization error");
     return null;
   }
 }
@@ -134,9 +149,7 @@ export async function checkChatbotRateLimit(ip: string): Promise<ChatbotRateLimi
   const now = Date.now();
   const redis = getRedisClient();
   if (!redis) {
-    if (process.env.NODE_ENV === "production") {
-      return { limited: true, retryAfterSeconds: 60 };
-    }
+    logRedisFallbackWarning("client unavailable");
     return checkInMemoryFallback(ip, now);
   }
 
@@ -163,13 +176,10 @@ export async function checkChatbotRateLimit(ip: string): Promise<ChatbotRateLimi
       return parsed;
     }
   } catch {
-    if (process.env.NODE_ENV === "production") {
-      return { limited: true, retryAfterSeconds: 60 };
-    }
+    logRedisFallbackWarning("request error");
+    return checkInMemoryFallback(ip, now);
   }
 
-  if (process.env.NODE_ENV === "production") {
-    return { limited: true, retryAfterSeconds: 60 };
-  }
+  logRedisFallbackWarning("invalid Redis response");
   return checkInMemoryFallback(ip, now);
 }

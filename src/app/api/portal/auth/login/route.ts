@@ -3,13 +3,11 @@ import { authenticateCitizen } from "@/lib/citizen-auth";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 import { SignJWT } from "jose";
 
-const citizenJwtSecret = process.env.JWT_SECRET;
-
-if (!citizenJwtSecret) {
-  throw new Error("JWT_SECRET must be configured");
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET must be configured");
+  return new TextEncoder().encode(secret);
 }
-
-const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +52,7 @@ export async function POST(request: NextRequest) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("4h")
-      .sign(JWT_SECRET);
+      .sign(getJwtSecret());
 
     const response = NextResponse.json({
       success: true,

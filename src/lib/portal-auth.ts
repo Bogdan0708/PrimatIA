@@ -5,13 +5,16 @@ import { NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/db";
 
-const citizenJwtSecret = process.env.JWT_SECRET;
-
-if (!citizenJwtSecret && process.env.NODE_ENV === "production") {
-  throw new Error("JWT_SECRET must be configured");
+function getCitizenJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET must be configured");
+  }
+  return new TextEncoder().encode(secret);
 }
 
-const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret || "build-placeholder");
+// Lazy — only fails at runtime when actually used, not at build/import time
+const JWT_SECRET_LAZY = { get value() { return getCitizenJwtSecret(); } };
 
 export interface CitizenSession {
   sub: string;
@@ -51,7 +54,7 @@ export async function getCitizenSession(): Promise<CitizenSession | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, JWT_SECRET_LAZY.value);
     const session = payload as unknown as CitizenSession;
     if (!(await isCitizenSessionValid(session))) return null;
     return session;
@@ -69,7 +72,7 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, JWT_SECRET_LAZY.value);
     const session = payload as unknown as CitizenSession;
     if (!(await isCitizenSessionValid(session))) return null;
     return session;

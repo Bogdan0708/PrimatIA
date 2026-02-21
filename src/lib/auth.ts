@@ -1,16 +1,16 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import type { Role } from "@/lib/constants";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
-const nextAuthSecret = process.env.NEXTAUTH_SECRET;
-if (!nextAuthSecret && process.env.NODE_ENV === "production") {
-  throw new Error("NEXTAUTH_SECRET must be configured");
-}
-if (!nextAuthSecret && typeof process.env.NEXT_PHASE === "undefined") {
-  console.warn("WARNING: NEXTAUTH_SECRET is not set. Authentication will fail at runtime.");
+function getNextAuthSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET must be configured");
+  }
+  return secret;
 }
 
 declare module "next-auth" {
@@ -33,7 +33,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret: nextAuthSecret,
+  secret: process.env.NEXTAUTH_SECRET ?? "nextauth-secret-not-set",
   providers: [
     Credentials({
       name: "credentials",
@@ -56,18 +56,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        const user = await prisma.tenantUser.findFirst({
-          where: {
-            tenantId,
-            email,
-            isActive: true,
-            deletedAt: null,
-            tenant: {
-              status: { in: ["active", "trial"] },
+        const user = await withTenantScope(tenantId, async () =>
+          prisma.tenantUser.findFirst({
+            where: {
+              tenantId,
+              email,
+              isActive: true,
               deletedAt: null,
+              tenant: {
+                status: { in: ["active", "trial"] },
+                deletedAt: null,
+              },
             },
-          },
-        });
+          })
+        );
 
         if (!user) return null;
 
@@ -79,26 +81,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!passwordValid) {
           const attempts = user.loginAttempts + 1;
-          await prisma.tenantUser.update({
-            where: { id: user.id },
-            data: {
-              loginAttempts: attempts,
-              lockedUntil:
-                attempts >= 5
-                  ? new Date(Date.now() + 15 * 60 * 1000)
-                  : undefined,
-            },
+          await withTenantScope(tenantId, async () => {
+            await prisma.tenantUser.update({
+              where: { id: user.id },
+              data: {
+                loginAttempts: attempts,
+                lockedUntil:
+                  attempts >= 5
+                    ? new Date(Date.now() + 15 * 60 * 1000)
+                    : undefined,
+              },
+            });
           });
           return null;
         }
 
-        await prisma.tenantUser.update({
-          where: { id: user.id },
-          data: {
-            loginAttempts: 0,
-            lockedUntil: null,
-            lastLoginAt: new Date(),
-          },
+        await withTenantScope(tenantId, async () => {
+          await prisma.tenantUser.update({
+            where: { id: user.id },
+            data: {
+              loginAttempts: 0,
+              lockedUntil: null,
+              lastLoginAt: new Date(),
+            },
+          });
         });
 
         return {

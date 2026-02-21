@@ -66,13 +66,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
     try {
-      await prisma.onlinePayment.updateMany({
-        where: {
-          tenantId,
-          gatewayRef: session.id,
-          status: { in: allowedFromStatusesFor("expired") },
-        },
-        data: { status: "expired" },
+      await withTenantScope(tenantId, async () => {
+        await prisma.onlinePayment.updateMany({
+          where: {
+            tenantId,
+            gatewayRef: session.id,
+            status: { in: allowedFromStatusesFor("expired") },
+          },
+          data: { status: "expired" },
+        });
       });
     } catch (error) {
       console.error("Error handling expired session:", error);
