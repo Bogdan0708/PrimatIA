@@ -10,12 +10,12 @@ export const ONLINE_PAYMENT_STATUSES = [
 export type OnlinePaymentStatus = (typeof ONLINE_PAYMENT_STATUSES)[number];
 
 const ALLOWED_TRANSITIONS: Record<OnlinePaymentStatus, ReadonlySet<OnlinePaymentStatus>> = {
-  initiated: new Set(["pending", "confirmed", "failed", "cancelled", "expired"]),
-  pending: new Set(["confirmed", "failed", "cancelled", "expired"]),
-  confirmed: new Set(),
-  failed: new Set(),
-  cancelled: new Set(),
-  expired: new Set(),
+  initiated: new Set<OnlinePaymentStatus>(["pending", "confirmed", "failed", "cancelled", "expired"]),
+  pending: new Set<OnlinePaymentStatus>(["confirmed", "failed", "cancelled", "expired"]),
+  confirmed: new Set<OnlinePaymentStatus>(),
+  failed: new Set<OnlinePaymentStatus>(),
+  cancelled: new Set<OnlinePaymentStatus>(),
+  expired: new Set<OnlinePaymentStatus>(),
 };
 
 export function canTransitionOnlinePaymentStatus(
