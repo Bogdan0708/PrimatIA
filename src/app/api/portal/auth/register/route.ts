@@ -1,40 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { registerCitizen } from "@/lib/citizen-auth";
 import { hashCnp } from "@/lib/crypto";
 import { sendNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/db";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
+import { strongPasswordSchema } from "@/lib/validations";
+
+const registerCitizenSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "First name is required"),
+    lastName: z.string().trim().min(1, "Last name is required"),
+    email: z.string().trim().email("Email invalid"),
+    password: strongPasswordSchema,
+    tip: z.enum(["PF", "PJ"]).optional(),
+    cnp: z.string().trim().optional(),
+    cui: z.string().trim().optional(),
+    phone: z.string().trim().optional(),
+    limbaPreferata: z.enum(["ro", "en", "hu"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.tip === "PF" && !data.cnp) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cnp"],
+        message: "CNP is required for individuals",
+      });
+    }
+    if (data.tip === "PJ" && !data.cui) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cui"],
+        message: "CUI is required for companies",
+      });
+    }
+  });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email, password, tip, cnp, cui, phone, limbaPreferata } = body;
-
-    if (!firstName || !lastName || !email || !password) {
+    const parsed = registerCitizenSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: parsed.error.issues[0]?.message || "Invalid registration data" },
         { status: 400 }
       );
     }
+    const { firstName, lastName, email, password, cnp, cui, phone, limbaPreferata } = parsed.data;
 
-    if (tip === "PF" && !cnp) {
-      return NextResponse.json(
-        { error: "CNP is required for individuals" },
-        { status: 400 }
-      );
-    }
-
-    if (tip === "PJ" && !cui) {
-      return NextResponse.json(
-        { error: "CUI is required for companies" },
-        { status: 400 }
-      );
-    }
-
-    // Tenant must be explicitly identified (P0-SEC-3)
-    const tenantId = request.headers.get("x-tenant-id");
+    // Tenant identity must be derived server-side from trusted context.
+    const tenantId = await resolveTenantIdFromHeaders(request.headers);
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant identification required. Set x-tenant-id header." },
+        { error: "Tenant could not be resolved for this domain." },
         { status: 400 }
       );
     }
@@ -107,5 +125,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).

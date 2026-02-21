@@ -3,6 +3,10 @@ import { auth } from "@/lib/auth";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
+import {
+  assertOnlinePaymentTransition,
+  isOnlinePaymentStatus,
+} from "@/lib/payments/online-payment-state-machine";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -33,9 +37,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    if (onlinePayment.status !== "initiated" && onlinePayment.status !== "pending") {
+    if (!isOnlinePaymentStatus(onlinePayment.status)) {
       return NextResponse.json(
-        { error: `Payment is in '${onlinePayment.status}' status, expected 'initiated' or 'pending'` },
+        { error: `Unsupported payment status '${onlinePayment.status}'` },
+        { status: 400 }
+      );
+    }
+    try {
+      assertOnlinePaymentTransition(onlinePayment.status, "confirmed", onlinePayment.id);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid payment status transition" },
         { status: 400 }
       );
     }
@@ -59,9 +71,10 @@ export async function POST(request: NextRequest) {
       const [lockedPayment] = await tx.$queryRaw<Array<{ status: string }>>(
         Prisma.sql`SELECT status FROM "OnlinePayment" WHERE id = ${onlinePayment.id} FOR UPDATE`
       );
-      if (lockedPayment.status !== "initiated" && lockedPayment.status !== "pending") {
-        throw new Error(`Payment already processed (status: ${lockedPayment.status})`);
+      if (!isOnlinePaymentStatus(lockedPayment.status)) {
+        throw new Error(`Unsupported payment status: ${lockedPayment.status}`);
       }
+      assertOnlinePaymentTransition(lockedPayment.status, "confirmed", onlinePayment.id);
 
       // Lock and validate debts inside transaction to prevent concurrent modifications
       if (selectedDebts && selectedDebts.length > 0) {

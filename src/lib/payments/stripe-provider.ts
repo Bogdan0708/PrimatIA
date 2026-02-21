@@ -36,6 +36,13 @@ export class StripeProvider implements GatewayProvider {
           params.items.map((i) => ({ impozitId: i.impozitId, amount: i.amount }))
         ),
       },
+      payment_intent_data: {
+        metadata: {
+          tenantId: params.tenantId,
+          contribuabilId: params.contribuabilId,
+          citizenUserId: params.citizenUserId,
+        },
+      },
       success_url: `${params.returnUrl}?ref={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: params.cancelUrl,
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60, // 30 minutes

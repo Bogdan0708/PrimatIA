@@ -6,6 +6,10 @@ import type {
   PaymentStatusResult,
   PaymentWebhookData,
 } from "./gateway";
+import {
+  canTransitionOnlinePaymentStatus,
+  type OnlinePaymentStatus,
+} from "./online-payment-state-machine";
 
 /**
  * In-memory store for mock payments.
@@ -15,7 +19,7 @@ const mockPayments = new Map<
   string,
   {
     params: InitiatePaymentParams;
-    status: "pending" | "confirmed" | "failed" | "cancelled" | "expired";
+    status: OnlinePaymentStatus;
     amount: number;
     createdAt: Date;
     expiresAt: Date;
@@ -65,7 +69,10 @@ export class MockGatewayProvider implements GatewayProvider {
     }
 
     // Auto-expire after timeout
-    if (payment.status === "pending" && payment.expiresAt < new Date()) {
+    if (
+      payment.expiresAt < new Date() &&
+      canTransitionOnlinePaymentStatus(payment.status, "expired")
+    ) {
       payment.status = "expired";
     }
 
@@ -105,7 +112,9 @@ export class MockGatewayProvider implements GatewayProvider {
    */
   async confirmMockPayment(gatewayRef: string): Promise<boolean> {
     const payment = mockPayments.get(gatewayRef);
-    if (!payment || payment.status !== "pending") return false;
+    if (!payment || !canTransitionOnlinePaymentStatus(payment.status, "confirmed")) {
+      return false;
+    }
 
     payment.status = "confirmed";
     payment.confirmedAt = new Date();
@@ -119,7 +128,9 @@ export class MockGatewayProvider implements GatewayProvider {
    */
   async cancelMockPayment(gatewayRef: string): Promise<boolean> {
     const payment = mockPayments.get(gatewayRef);
-    if (!payment || payment.status !== "pending") return false;
+    if (!payment || !canTransitionOnlinePaymentStatus(payment.status, "cancelled")) {
+      return false;
+    }
 
     payment.status = "cancelled";
     return true;

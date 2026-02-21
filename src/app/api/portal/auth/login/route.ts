@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 import { SignJWT } from "jose";
 
-const citizenJwtSecret =
-  process.env.JWT_SECRET ||
-  process.env.CITIZEN_JWT_SECRET ||
-  process.env.NEXTAUTH_SECRET;
+const citizenJwtSecret = process.env.JWT_SECRET;
 
 if (!citizenJwtSecret) {
-  throw new Error(
-    "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
-  );
+  throw new Error("JWT_SECRET must be configured");
 }
 
 const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);
@@ -27,12 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tenant must be explicitly identified — never fall back to "first active tenant"
-    // as that would allow cross-tenant authentication (P0-SEC-3).
-    const tenantId = request.headers.get("x-tenant-id");
+    // Tenant identity must be derived server-side from trusted context.
+    const tenantId = await resolveTenantIdFromHeaders(request.headers);
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant identification required. Set x-tenant-id header." },
+        { error: "Tenant could not be resolved for this domain." },
         { status: 400 }
       );
     }
@@ -89,6 +84,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).
-// Tenant must always be explicitly identified via x-tenant-id header.

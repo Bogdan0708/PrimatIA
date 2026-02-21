@@ -161,22 +161,6 @@ function checkRequestSize(request: NextRequest): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Tenant resolution — derive tenant ID from subdomain or env var
-// ---------------------------------------------------------------------------
-
-/**
- * Resolve the tenant ID (UUID) for portal API requests.
- *
- * Each deployment is configured with the TENANT_ID env var pointing to the
- * municipality's tenant UUID. This keeps client-side code tenant-agnostic —
- * the middleware injects the header automatically.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function resolveTenantId(_request: NextRequest): string | null {
-  return process.env.TENANT_ID ?? null;
-}
-
-// ---------------------------------------------------------------------------
 // Main middleware
 // ---------------------------------------------------------------------------
 
@@ -251,20 +235,7 @@ export default function middleware(request: NextRequest) {
 
   // Skip i18n middleware for API routes
   if (pathname.startsWith("/api/")) {
-    // Inject x-tenant-id header for portal API routes so client-side fetches
-    // don't need to supply it manually. Tenant is resolved from the subdomain
-    // (e.g. "comuna-x.primaria.ro") or the TENANT_ID env var as fallback.
-    const requestHeaders = new Headers(request.headers);
-    if (pathname.startsWith("/api/portal") && !request.headers.get("x-tenant-id")) {
-      const tenantId = resolveTenantId(request);
-      if (tenantId) {
-        requestHeaders.set("x-tenant-id", tenantId);
-      }
-    }
-
-    const response = NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    const response = NextResponse.next();
     addSecurityHeaders(response);
     if (pathname.startsWith("/api/portal")) {
       addCorsHeaders(response, request);

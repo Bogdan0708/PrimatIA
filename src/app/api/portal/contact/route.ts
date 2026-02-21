@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, withTenantScope } from "@/lib/db";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,11 +16,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tenant must be explicitly identified (P0-SEC-3)
-    const tenantId = citizen?.tenantId || request.headers.get("x-tenant-id");
+    // Authenticated tenant is read from JWT; anonymous requests derive tenant from domain.
+    const tenantId = citizen?.tenantId ?? await resolveTenantIdFromHeaders(request.headers);
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant identification required" },
+        { error: "Tenant could not be resolved for this domain." },
         { status: 400 }
       );
     }
@@ -47,5 +48,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).

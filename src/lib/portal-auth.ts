@@ -5,15 +5,10 @@ import { NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/db";
 
-const citizenJwtSecret =
-  process.env.JWT_SECRET ||
-  process.env.CITIZEN_JWT_SECRET ||
-  process.env.NEXTAUTH_SECRET;
+const citizenJwtSecret = process.env.JWT_SECRET;
 
 if (!citizenJwtSecret) {
-  throw new Error(
-    "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
-  );
+  throw new Error("JWT_SECRET must be configured");
 }
 
 const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);

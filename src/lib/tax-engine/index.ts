@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { calculateBuildingTax } from "./building-tax";
 import { calculateLandTax } from "./land-tax";
 import { calculateVehicleTax } from "./vehicle-tax";
+import { toSafeNumber } from "./utils";
 import type {
   BuildingTaxInput,
   HclDecisionContext,
@@ -36,7 +37,9 @@ export async function resolveActiveHcl(
   return {
     id: hcl.id,
     fiscalYear: hcl.fiscalYear,
-    inflationIndex: hcl.inflationIndex ? Number(hcl.inflationIndex) : undefined,
+    inflationIndex: hcl.inflationIndex != null
+      ? toSafeNumber(hcl.inflationIndex, "hclDecision.inflationIndex")
+      : undefined,
   };
 }
 
@@ -70,7 +73,10 @@ export async function getApplicableExemptions(
   });
 
   return exemptions.map((e) => ({
-    discountPercent: Number(e.scutireRegula.discountPercent),
+    discountPercent: toSafeNumber(
+      e.scutireRegula.discountPercent,
+      "scutireRegula.discountPercent"
+    ),
     ruleId: e.scutireRegula.id,
     ruleName: e.scutireRegula.nameRo,
   }));
@@ -122,23 +128,43 @@ export async function calculateAllTaxesForContribuabil(
         destinatie: b.destinatie as BuildingTaxInput["destinatie"],
         tipConstructie: b.tipConstructie,
         anConstructie: b.anConstructie,
-        suprafataConstruita: Number(b.suprafataConstruita),
-        suprafataDesfasurata: b.suprafataDesfasurata
-          ? Number(b.suprafataDesfasurata)
+        suprafataConstruita: toSafeNumber(
+          b.suprafataConstruita,
+          "proprietateCladire.suprafataConstruita"
+        ),
+        suprafataDesfasurata: b.suprafataDesfasurata != null
+          ? toSafeNumber(
+            b.suprafataDesfasurata,
+            "proprietateCladire.suprafataDesfasurata"
+          )
           : undefined,
-        valoareImpozabila: b.valoareImpozabila
-          ? Number(b.valoareImpozabila)
+        valoareImpozabila: b.valoareImpozabila != null
+          ? toSafeNumber(
+            b.valoareImpozabila,
+            "proprietateCladire.valoareImpozabila"
+          )
           : undefined,
-        valoareInventar: b.valoareInventar ? Number(b.valoareInventar) : undefined,
+        valoareInventar: b.valoareInventar != null
+          ? toSafeNumber(
+            b.valoareInventar,
+            "proprietateCladire.valoareInventar"
+          )
+          : undefined,
         zona: b.zona,
-        cotaParte: Number(b.cotaParte),
+        cotaParte: toSafeNumber(b.cotaParte, "proprietateCladire.cotaParte"),
         dataDobandire: b.dataDobandire,
         dataInstrainare: b.dataInstrainare ?? undefined,
-        suprafataRezidentiala: b.suprafataRezidentiala
-          ? Number(b.suprafataRezidentiala)
+        suprafataRezidentiala: b.suprafataRezidentiala != null
+          ? toSafeNumber(
+            b.suprafataRezidentiala,
+            "proprietateCladire.suprafataRezidentiala"
+          )
           : undefined,
-        suprafataNerezidentiala: b.suprafataNerezidentiala
-          ? Number(b.suprafataNerezidentiala)
+        suprafataNerezidentiala: b.suprafataNerezidentiala != null
+          ? toSafeNumber(
+            b.suprafataNerezidentiala,
+            "proprietateCladire.suprafataNerezidentiala"
+          )
           : undefined,
       },
       hcl,
@@ -163,9 +189,9 @@ export async function calculateAllTaxesForContribuabil(
         tenantId,
         fiscalYear,
         categorie: l.categorie,
-        suprafataMp: Number(l.suprafataMp),
+        suprafataMp: toSafeNumber(l.suprafataMp, "proprietateTeren.suprafataMp"),
         zona: l.zona,
-        cotaParte: Number(l.cotaParte),
+        cotaParte: toSafeNumber(l.cotaParte, "proprietateTeren.cotaParte"),
         dataDobandire: l.dataDobandire,
         dataInstrainare: l.dataInstrainare ?? undefined,
       },
@@ -192,7 +218,9 @@ export async function calculateAllTaxesForContribuabil(
         fiscalYear,
         tipVehicul: v.tipVehicul,
         cilindreeCmc: v.cilindreeCmc ?? undefined,
-        putereKw: v.putereKw ? Number(v.putereKw) : undefined,
+        putereKw: v.putereKw != null
+          ? toSafeNumber(v.putereKw, "proprietateVehicul.putereKw")
+          : undefined,
         masaTotalaKg: v.masaTotalaKg ?? undefined,
         nrLocuri: v.nrLocuri ?? undefined,
         normaPoluare: v.normaPoluare ?? undefined,
