@@ -7,11 +7,11 @@ import { prisma } from "@/lib/db";
 
 const citizenJwtSecret = process.env.JWT_SECRET;
 
-if (!citizenJwtSecret) {
+if (!citizenJwtSecret && process.env.NODE_ENV === "production") {
   throw new Error("JWT_SECRET must be configured");
 }
 
-const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);
+const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret || "build-placeholder");
 
 export interface CitizenSession {
   sub: string;

@@ -6,8 +6,11 @@ import type { Role } from "@/lib/constants";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
 const nextAuthSecret = process.env.NEXTAUTH_SECRET;
-if (!nextAuthSecret) {
+if (!nextAuthSecret && process.env.NODE_ENV === "production") {
   throw new Error("NEXTAUTH_SECRET must be configured");
+}
+if (!nextAuthSecret && typeof process.env.NEXT_PHASE === "undefined") {
+  console.warn("WARNING: NEXTAUTH_SECRET is not set. Authentication will fail at runtime.");
 }
 
 declare module "next-auth" {
