@@ -5,13 +5,6 @@ import { prisma, withTenantScope } from "@/lib/db";
 import type { Role } from "@/lib/constants";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
-function _getNextAuthSecret(): string {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error("NEXTAUTH_SECRET must be configured");
-  }
-  return secret;
-}
 
 declare module "next-auth" {
   interface User {
