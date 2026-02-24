@@ -3,6 +3,7 @@ import { registerCitizen } from "@/lib/citizen-auth";
 import { hashCnp } from "@/lib/crypto";
 import { sendNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/db";
+import { resolvePortalTenant } from "@/lib/portal-auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,11 +31,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tenant must be explicitly identified (P0-SEC-3)
-    const tenantId = request.headers.get("x-tenant-id");
+    const tenantId = await resolvePortalTenant(request);
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant identification required. Set x-tenant-id header." },
+        { error: "Tenant identification required" },
         { status: 400 }
       );
     }
@@ -108,4 +108,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).

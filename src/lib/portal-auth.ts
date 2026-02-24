@@ -85,6 +85,23 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
 }
 
 /**
+ * Resolve tenant ID for a portal API request.
+ * Checks x-tenant-id header first; falls back to the single active tenant
+ * for single-tenant deployments where TENANT_ID env var is not set.
+ */
+export async function resolvePortalTenant(request: NextRequest): Promise<string | null> {
+  const fromHeader = request.headers.get("x-tenant-id");
+  if (fromHeader) return fromHeader;
+
+  const tenant = await prisma.tenant.findFirst({
+    where: { status: { in: ["active", "trial"] }, deletedAt: null },
+    select: { id: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return tenant?.id ?? null;
+}
+
+/**
  * Require citizen auth - redirects to login if not authenticated.
  * For use in server components.
  */

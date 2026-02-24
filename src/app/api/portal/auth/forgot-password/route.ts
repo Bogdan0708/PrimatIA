@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestCitizenPasswordReset } from "@/lib/password-reset";
+import { resolvePortalTenant } from "@/lib/portal-auth";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const email = typeof body?.email === "string" ? body.email : "";
 
-    // Tenant must be explicitly identified (P0-SEC-3)
-    const tenantId = request.headers.get("x-tenant-id");
+    const tenantId = await resolvePortalTenant(request);
 
     if (email && tenantId) {
       try {
@@ -24,4 +24,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).

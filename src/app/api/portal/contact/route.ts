@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCitizenFromRequest } from "@/lib/portal-auth";
+import { getCitizenFromRequest, resolvePortalTenant } from "@/lib/portal-auth";
 import { prisma, withTenantScope } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tenant must be explicitly identified (P0-SEC-3)
-    const tenantId = citizen?.tenantId || request.headers.get("x-tenant-id");
+    const tenantId = citizen?.tenantId || await resolvePortalTenant(request);
     if (!tenantId) {
       return NextResponse.json(
         { error: "Tenant identification required" },
@@ -48,4 +47,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).
