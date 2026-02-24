@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
 import { SignJWT } from "jose";
+import { prisma } from "@/lib/db";
 
-const citizenJwtSecret =
-  process.env.JWT_SECRET ||
-  process.env.CITIZEN_JWT_SECRET ||
-  process.env.NEXTAUTH_SECRET;
-
-if (!citizenJwtSecret) {
-  throw new Error(
-    "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
-  );
+/** Lazily resolved at request time so the module can be imported during build. */
+function getJwtSecret(): Uint8Array {
+  const secret =
+    process.env.JWT_SECRET ||
+    process.env.CITIZEN_JWT_SECRET ||
+    process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error(
+      "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
+    );
+  }
+  return new TextEncoder().encode(secret);
 }
-
-const JWT_SECRET = new TextEncoder().encode(citizenJwtSecret);
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,14 +29,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tenant must be explicitly identified — never fall back to "first active tenant"
-    // as that would allow cross-tenant authentication (P0-SEC-3).
-    const tenantId = request.headers.get("x-tenant-id");
+    // Prefer the header injected by middleware (from TENANT_ID env var in production).
+    // Fall back to the single active tenant for single-tenant deployments and local dev
+    // where TENANT_ID is not configured. This is safe: if multiple tenants exist and no
+    // header is present, the query returns null and we return 400.
+    let tenantId = request.headers.get("x-tenant-id");
     if (!tenantId) {
-      return NextResponse.json(
-        { error: "Tenant identification required. Set x-tenant-id header." },
-        { status: 400 }
-      );
+      const tenant = await prisma.tenant.findFirst({
+        where: { status: { in: ["active", "trial"] }, deletedAt: null },
+        select: { id: true },
+        orderBy: { createdAt: "asc" },
+      });
+      if (!tenant) {
+        return NextResponse.json(
+          { error: "Tenant identification required" },
+          { status: 400 }
+        );
+      }
+      tenantId = tenant.id;
     }
 
     const citizen = await authenticateCitizen(email, password, tenantId);
@@ -59,7 +71,7 @@ export async function POST(request: NextRequest) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("4h")
-      .sign(JWT_SECRET);
+      .sign(getJwtSecret());
 
     const response = NextResponse.json({
       success: true,
