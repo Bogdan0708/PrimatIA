@@ -26,8 +26,8 @@ gcloud run deploy "$SERVICE" \
   --max-instances 3 \
   --cpu-throttling \
   --startup-cpu-boost \
-  --set-env-vars "NODE_ENV=production" \
-  --set-secrets "DATABASE_URL=primaria-database-url:latest,NEXTAUTH_SECRET=primaria-nextauth-secret:latest,STRIPE_SECRET_KEY=primaria-stripe-key:latest,STRIPE_WEBHOOK_SECRET=primaria-stripe-webhook:latest,LM_STUDIO_URL=primaria-lm-studio-url:latest"
+  --set-env-vars "NODE_ENV=production,TENANT_ID=${TENANT_ID:?Set TENANT_ID}" \
+  --set-secrets "DATABASE_URL=primaria-database-url:latest,NEXTAUTH_SECRET=primaria-nextauth-secret:latest,STRIPE_SECRET_KEY=primaria-stripe-key:latest,STRIPE_WEBHOOK_SECRET=primaria-stripe-webhook:latest"
 
 echo "✅ Deployed! URL:"
 gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)'
