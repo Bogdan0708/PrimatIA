@@ -159,7 +159,7 @@ export default function OnlinePaymentPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-portal-primary" />
       </div>
     );
   }
@@ -217,20 +217,20 @@ export default function OnlinePaymentPage() {
 
           {/* Summary + proceed button (step: select) */}
           {step === "select" && selected.size > 0 && (
-            <Card className="border-teal-200 bg-teal-50">
+            <Card className="border-portal-primary/30 bg-portal-primary-subtle">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">
                       {t("selectedItems")}: {selected.size}
                     </p>
-                    <p className="text-2xl font-bold text-teal-700">
+                    <p className="text-2xl font-bold text-portal-primary">
                       {formatLei(totalAmount)}
                     </p>
                   </div>
                   <Button
                     onClick={() => setStep("method")}
-                    className="bg-teal-600 hover:bg-teal-700"
+                    className="bg-portal-primary hover:bg-portal-primary-hover"
                     size="lg"
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
@@ -249,11 +249,11 @@ export default function OnlinePaymentPage() {
                 <CardDescription>
                   {t("choosePaymentMethodDescription")}
                 </CardDescription>
-                <div className="mt-2 rounded-lg bg-teal-50 p-3">
+                <div className="mt-2 rounded-lg bg-portal-primary-subtle p-3">
                   <p className="text-sm text-muted-foreground">
                     {t("selectedItems")}: {selected.size}
                   </p>
-                  <p className="text-xl font-bold text-teal-700">
+                  <p className="text-xl font-bold text-portal-primary">
                     {formatLei(totalAmount)}
                   </p>
                 </div>
@@ -264,10 +264,10 @@ export default function OnlinePaymentPage() {
                   <button
                     onClick={handleCardPayment}
                     disabled={submitting}
-                    className="flex flex-col items-center gap-3 rounded-xl border-2 border-teal-200 p-6 text-center transition-all hover:border-teal-500 hover:bg-teal-50 disabled:opacity-50"
+                    className="flex flex-col items-center gap-3 rounded-xl border-2 border-portal-primary/30 p-6 text-center transition-all hover:border-portal-primary hover:bg-portal-primary-subtle disabled:opacity-50"
                   >
-                    <div className="rounded-full bg-teal-100 p-4">
-                      <CreditCard className="h-8 w-8 text-teal-600" />
+                    <div className="rounded-full bg-portal-primary-subtle p-4">
+                      <CreditCard className="h-8 w-8 text-portal-primary" />
                     </div>
                     <div>
                       <p className="text-lg font-semibold">
@@ -278,7 +278,7 @@ export default function OnlinePaymentPage() {
                       </p>
                     </div>
                     {submitting && (
-                      <div className="flex items-center gap-2 text-sm text-teal-600">
+                      <div className="flex items-center gap-2 text-sm text-portal-primary">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         {t("processingPayment")}
                       </div>
@@ -432,7 +432,7 @@ function BankDetailRow({
         <p className="text-xs text-muted-foreground">{label}</p>
         <p
           className={`font-medium ${mono ? "font-mono text-sm" : ""} ${
-            highlight ? "text-teal-700" : ""
+            highlight ? "text-portal-primary" : ""
           }`}
         >
           {value}

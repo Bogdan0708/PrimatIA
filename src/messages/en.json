@@ -26,6 +26,7 @@
     "deleteSuccess": "Item deleted.",
     "deleteError": "Failed to delete item.",
     "noResults": "No results found",
+    "noResultsHint": "Try adjusting your search terms or filters.",
     "error": "Error",
     "success": "Success",
     "required": "Required",
@@ -63,7 +64,11 @@
     "rateComparison": "Rate comparison",
     "anomalies": "Anomalies",
     "forecast": "Forecast",
-    "regulations": "Legislation"
+    "regulations": "Legislation",
+    "groupCoreData": "Taxpayer data",
+    "groupOperations": "Operations",
+    "groupAnalytics": "Reports",
+    "groupAdmin": "Administration"
   },
   "auth": {
     "signIn": "Sign In",
@@ -107,7 +112,8 @@
     "buildings": "Buildings",
     "landPlots": "Land Plots",
     "vehiclesCount": "Vehicles",
-    "days": "days"
+    "days": "days",
+    "last12Months": "Last 12 months"
   },
   "taxpayer": {
     "title": "Taxpayers",
@@ -803,7 +809,11 @@
     "phone": "Phone",
     "email": "Email",
     "footerText": "Local tax administration platform",
-    "copyright": "Local Tax Administration"
+    "copyright": "Local Tax Administration",
+    "platformBadge": "Municipal digital platform",
+    "trustSecure": "SSL encrypted data",
+    "trustGdpr": "GDPR compliant",
+    "trustOfficial": "Official platform"
   },
   "compliance": {
     "title": "Compliance Score",

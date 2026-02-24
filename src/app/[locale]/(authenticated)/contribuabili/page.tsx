@@ -5,6 +5,8 @@ import { Plus, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { deleteContribuabil, getContribuabili } from "./_actions/contribuabil-actions";
 import { ContribuabilSearch } from "./_components/contribuabil-search";
 import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
@@ -78,18 +80,17 @@ export default async function ContribuabiliPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-        </div>
-        <Link href={`${localePrefix}/contribuabili/new`}>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("addNew")}
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={t("title")}
+        actions={
+          <Link href={`${localePrefix}/contribuabili/new`}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("addNew")}
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Search & Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -182,9 +183,20 @@ export default async function ContribuabiliPage({
       {/* Table */}
       {result.items.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">{tc("noResults")}</p>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Users}
+              title={tc("noResults")}
+              description={tc("noResultsHint")}
+              action={
+                <Link href={`${localePrefix}/contribuabili/new`}>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("addNew")}
+                  </Button>
+                </Link>
+              }
+            />
           </CardContent>
         </Card>
       ) : (

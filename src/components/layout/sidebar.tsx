@@ -32,6 +32,7 @@ interface NavItem {
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: Role[];
+  group?: string;
 }
 
 const mainNavItems: NavItem[] = [
@@ -44,46 +45,55 @@ const mainNavItems: NavItem[] = [
     href: "/contribuabili",
     labelKey: "taxpayers",
     icon: Users,
+    group: "coreData",
   },
   {
     href: "/proprietati/cladiri",
     labelKey: "buildings",
     icon: Building2,
+    group: "coreData",
   },
   {
     href: "/proprietati/terenuri",
     labelKey: "land",
     icon: MapPin,
+    group: "coreData",
   },
   {
     href: "/proprietati/vehicule",
     labelKey: "vehicles",
     icon: Car,
+    group: "coreData",
   },
   {
     href: "/plati",
     labelKey: "payments",
     icon: CreditCard,
+    group: "operations",
   },
   {
     href: "/documente",
     labelKey: "documents",
     icon: FileText,
-  },
-  {
-    href: "/rapoarte",
-    labelKey: "reports",
-    icon: BarChart3,
+    group: "operations",
   },
   {
     href: "/somatii",
     labelKey: "somatii",
     icon: AlertTriangle,
+    group: "operations",
+  },
+  {
+    href: "/rapoarte",
+    labelKey: "reports",
+    icon: BarChart3,
+    group: "analytics",
   },
   {
     href: "/reglementari",
     labelKey: "regulations",
     icon: BookOpen,
+    group: "analytics",
   },
 ];
 
@@ -158,6 +168,11 @@ interface SidebarProps {
   className?: string;
 }
 
+interface NavGroup {
+  labelKey: string | null;
+  items: NavItem[];
+}
+
 export function Sidebar({ userRole, className }: SidebarProps) {
   const pathname = usePathname();
   const locale = useLocale();
@@ -169,10 +184,21 @@ export function Sidebar({ userRole, className }: SidebarProps) {
   const filterByRole = (items: NavItem[]) =>
     items.filter((item) => !item.roles || item.roles.includes(userRole));
 
+  // Group mainNavItems: ungrouped first, then by group
+  const groupOrder = ["coreData", "operations", "analytics"];
+  const ungrouped = mainNavItems.filter((i) => !i.group);
+  const groups: NavGroup[] = [
+    { labelKey: null, items: ungrouped },
+    ...groupOrder.map((g) => ({
+      labelKey: `group${g.charAt(0).toUpperCase()}${g.slice(1)}`,
+      items: mainNavItems.filter((i) => i.group === g),
+    })),
+  ];
+
   return (
     <aside
       className={cn(
-        "flex h-full w-64 flex-col border-r bg-card",
+        "flex h-full w-64 flex-col border-r bg-sidebar-bg",
         className
       )}
     >
@@ -182,21 +208,33 @@ export function Sidebar({ userRole, className }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-1">
-          {mainNavItems.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              isActive={pathWithoutLocale.startsWith(item.href)}
-              localePrefix={localePrefix}
-              label={t(item.labelKey)}
-            />
-          ))}
-        </div>
+        {groups.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? "mt-4" : ""}>
+            {group.labelKey && (
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {t(group.labelKey)}
+              </p>
+            )}
+            <div className="space-y-1">
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  isActive={pathWithoutLocale.startsWith(item.href)}
+                  localePrefix={localePrefix}
+                  label={t(item.labelKey)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
 
         {filterByRole(adminNavItems).length > 0 && (
           <>
             <Separator className="my-4" />
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              {t("groupAdmin")}
+            </p>
             <div className="space-y-1">
               {filterByRole(adminNavItems).map((item) => (
                 <NavLink
@@ -248,14 +286,17 @@ function NavLink({
     <Link
       href={`${localePrefix}${item.href}`}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         isActive
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground"
+          ? "bg-sidebar-active-bg text-sidebar-active-fg shadow-sm"
+          : "text-muted-foreground hover:bg-sidebar-hover-bg hover:text-foreground"
       )}
     >
-      <Icon className="h-4 w-4" />
-      {label}
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="flex-1">{label}</span>
+      {isActive && (
+        <span className="h-1.5 w-1.5 rounded-full bg-sidebar-active-fg/80" />
+      )}
     </Link>
   );
 }

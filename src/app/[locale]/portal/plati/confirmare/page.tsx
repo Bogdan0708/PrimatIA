@@ -29,7 +29,7 @@ export default function PaymentConfirmationPage() {
         <CardHeader>
           <div className="flex justify-center mb-4">
             {success ? (
-              <CheckCircle className="h-16 w-16 text-teal-600" />
+              <CheckCircle className="h-16 w-16 text-portal-primary" />
             ) : (
               <XCircle className="h-16 w-16 text-destructive" />
             )}
@@ -51,7 +51,7 @@ export default function PaymentConfirmationPage() {
             </Link>
           </Button>
           {success && (
-            <Button asChild className="bg-teal-600 hover:bg-teal-700">
+            <Button asChild className="bg-portal-primary hover:bg-portal-primary-hover">
               <Link href={`${localePrefix}/portal/dashboard`}>
                 {t("backToDashboard")}
               </Link>

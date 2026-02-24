@@ -60,7 +60,7 @@ export default function PortalContactPage() {
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-teal-600" />
+              <CheckCircle className="h-16 w-16 text-portal-primary" />
             </div>
             <CardTitle>{t("messageSent")}</CardTitle>
             <CardDescription>{t("messageSentDescription")}</CardDescription>
@@ -125,7 +125,7 @@ export default function PortalContactPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700"
+                className="w-full bg-portal-primary hover:bg-portal-primary-hover"
                 disabled={loading}
               >
                 {loading ? (

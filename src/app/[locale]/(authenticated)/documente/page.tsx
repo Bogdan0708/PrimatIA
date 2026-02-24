@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getDocuments, getDocumentDownloadUrl } from "./_actions/document-actions";
 
 export default async function DocumentePage({
@@ -65,9 +67,7 @@ export default async function DocumentePage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-      </div>
+      <PageHeader title={t("title")} />
 
       <div className="flex gap-2 flex-wrap">
         <div className="flex rounded-md border border-input">
@@ -100,9 +100,12 @@ export default async function DocumentePage({
 
       {result.items.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">{tc("noResults")}</p>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={FileText}
+              title={tc("noResults")}
+              description={tc("noResultsHint")}
+            />
           </CardContent>
         </Card>
       ) : (

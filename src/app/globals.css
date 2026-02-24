@@ -24,6 +24,33 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Semantic status */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar — distinct active vs hover */
+    --sidebar-bg: 220 33% 98%;
+    --sidebar-active-bg: 221.2 83.2% 53.3%;
+    --sidebar-active-fg: 210 40% 98%;
+    --sidebar-hover-bg: 210 40% 94%;
+
+    /* Portal brand — replaces all text-teal-600 */
+    --portal-primary: 174 72% 31%;
+    --portal-primary-foreground: 0 0% 100%;
+    --portal-primary-hover: 174 72% 25%;
+    --portal-primary-subtle: 174 72% 94%;
+
+    /* Chart tokens */
+    --chart-1: 221 83% 53%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 262 52% 47%;
   }
 
   .dark {
@@ -46,6 +73,33 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Semantic status — dark */
+    --success: 142 60% 50%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 60%;
+    --warning-foreground: 0 0% 10%;
+    --info: 199 80% 58%;
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar — dark */
+    --sidebar-bg: 222.2 84% 6%;
+    --sidebar-active-bg: 217.2 91.2% 59.8%;
+    --sidebar-active-fg: 222.2 47.4% 11.2%;
+    --sidebar-hover-bg: 217.2 32.6% 17.5%;
+
+    /* Portal brand — dark */
+    --portal-primary: 174 60% 45%;
+    --portal-primary-foreground: 0 0% 100%;
+    --portal-primary-hover: 174 60% 38%;
+    --portal-primary-subtle: 174 60% 15%;
+
+    /* Chart tokens — dark */
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 60% 50%;
+    --chart-3: 38 85% 60%;
+    --chart-4: 0 72% 65%;
+    --chart-5: 262 45% 60%;
   }
 }
 

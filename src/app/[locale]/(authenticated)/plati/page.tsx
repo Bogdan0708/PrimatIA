@@ -5,6 +5,8 @@ import { Plus, ChevronLeft, ChevronRight, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getPlati } from "./_actions/plata-actions";
 
 export default async function PlatiPage({
@@ -63,12 +65,14 @@ export default async function PlatiPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-        <Link href={`${localePrefix}/plati/new`}>
-          <Button><Plus className="mr-2 h-4 w-4" />{t("addNew")}</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={t("title")}
+        actions={
+          <Link href={`${localePrefix}/plati/new`}>
+            <Button><Plus className="mr-2 h-4 w-4" />{t("addNew")}</Button>
+          </Link>
+        }
+      />
 
       <div className="flex gap-2 flex-wrap">
         <div className="flex rounded-md border border-input">
@@ -88,9 +92,12 @@ export default async function PlatiPage({
 
       {result.items.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <CreditCard className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">{tc("noResults")}</p>
+          <CardContent className="p-0">
+            <EmptyState
+              icon={CreditCard}
+              title={tc("noResults")}
+              description={tc("noResultsHint")}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -124,7 +131,7 @@ export default async function PlatiPage({
                     <td className="p-4">{methodLabel(item.modalitate)}</td>
                     <td className="p-4 font-mono text-xs">{item.nrChitanta ?? item.nrDocument ?? "-"}</td>
                     <td className="p-4">
-                      <Badge variant={item.distribuit ? "default" : "secondary"}>
+                      <Badge variant={item.distribuit ? "success" : "warning"}>
                         {item.distribuit ? t("distributed") : t("notDistributed")}
                       </Badge>
                     </td>

@@ -26,6 +26,7 @@
     "deleteSuccess": "Elem törölve.",
     "deleteError": "A törlés nem sikerült.",
     "noResults": "Nincs találat",
+    "noResultsHint": "Próbáljon módosítani a keresési feltételeken vagy szűrőkön.",
     "error": "Hiba",
     "success": "Siker",
     "required": "Kötelező",
@@ -63,7 +64,11 @@
     "rateComparison": "Adó összehasonlítás",
     "anomalies": "Anomáliák",
     "forecast": "Előrejelzés",
-    "regulations": "Jogszabályok"
+    "regulations": "Jogszabályok",
+    "groupCoreData": "Adózói adatok",
+    "groupOperations": "Műveletek",
+    "groupAnalytics": "Riportok",
+    "groupAdmin": "Adminisztráció"
   },
   "auth": {
     "signIn": "Bejelentkezés",
@@ -107,7 +112,8 @@
     "buildings": "Épületek",
     "landPlots": "Telkek",
     "vehiclesCount": "Járművek",
-    "days": "napok"
+    "days": "napok",
+    "last12Months": "Az elmúlt 12 hónap"
   },
   "taxpayer": {
     "title": "Adófizetők",
@@ -803,7 +809,11 @@
     "phone": "Telefon",
     "email": "E-mail",
     "footerText": "Helyi adókezelési platform",
-    "copyright": "Helyi Adókezelés"
+    "copyright": "Helyi Adókezelés",
+    "platformBadge": "Digitális önkormányzati platform",
+    "trustSecure": "SSL titkosított adatok",
+    "trustGdpr": "GDPR megfelelőség",
+    "trustOfficial": "Hivatalos platform"
   },
   "compliance": {
     "title": "Megfelelőségi pontszám",

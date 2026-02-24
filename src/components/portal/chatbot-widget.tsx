@@ -104,17 +104,17 @@ export function ChatbotWidget() {
             : "pointer-events-none opacity-0 translate-y-4 scale-95"
         )}
       >
-        <Card className="flex h-[70vh] max-h-[520px] flex-col overflow-hidden border-teal-100 shadow-xl">
-          <div className="flex items-center justify-between border-b bg-teal-600 px-4 py-3 text-white">
+        <Card className="flex h-[70vh] max-h-[520px] flex-col overflow-hidden border-portal-primary/20 shadow-xl">
+          <div className="flex items-center justify-between border-b bg-portal-primary px-4 py-3 text-white">
             <div>
               <p className="text-sm font-semibold">{t("title")}</p>
-              <p className="text-xs text-teal-50">{t("subtitle")}</p>
+              <p className="text-xs text-portal-primary-subtle">{t("subtitle")}</p>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="text-white hover:bg-teal-500"
+              className="text-white hover:bg-portal-primary-subtle0"
               onClick={() => setOpen(false)}
             >
               <X className="h-4 w-4" />
@@ -135,7 +135,7 @@ export function ChatbotWidget() {
                     className={cn(
                       "max-w-[80%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm",
                       message.role === "user"
-                        ? "bg-teal-600 text-white"
+                        ? "bg-portal-primary text-white"
                         : "bg-white text-slate-800 border"
                     )}
                   >
@@ -173,7 +173,7 @@ export function ChatbotWidget() {
                 type="button"
                 onClick={sendMessage}
                 disabled={loading || input.trim().length === 0}
-                className="bg-teal-600 hover:bg-teal-700"
+                className="bg-portal-primary hover:bg-portal-primary-hover"
               >
                 <Send className="h-4 w-4" />
               </Button>
@@ -188,7 +188,7 @@ export function ChatbotWidget() {
       <Button
         type="button"
         className={cn(
-          "h-12 w-12 rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700",
+          "h-12 w-12 rounded-full bg-portal-primary text-white shadow-lg hover:bg-portal-primary-hover",
           open && "hidden"
         )}
         onClick={() => setOpen(true)}

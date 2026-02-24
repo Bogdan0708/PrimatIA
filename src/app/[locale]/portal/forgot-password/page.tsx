@@ -46,7 +46,7 @@ export default function PortalForgotPasswordPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Building2 className="h-8 w-8 text-teal-600" />
+              <Building2 className="h-8 w-8 text-portal-primary" />
               <span className="text-2xl font-bold">PrimărIA</span>
             </div>
           </div>
@@ -57,7 +57,7 @@ export default function PortalForgotPasswordPage() {
           {done ? (
             <div className="space-y-4 text-sm">
               <p>Dacă adresa există în sistem, am trimis un link de resetare.</p>
-              <Button asChild className="w-full bg-teal-600 hover:bg-teal-700">
+              <Button asChild className="w-full bg-portal-primary hover:bg-portal-primary-hover">
                 <Link href={`${localePrefix}/portal/login`}>{tCommon("login")}</Link>
               </Button>
             </div>
@@ -75,7 +75,7 @@ export default function PortalForgotPasswordPage() {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700"
+                className="w-full bg-portal-primary hover:bg-portal-primary-hover"
                 disabled={loading}
               >
                 {loading ? tCommon("loading") : "Trimite link"}

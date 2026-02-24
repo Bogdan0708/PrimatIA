@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Building2, CreditCard, FileSearch, FileText, Phone, Clock, MapPin } from "lucide-react";
+import { Building2, CreditCard, FileSearch, FileText, Phone, Clock, MapPin, ShieldCheck, Globe2, BadgeCheck } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,7 @@ export default async function PublicLandingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-white overflow-hidden relative">
       {/* Hero */}
       <header className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,8 +57,24 @@ export default async function PublicLandingPage() {
 
       <main>
         {/* Hero section */}
-        <section className="py-20 px-4">
-          <div className="max-w-4xl mx-auto text-center">
+        <section className="py-20 px-4 relative">
+          {/* Decorative blur blobs */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/8 blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-primary/8 blur-3xl"
+          />
+
+          <div className="max-w-4xl mx-auto text-center relative z-10">
+            {/* Eyebrow badge */}
+            <div className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-sm font-medium text-muted-foreground shadow-sm mb-6">
+              <Building2 className="h-4 w-4 text-primary" />
+              <span>{t("platformBadge")}</span>
+            </div>
+
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
               {tenant?.name || t("defaultTitle")}
             </h1>
@@ -78,6 +94,22 @@ export default async function PublicLandingPage() {
                   {t("checkStatus")}
                 </Link>
               </Button>
+            </div>
+
+            {/* Trust row */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-success" />
+                <span>{t("trustSecure")}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Globe2 className="h-4 w-4 text-info" />
+                <span>{t("trustGdpr")}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <BadgeCheck className="h-4 w-4 text-primary" />
+                <span>{t("trustOfficial")}</span>
+              </div>
             </div>
           </div>
         </section>

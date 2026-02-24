@@ -18,9 +18,11 @@ import {
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardChartsProps {
   revenueByMonth: { month: string; total: number }[];
@@ -29,13 +31,19 @@ interface DashboardChartsProps {
   overdueAging: { bucket: string; total: number }[];
 }
 
-const PIE_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626"];
+const PIE_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 
 const AGING_COLORS: Record<string, string> = {
-  "0-30": "#3b82f6",
-  "31-90": "#f59e0b",
-  "91-180": "#f97316",
-  "180+": "#dc2626",
+  "0-30": "hsl(var(--chart-1))",
+  "31-90": "hsl(var(--chart-3))",
+  "91-180": "hsl(var(--warning))",
+  "180+": "hsl(var(--destructive))",
 };
 
 function formatCurrency(n: number) {
@@ -84,8 +92,16 @@ export function DashboardCharts({
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">{t("revenueByMonth")}</CardTitle>
+          <CardDescription>{t("last12Months")}</CardDescription>
         </CardHeader>
         <CardContent>
+          {revenueData.length === 0 ? (
+            <div className="flex h-[300px] flex-col justify-end gap-2 px-4">
+              <Skeleton className="h-24 w-full rounded-sm" />
+              <Skeleton className="h-16 w-full rounded-sm" />
+              <Skeleton className="h-32 w-full rounded-sm" />
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -106,9 +122,10 @@ export function DashboardCharts({
                   value != null ? [formatCurrency(value), t("totalRevenue")] : ["-", t("totalRevenue")]
                 }
               />
-              <Bar dataKey="total" fill="#2563eb" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -146,6 +163,7 @@ export function DashboardCharts({
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">{t("collectionRateTrend")}</CardTitle>
+          <CardDescription>{t("last12Months")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -172,7 +190,7 @@ export function DashboardCharts({
               <Line
                 type="monotone"
                 dataKey="rate"
-                stroke="#16a34a"
+                stroke="hsl(var(--chart-2))"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
@@ -188,6 +206,13 @@ export function DashboardCharts({
           <CardTitle className="text-lg">{t("overdueAging")}</CardTitle>
         </CardHeader>
         <CardContent>
+          {agingData.length === 0 ? (
+            <div className="flex h-[300px] flex-col justify-end gap-2 px-4">
+              <Skeleton className="h-32 w-full rounded-sm" />
+              <Skeleton className="h-20 w-full rounded-sm" />
+              <Skeleton className="h-48 w-full rounded-sm" />
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={agingData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -207,6 +232,7 @@ export function DashboardCharts({
               <Bar dataKey="total" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
     </div>

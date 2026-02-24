@@ -96,12 +96,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link href={toLocalePath("/portal")} className="flex items-center gap-2">
-              <Building2 className="h-7 w-7 text-teal-600" />
+              <Building2 className="h-7 w-7 text-portal-primary" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-gray-900">
                   PrimărIA
                 </span>
-                <span className="text-xs text-teal-600 -mt-1 hidden sm:block">
+                <span className="text-xs text-portal-primary -mt-1 hidden sm:block">
                   {t("title")}
                 </span>
               </div>
@@ -120,7 +120,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                       className={cn(
                         "flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                         isActive
-                          ? "bg-teal-50 text-teal-700"
+                          ? "bg-portal-primary-subtle text-portal-primary"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                       )}
                     >
@@ -165,7 +165,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                         className="relative h-8 w-8 rounded-full"
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-teal-100 text-teal-700">
+                          <AvatarFallback className="bg-portal-primary-subtle text-portal-primary">
                             {initials}
                           </AvatarFallback>
                         </Avatar>
@@ -219,7 +219,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 <Button
                   asChild
                   variant="default"
-                  className="bg-teal-600 hover:bg-teal-700"
+                  className="bg-portal-primary hover:bg-portal-primary-hover"
                 >
                   <Link href={toLocalePath("/portal/login")}>
                     {tCommon("login")}
@@ -245,7 +245,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                     className={cn(
                       "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md",
                       isActive
-                        ? "bg-teal-50 text-teal-700"
+                        ? "bg-portal-primary-subtle text-portal-primary"
                         : "text-gray-600 hover:bg-gray-100"
                     )}
                   >
@@ -271,7 +271,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-teal-400" />
+              <Building2 className="h-5 w-5 text-portal-primary" />
               <span className="font-semibold text-white">PrimărIA</span>
             </div>
             <p className="text-sm text-center">

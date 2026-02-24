@@ -62,7 +62,7 @@ export default function PortalLoginPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Building2 className="h-8 w-8 text-teal-600" />
+              <Building2 className="h-8 w-8 text-portal-primary" />
               <span className="text-2xl font-bold">PrimărIA</span>
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function PortalLoginPage() {
             )}
             <Button
               type="submit"
-              className="w-full bg-teal-600 hover:bg-teal-700"
+              className="w-full bg-portal-primary hover:bg-portal-primary-hover"
               disabled={loading}
             >
               {loading ? tCommon("loading") : tCommon("login")}
@@ -111,7 +111,7 @@ export default function PortalLoginPage() {
             {t("noAccount")}{" "}
             <Link
               href={`${localePrefix}/portal/register`}
-              className="text-teal-600 hover:underline font-medium"
+              className="text-portal-primary hover:underline font-medium"
             >
               {t("registerHere")}
             </Link>

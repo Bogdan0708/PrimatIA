@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -52,11 +53,7 @@ export function ComplianceScoreBadge({
   }, [contribuabilId]);
 
   if (loading) {
-    return (
-      <Badge variant="outline" className="animate-pulse">
-        ...
-      </Badge>
-    );
+    return <Skeleton className="h-5 w-12 rounded-full" />;
   }
 
   if (!data) return null;

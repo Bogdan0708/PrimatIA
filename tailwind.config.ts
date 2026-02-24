@@ -50,6 +50,30 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
+        "portal-primary": {
+          DEFAULT: "hsl(var(--portal-primary))",
+          foreground: "hsl(var(--portal-primary-foreground))",
+          hover: "hsl(var(--portal-primary-hover))",
+          subtle: "hsl(var(--portal-primary-subtle))",
+        },
+        sidebar: {
+          bg: "hsl(var(--sidebar-bg))",
+          "active-bg": "hsl(var(--sidebar-active-bg))",
+          "active-fg": "hsl(var(--sidebar-active-fg))",
+          "hover-bg": "hsl(var(--sidebar-hover-bg))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

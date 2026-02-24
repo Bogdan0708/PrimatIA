@@ -104,7 +104,7 @@ export default async function PortalTaxesPage() {
                         <TableCell className="font-medium">{taxName}</TableCell>
                         <TableCell className="text-right">{formatLei(Number(tax.sumaDatorata))}</TableCell>
                         <TableCell className="text-right">{formatLei(Number(tax.sumaPlatita))}</TableCell>
-                        <TableCell className={`text-right font-semibold ${outstanding > 0 ? "text-destructive" : "text-teal-600"}`}>
+                        <TableCell className={`text-right font-semibold ${outstanding > 0 ? "text-destructive" : "text-portal-primary"}`}>
                           {formatLei(outstanding)}
                         </TableCell>
                         <TableCell>

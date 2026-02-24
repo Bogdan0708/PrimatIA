@@ -102,11 +102,11 @@ export function CertificateRequestForm({ contribuabili }: Props) {
       </div>
 
       {error && <div className="text-sm text-destructive">{error}</div>}
-      {success && <div className="text-sm text-teal-600">{t("requestSubmitted")}</div>}
+      {success && <div className="text-sm text-portal-primary">{t("requestSubmitted")}</div>}
 
       <Button
         type="submit"
-        className="w-full bg-teal-600 hover:bg-teal-700"
+        className="w-full bg-portal-primary hover:bg-portal-primary-hover"
         disabled={loading}
       >
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

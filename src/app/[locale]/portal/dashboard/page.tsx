@@ -198,7 +198,7 @@ export default async function PortalDashboardPage() {
             <AlertTriangle className={`h-4 w-4 ${totalOwed > 0 ? "text-destructive" : "text-muted-foreground"}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${totalOwed > 0 ? "text-destructive" : "text-teal-600"}`}>
+            <div className={`text-2xl font-bold ${totalOwed > 0 ? "text-destructive" : "text-portal-primary"}`}>
               {formatLei(totalOwed)}
             </div>
             <p className="text-xs text-muted-foreground">{t("forYear")} {currentYear}</p>
@@ -211,7 +211,7 @@ export default async function PortalDashboardPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-teal-600">{formatLei(totalPaid)}</div>
+            <div className="text-2xl font-bold text-portal-primary">{formatLei(totalPaid)}</div>
             <p className="text-xs text-muted-foreground">{t("forYear")} {currentYear}</p>
           </CardContent>
         </Card>
@@ -224,7 +224,7 @@ export default async function PortalDashboardPage() {
           <CardContent>
             <Link
               href={`${localePrefix}/portal/documente`}
-              className="text-teal-600 hover:underline text-sm"
+              className="text-portal-primary hover:underline text-sm"
             >
               {t("viewDocuments")}
             </Link>
@@ -237,7 +237,7 @@ export default async function PortalDashboardPage() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="text-lg">{t("myProperties")}</CardTitle>
-            <Link href={`${localePrefix}/portal/proprietati`} className="text-sm text-teal-600 hover:underline">
+            <Link href={`${localePrefix}/portal/proprietati`} className="text-sm text-portal-primary hover:underline">
               {t("properties")}
             </Link>
           </CardHeader>
@@ -263,7 +263,7 @@ export default async function PortalDashboardPage() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="text-lg">{t("myTaxes")}</CardTitle>
-            <Link href={`${localePrefix}/portal/impozite`} className="text-sm text-teal-600 hover:underline">
+            <Link href={`${localePrefix}/portal/impozite`} className="text-sm text-portal-primary hover:underline">
               {t("taxes")}
             </Link>
           </CardHeader>
@@ -290,7 +290,7 @@ export default async function PortalDashboardPage() {
         <Card>
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="text-lg">{t("paymentHistory")}</CardTitle>
-            <Link href={`${localePrefix}/portal/plati`} className="text-sm text-teal-600 hover:underline">
+            <Link href={`${localePrefix}/portal/plati`} className="text-sm text-portal-primary hover:underline">
               {t("payments")}
             </Link>
           </CardHeader>
@@ -349,23 +349,23 @@ export default async function PortalDashboardPage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
               href={`${localePrefix}/portal/plati/online`}
-              className="flex items-center gap-2 rounded-lg border p-4 hover:bg-teal-50 transition-colors"
+              className="flex items-center gap-2 rounded-lg border p-4 hover:bg-portal-primary-subtle transition-colors"
             >
-              <CreditCard className="h-5 w-5 text-teal-600" />
+              <CreditCard className="h-5 w-5 text-portal-primary" />
               <span className="font-medium">{t("payOnline")}</span>
             </Link>
             <Link
               href={`${localePrefix}/portal/certificate`}
-              className="flex items-center gap-2 rounded-lg border p-4 hover:bg-teal-50 transition-colors"
+              className="flex items-center gap-2 rounded-lg border p-4 hover:bg-portal-primary-subtle transition-colors"
             >
-              <FileText className="h-5 w-5 text-teal-600" />
+              <FileText className="h-5 w-5 text-portal-primary" />
               <span className="font-medium">{t("requestCertificate")}</span>
             </Link>
             <Link
               href={`${localePrefix}/portal/impozite`}
-              className="flex items-center gap-2 rounded-lg border p-4 hover:bg-teal-50 transition-colors"
+              className="flex items-center gap-2 rounded-lg border p-4 hover:bg-portal-primary-subtle transition-colors"
             >
-              <AlertTriangle className="h-5 w-5 text-teal-600" />
+              <AlertTriangle className="h-5 w-5 text-portal-primary" />
               <span className="font-medium">{t("viewTaxes")}</span>
             </Link>
           </div>

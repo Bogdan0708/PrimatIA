@@ -88,7 +88,7 @@ export default function PortalProfilePage() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-portal-primary" />
       </div>
     );
   }
@@ -103,7 +103,7 @@ export default function PortalProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-teal-600" />
+              <User className="h-5 w-5 text-portal-primary" />
               {t("personalInfo")}
             </CardTitle>
           </CardHeader>
@@ -149,7 +149,7 @@ export default function PortalProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-teal-600" />
+              <Bell className="h-5 w-5 text-portal-primary" />
               {t("notificationPreferences")}
             </CardTitle>
             <CardDescription>{t("notificationPreferencesDescription")}</CardDescription>
@@ -171,11 +171,11 @@ export default function PortalProfilePage() {
         </Card>
 
         {error && <div className="text-sm text-destructive">{error}</div>}
-        {success && <div className="text-sm text-teal-600">{t("profileUpdated")}</div>}
+        {success && <div className="text-sm text-portal-primary">{t("profileUpdated")}</div>}
 
         <Button
           type="submit"
-          className="bg-teal-600 hover:bg-teal-700"
+          className="bg-portal-primary hover:bg-portal-primary-hover"
           disabled={saving}
         >
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

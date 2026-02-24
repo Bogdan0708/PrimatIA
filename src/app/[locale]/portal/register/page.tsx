@@ -89,7 +89,7 @@ export default function PortalRegisterPage() {
         <Card className="w-full max-w-md text-center">
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-teal-600" />
+              <CheckCircle className="h-16 w-16 text-portal-primary" />
             </div>
             <CardTitle>{t("registrationSuccess")}</CardTitle>
             <CardDescription>{t("checkEmail")}</CardDescription>
@@ -138,7 +138,7 @@ export default function PortalRegisterPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="flex items-center gap-2">
-              <Building2 className="h-8 w-8 text-teal-600" />
+              <Building2 className="h-8 w-8 text-portal-primary" />
               <span className="text-2xl font-bold">PrimărIA</span>
             </div>
           </div>
@@ -231,7 +231,7 @@ export default function PortalRegisterPage() {
 
             <Button
               type="submit"
-              className="w-full bg-teal-600 hover:bg-teal-700"
+              className="w-full bg-portal-primary hover:bg-portal-primary-hover"
               disabled={loading}
             >
               {loading ? tCommon("loading") : t("register")}
@@ -243,7 +243,7 @@ export default function PortalRegisterPage() {
             {t("hasAccount")}{" "}
             <Link
               href={`${localePrefix}/portal/login`}
-              className="text-teal-600 hover:underline font-medium"
+              className="text-portal-primary hover:underline font-medium"
             >
               {tCommon("login")}
             </Link>

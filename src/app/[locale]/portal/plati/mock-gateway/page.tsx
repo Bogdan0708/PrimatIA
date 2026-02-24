@@ -72,7 +72,7 @@ export default function MockGatewayPage() {
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-gray-50 p-4 text-center">
             <p className="text-sm text-muted-foreground">{t("totalToPay")}</p>
-            <p className="text-3xl font-bold text-teal-600">{formatLei(amount)}</p>
+            <p className="text-3xl font-bold text-portal-primary">{formatLei(amount)}</p>
             <p className="text-xs text-muted-foreground mt-1">Ref: {gatewayRef}</p>
           </div>
 
@@ -104,7 +104,7 @@ export default function MockGatewayPage() {
             {t("cancelPayment")}
           </Button>
           <Button
-            className="flex-1 bg-teal-600 hover:bg-teal-700"
+            className="flex-1 bg-portal-primary hover:bg-portal-primary-hover"
             onClick={handleConfirm}
             disabled={processing}
           >

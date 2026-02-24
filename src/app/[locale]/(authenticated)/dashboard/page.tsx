@@ -11,8 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Calculator, CreditCard, AlertTriangle, Building2, Clock } from "lucide-react";
+import { Users, CreditCard, AlertTriangle, Building2, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import { DashboardCharts } from "./_components/dashboard-charts";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default async function DashboardPage() {
   await requireStaff();
@@ -201,36 +202,42 @@ export default async function DashboardPage() {
       value: totalContribuabili.toLocaleString(),
       subtitle: `${totalProps} ${t("totalProperties").toLowerCase()}`,
       icon: Users,
+      variant: "info" as const,
     },
     {
       title: t("totalRevenue"),
       value: formatCurrency(totalPlatit),
       subtitle: "",
       icon: CreditCard,
+      variant: "success" as const,
     },
     {
       title: t("outstandingDebts"),
       value: formatCurrency(totalRestante),
       subtitle: totalPenalitati > 0 ? `(din care ${formatCurrency(totalPenalitati)} penalitati)` : "",
       icon: AlertTriangle,
+      variant: totalRestante > 0 ? "destructive" as const : "success" as const,
     },
     {
       title: t("pendingPayments"),
       value: pendingPaymentsCount.toLocaleString(),
       subtitle: totalRestante > 0 ? formatCurrency(totalRestante) : "",
       icon: Clock,
+      variant: pendingPaymentsCount > 0 ? "warning" as const : "success" as const,
     },
     {
       title: t("collectionRate"),
       value: `${collectionRate}%`,
       subtitle: "",
-      icon: Calculator,
+      icon: collectionRate >= 80 ? TrendingUp : TrendingDown,
+      variant: collectionRate >= 80 ? "success" as const : collectionRate >= 50 ? "warning" as const : "destructive" as const,
     },
     {
       title: t("totalProperties"),
       value: totalProps.toLocaleString(),
       subtitle: `${totalProprietati[0]} ${t("buildings")} / ${totalProprietati[1]} ${t("landPlots")} / ${totalProprietati[2]} ${t("vehiclesCount")}`,
       icon: Building2,
+      variant: "info" as const,
     },
   ];
 
@@ -269,21 +276,27 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
-      </div>
+      <PageHeader title={t("title")} />
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
+          const iconClasses: Record<string, string> = {
+            success: "bg-success/10 text-success",
+            warning: "bg-warning/10 text-warning",
+            destructive: "bg-destructive/10 text-destructive",
+            info: "bg-info/10 text-info",
+          };
           return (
             <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   {stat.title}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClasses[stat.variant] ?? ""}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>

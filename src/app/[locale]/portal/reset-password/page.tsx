@@ -106,7 +106,7 @@ export default function PortalResetPasswordPage() {
                 />
               </div>
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={loading}>
+              <Button type="submit" className="w-full bg-portal-primary hover:bg-portal-primary-hover" disabled={loading}>
                 {loading ? tCommon("loading") : "Resetează parola"}
               </Button>
             </form>

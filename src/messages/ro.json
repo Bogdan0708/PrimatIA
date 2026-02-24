@@ -26,6 +26,7 @@
     "deleteSuccess": "Elementul a fost șters.",
     "deleteError": "Ștergerea a eșuat.",
     "noResults": "Nu s-au găsit rezultate",
+    "noResultsHint": "Încercați să modificați criteriile de căutare sau filtrele.",
     "error": "Eroare",
     "success": "Succes",
     "required": "Obligatoriu",
@@ -63,7 +64,11 @@
     "rateComparison": "Comparație taxe",
     "anomalies": "Anomalii",
     "forecast": "Previziuni",
-    "regulations": "Legislație"
+    "regulations": "Legislație",
+    "groupCoreData": "Date contribuabili",
+    "groupOperations": "Operațiuni",
+    "groupAnalytics": "Rapoarte",
+    "groupAdmin": "Administrare"
   },
   "auth": {
     "signIn": "Autentificare",
@@ -107,7 +112,8 @@
     "buildings": "Clădiri",
     "landPlots": "Terenuri",
     "vehiclesCount": "Vehicule",
-    "days": "zile"
+    "days": "zile",
+    "last12Months": "Ultimele 12 luni"
   },
   "taxpayer": {
     "title": "Contribuabili",
@@ -803,7 +809,11 @@
     "phone": "Telefon",
     "email": "Email",
     "footerText": "Platformă de administrare a impozitelor și taxelor locale",
-    "copyright": "Administrare Taxe Locale"
+    "copyright": "Administrare Taxe Locale",
+    "platformBadge": "Platformă digitală municipală",
+    "trustSecure": "Date criptate SSL",
+    "trustGdpr": "Conformitate GDPR",
+    "trustOfficial": "Platformă oficială"
   },
   "compliance": {
     "title": "Scor conformitate",

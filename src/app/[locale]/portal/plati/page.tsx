@@ -51,7 +51,7 @@ export default async function PortalPaymentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("paymentHistory")}</h1>
-        <Button asChild className="bg-teal-600 hover:bg-teal-700">
+        <Button asChild className="bg-portal-primary hover:bg-portal-primary-hover">
           <Link href={`${localePrefix}/portal/plati/online`}>
             <CreditCard className="mr-2 h-4 w-4" />
             {t("payOnline")}
