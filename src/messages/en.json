@@ -353,7 +353,13 @@
     "landPaduri": "Forests",
     "landApe": "Waters",
     "landDrumuri": "Roads",
-    "landNeproductiv": "Unproductive"
+    "landNeproductiv": "Unproductive",
+    "editBuilding": "Edit building",
+    "editLand": "Edit land",
+    "editVehicle": "Edit vehicle",
+    "saving": "Saving...",
+    "updateSuccess": "Changes saved successfully",
+    "updateError": "Error saving changes"
   },
   "hcl": {
     "title": "Local Council Decisions",

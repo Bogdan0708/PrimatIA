@@ -353,7 +353,13 @@
     "landPaduri": "Erdő",
     "landApe": "Vizek",
     "landDrumuri": "Utak",
-    "landNeproductiv": "Terméketlen"
+    "landNeproductiv": "Terméketlen",
+    "editBuilding": "Épület szerkesztése",
+    "editLand": "Telek szerkesztése",
+    "editVehicle": "Jármű szerkesztése",
+    "saving": "Mentés...",
+    "updateSuccess": "A változtatások mentve",
+    "updateError": "Hiba a mentés során"
   },
   "hcl": {
     "title": "Helyi tanácsi határozatok",

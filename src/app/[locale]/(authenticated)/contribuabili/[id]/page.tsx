@@ -4,9 +4,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Building2,
-  MapPin,
-  Car,
   CreditCard,
   Shield,
   Calculator,
@@ -23,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getContribuabilById } from "../_actions/contribuabil-actions";
 import { ComplianceScoreBadge } from "../_components/compliance-score-badge";
+import { PropertiesTab } from "../_components/properties-tab";
 
 export default async function ContribuabilDetailPage({
   params,
@@ -32,7 +30,6 @@ export default async function ContribuabilDetailPage({
   await requireStaff();
   const t = await getTranslations("taxpayer");
   const tc = await getTranslations("common");
-  const tp = await getTranslations("property");
   const tf = await getTranslations("fiscal");
   const ttax = await getTranslations("tax");
   const tpay = await getTranslations("payment");
@@ -324,238 +321,12 @@ export default async function ContribuabilDetailPage({
 
         {/* PROPERTIES TAB */}
         <TabsContent value="properties" className="space-y-4">
-          {/* Buildings */}
-          {contribuabil.proprietatiCladiri.length > 0 && (
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                <CardTitle className="text-lg">
-                  {tp("buildings")} ({contribuabil.proprietatiCladiri.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("destination")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("zone")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("builtArea")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("constructionYear")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tc("status")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tc("actions")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {contribuabil.proprietatiCladiri.map((c) => (
-                        <tr
-                          key={c.id}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <td className="p-3">{c.destinatie}</td>
-                          <td className="p-3">
-                            <Badge variant="outline">{c.zona}</Badge>
-                          </td>
-                          <td className="p-3">
-                            {Number(c.suprafataConstruita).toLocaleString()} mp
-                          </td>
-                          <td className="p-3">{c.anConstructie}</td>
-                          <td className="p-3">
-                            <Badge
-                              variant={
-                                c.status === "activ" ? "default" : "secondary"
-                              }
-                            >
-                              {c.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <Link href={`/proprietati/cladiri/${c.id}`}>
-                              <Button variant="ghost" size="sm">
-                                {tc("details")}
-                              </Button>
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Land */}
-          {contribuabil.proprietatiTerenuri.length > 0 && (
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                <CardTitle className="text-lg">
-                  {tp("land")} ({contribuabil.proprietatiTerenuri.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("category")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("zone")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("areaSqm")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("ownershipShare")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tc("status")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tc("actions")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {contribuabil.proprietatiTerenuri.map((ter) => (
-                        <tr
-                          key={ter.id}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <td className="p-3">{ter.categorie}</td>
-                          <td className="p-3">
-                            <Badge variant="outline">{ter.zona}</Badge>
-                          </td>
-                          <td className="p-3">
-                            {Number(ter.suprafataMp).toLocaleString()} mp
-                          </td>
-                          <td className="p-3">{Number(ter.cotaParte)}%</td>
-                          <td className="p-3">
-                            <Badge
-                              variant={
-                                ter.status === "activ" ? "default" : "secondary"
-                              }
-                            >
-                              {ter.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <Link href={`/proprietati/terenuri/${ter.id}`}>
-                              <Button variant="ghost" size="sm">
-                                {tc("details")}
-                              </Button>
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Vehicles */}
-          {contribuabil.proprietatiVehicule.length > 0 && (
-            <Card>
-              <CardHeader className="flex flex-row items-center gap-2">
-                <Car className="h-5 w-5" />
-                <CardTitle className="text-lg">
-                  {tp("vehicles")} ({contribuabil.proprietatiVehicule.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("vehicleType")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("brand")} / {tp("model")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("registrationNumber")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tp("engineDisplacement")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tc("status")}
-                        </th>
-                        <th className="h-10 px-3 text-left font-medium">
-                          {tc("actions")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {contribuabil.proprietatiVehicule.map((v) => (
-                        <tr
-                          key={v.id}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <td className="p-3">{v.tipVehicul}</td>
-                          <td className="p-3">
-                            {[v.marca, v.model].filter(Boolean).join(" ") ||
-                              "-"}
-                          </td>
-                          <td className="p-3 font-mono text-xs">
-                            {v.numarInmatriculare ?? "-"}
-                          </td>
-                          <td className="p-3">
-                            {v.cilindreeCmc
-                              ? `${v.cilindreeCmc} cmc`
-                              : "-"}
-                          </td>
-                          <td className="p-3">
-                            <Badge
-                              variant={
-                                v.status === "activ" ? "default" : "secondary"
-                              }
-                            >
-                              {v.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <Link href={`/proprietati/vehicule/${v.id}`}>
-                              <Button variant="ghost" size="sm">
-                                {tc("details")}
-                              </Button>
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {fs.totalBuildings + fs.totalLand + fs.totalVehicles === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">{tf("noProperties")}</p>
-              </CardContent>
-            </Card>
-          )}
+          <PropertiesTab
+            buildings={contribuabil.proprietatiCladiri}
+            land={contribuabil.proprietatiTerenuri}
+            vehicles={contribuabil.proprietatiVehicule}
+            noPropertiesLabel={tf("noProperties")}
+          />
         </TabsContent>
 
         {/* TAXES TAB */}

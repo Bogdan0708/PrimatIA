@@ -353,7 +353,13 @@
     "landPaduri": "Păduri",
     "landApe": "Ape",
     "landDrumuri": "Drumuri",
-    "landNeproductiv": "Neproductiv"
+    "landNeproductiv": "Neproductiv",
+    "editBuilding": "Editează clădire",
+    "editLand": "Editează teren",
+    "editVehicle": "Editează vehicul",
+    "saving": "Se salvează...",
+    "updateSuccess": "Modificările au fost salvate",
+    "updateError": "Eroare la salvare"
   },
   "hcl": {
     "title": "Hotărâri Consiliul Local",

@@ -25,9 +25,6 @@
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@auth/prisma-adapter": "^2.0.0",
     "@prisma/client": "^6.0.0",
