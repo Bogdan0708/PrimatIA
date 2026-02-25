@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ScrollText } from "lucide-react";
@@ -15,6 +15,8 @@ export default async function SomatiiPage({
   await requireStaff();
   const t = await getTranslations("somatie");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const currentPage = searchParams.page ? parseInt(searchParams.page) : 1;
   const result = await getSomatii({
@@ -28,7 +30,7 @@ export default async function SomatiiPage({
       if (value) urlParams.set(key, value);
     });
     const qs = urlParams.toString();
-    return `/somatii${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/somatii${qs ? `?${qs}` : ""}`;
   };
 
   const buildPageUrl = (page: number) => {
@@ -36,7 +38,7 @@ export default async function SomatiiPage({
     if (searchParams.status) urlParams.set("status", searchParams.status);
     if (page > 1) urlParams.set("page", page.toString());
     const qs = urlParams.toString();
-    return `/somatii${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/somatii${qs ? `?${qs}` : ""}`;
   };
 
   const from = result.total === 0 ? 0 : (currentPage - 1) * result.perPage + 1;
@@ -119,7 +121,7 @@ export default async function SomatiiPage({
                     <td className="p-4 font-mono text-xs">{item.numar}</td>
                     <td className="p-4 font-medium">
                       <Link
-                        href={`/contribuabili/${item.contribuabilId}`}
+                        href={`${localePrefix}/contribuabili/${item.contribuabilId}`}
                         className="hover:underline text-primary"
                       >
                         {item.contribuabilName}
@@ -145,10 +147,8 @@ export default async function SomatiiPage({
                         {t(`status_${item.status}`)}
                       </Badge>
                     </td>
-                    <td className="p-4">
-                      <Link href={`/somatii/${item.id}`}>
-                        <Button variant="ghost" size="sm">{tc("details")}</Button>
-                      </Link>
+                    <td className="p-4 font-mono text-xs text-muted-foreground">
+                      {item.id.slice(0, 8)}
                     </td>
                   </tr>
                 ))}

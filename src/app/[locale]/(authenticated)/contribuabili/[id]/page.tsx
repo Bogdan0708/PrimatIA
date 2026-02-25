@@ -525,12 +525,8 @@ export default async function ContribuabilDetailPage({
                             : tpay("notDistributed")}
                         </Badge>
                       </td>
-                      <td className="p-3">
-                        <Link href={`/plati/${p.id}`}>
-                          <Button variant="ghost" size="sm">
-                            {tc("details")}
-                          </Button>
-                        </Link>
+                      <td className="p-3 font-mono text-xs text-muted-foreground">
+                        {p.id.slice(0, 8)}
                       </td>
                     </tr>
                   ))}

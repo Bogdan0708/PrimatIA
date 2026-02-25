@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireStaff } from "@/lib/auth-utils";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
@@ -17,6 +17,8 @@ export default async function DocumentePage({
   await requireStaff();
   const t = await getTranslations("document");
   const tc = await getTranslations("common");
+  const locale = await getLocale();
+  const localePrefix = `/${locale}`;
 
   const currentPage = searchParams.page ? parseInt(searchParams.page) : 1;
   const result = await getDocuments({
@@ -30,7 +32,7 @@ export default async function DocumentePage({
       if (value) urlParams.set(key, value);
     });
     const qs = urlParams.toString();
-    return `/documente${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/documente${qs ? `?${qs}` : ""}`;
   };
 
   const buildPageUrl = (page: number) => {
@@ -38,7 +40,7 @@ export default async function DocumentePage({
     if (searchParams.tip) urlParams.set("tip", searchParams.tip);
     if (page > 1) urlParams.set("page", page.toString());
     const qs = urlParams.toString();
-    return `/documente${qs ? `?${qs}` : ""}`;
+    return `${localePrefix}/documente${qs ? `?${qs}` : ""}`;
   };
 
   const from = result.total === 0 ? 0 : (currentPage - 1) * result.perPage + 1;
@@ -131,7 +133,7 @@ export default async function DocumentePage({
                     <td className="p-4 font-medium">
                       {item.contribuabilName ? (
                         <Link
-                          href={`/contribuabili/${item.contribuabilId}`}
+                          href={`${localePrefix}/contribuabili/${item.contribuabilId}`}
                           className="hover:underline text-primary"
                         >
                           {item.contribuabilName}

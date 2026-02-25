@@ -242,7 +242,7 @@ export default async function ContribuabiliPage({
                   >
                     <td className="p-4 font-medium">
                       <Link
-                        href={`/contribuabili/${item.id}`}
+                        href={`${localePrefix}/contribuabili/${item.id}`}
                         className="hover:underline text-primary"
                       >
                         {item.nume}
@@ -269,12 +269,12 @@ export default async function ContribuabiliPage({
                     </td>
                     <td className="p-4">
                       <div className="flex gap-1">
-                        <Link href={`/contribuabili/${item.id}`}>
+                        <Link href={`${localePrefix}/contribuabili/${item.id}`}>
                           <Button variant="ghost" size="sm">
                             {tc("details")}
                           </Button>
                         </Link>
-                        <Link href={`/contribuabili/${item.id}/edit`}>
+                        <Link href={`${localePrefix}/contribuabili/${item.id}/edit`}>
                           <Button variant="ghost" size="sm">
                             {tc("edit")}
                           </Button>

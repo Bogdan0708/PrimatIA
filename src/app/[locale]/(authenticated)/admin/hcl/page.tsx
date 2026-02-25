@@ -120,7 +120,7 @@ export default async function HclPage({
                 <tr key={item.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="p-4 font-medium">
                     <Link
-                      href={`${localePrefix}/admin/hcl/${item.id}`}
+                      href={`${localePrefix}/admin/hcl/${item.id}/edit`}
                       className="hover:underline text-primary"
                     >
                       {item.hclNumber}
@@ -137,10 +137,7 @@ export default async function HclPage({
                   </td>
                   <td className="p-4">
                     <div className="flex gap-1">
-                      <Link href={`/admin/hcl/${item.id}`}>
-                        <Button variant="ghost" size="sm">{tc("details")}</Button>
-                      </Link>
-                      <Link href={`/admin/hcl/${item.id}/edit`}>
+                      <Link href={`${localePrefix}/admin/hcl/${item.id}/edit`}>
                         <Button variant="ghost" size="sm">{tc("edit")}</Button>
                       </Link>
                     </div>
