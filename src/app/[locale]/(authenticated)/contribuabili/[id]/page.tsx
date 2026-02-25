@@ -608,7 +608,11 @@ export default async function ContribuabilDetailPage({
                       >
                         <td className="p-3 font-mono">{imp.fiscalYear}</td>
                         <td className="p-3">
-                          {(imp.taxType?.name as string) ?? imp.taxTypeId}
+                          {imp.taxType?.name
+                            ? (imp.taxType.name as Record<string, string>)[locale] ||
+                              (imp.taxType.name as Record<string, string>).ro ||
+                              imp.taxType.code
+                            : imp.taxTypeId}
                         </td>
                         <td className="p-3">{formatCurrency(owed)}</td>
                         <td className="p-3 text-green-600">

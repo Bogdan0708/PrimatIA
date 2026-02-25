@@ -61,7 +61,7 @@ export async function runMassCalculation(
           fiscalYear
         );
 
-        // Get property IDs to map results
+        // Get property details to map results (ordered by ID to match calculator)
         const [buildings, land, vehicles] = await Promise.all([
           prisma.proprietateCladire.findMany({
             where: {
@@ -70,7 +70,8 @@ export async function runMassCalculation(
               status: "activ",
               deletedAt: null,
             },
-            select: { id: true },
+            select: { id: true, destinatie: true },
+            orderBy: { id: "asc" },
           }),
           prisma.proprietateTeren.findMany({
             where: {
@@ -79,7 +80,8 @@ export async function runMassCalculation(
               status: "activ",
               deletedAt: null,
             },
-            select: { id: true },
+            select: { id: true, categorie: true },
+            orderBy: { id: "asc" },
           }),
           prisma.proprietateVehicul.findMany({
             where: {
@@ -89,28 +91,41 @@ export async function runMassCalculation(
               deletedAt: null,
             },
             select: { id: true },
+            orderBy: { id: "asc" },
           }),
         ]);
 
-        // Map results to properties
+        // Map results to properties with correct tax type codes
         const allEntries: TaxResultWithProperty[] = [];
         calcResults.buildings.forEach((r, i) => {
           if (buildings[i]) {
+            const dest = buildings[i].destinatie;
+            const code = dest === "nerezidentiala"
+              ? "impozit_cladiri_nerezidentiale"
+              : dest === "mixta"
+                ? "impozit_cladiri_mixte"
+                : "impozit_cladiri_rezidentiale";
             allEntries.push({
               result: r,
               proprietateType: "cladire",
               proprietateId: buildings[i].id,
-              taxTypeCode: "impozit_cladiri",
+              taxTypeCode: code,
             });
           }
         });
         calcResults.land.forEach((r, i) => {
           if (land[i]) {
+            const cat = land[i].categorie;
+            const code = cat.startsWith("extravilan")
+              ? "impozit_teren_extravilan"
+              : cat.includes("curti")
+                ? "impozit_teren_curti"
+                : "impozit_teren_intravilan";
             allEntries.push({
               result: r,
               proprietateType: "teren",
               proprietateId: land[i].id,
-              taxTypeCode: "impozit_teren",
+              taxTypeCode: code,
             });
           }
         });
@@ -120,7 +135,7 @@ export async function runMassCalculation(
               result: r,
               proprietateType: "vehicul",
               proprietateId: vehicles[i].id,
-              taxTypeCode: "impozit_vehicule",
+              taxTypeCode: "impozit_mijloace_transport",
             });
           }
         });
@@ -165,12 +180,18 @@ export async function runMassCalculation(
               where: { code: entry.taxTypeCode },
             });
 
+            if (!taxType) {
+              console.error(`Tax type not found: ${entry.taxTypeCode}`);
+              errors++;
+              continue;
+            }
+
             await prisma.impozit.create({
               data: {
                 tenantId: session.user.tenantId,
                 contribuabilId: c.id,
                 fiscalYear,
-                taxTypeId: taxType?.id ?? "",
+                taxTypeId: taxType.id,
                 hclDecisionId: r.hclDecisionId,
                 rateTableId: r.rateTableId,
                 proprietateType: entry.proprietateType,

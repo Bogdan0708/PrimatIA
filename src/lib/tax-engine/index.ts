@@ -91,16 +91,34 @@ export async function calculateAllTaxesForContribuabil(
   const hcl = await resolveActiveHcl(tenantId, fiscalYear);
   if (!hcl) throw new Error(`No active HCL decision for fiscal year ${fiscalYear}`);
 
-  // Get all active properties
+  // Load contribuabil type (PF/PJ) and tenant commune rank
+  const [contribuabil, tenant] = await Promise.all([
+    prisma.contribuabil.findUnique({
+      where: { id: contribuabilId },
+      select: { tip: true },
+    }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { communeRank: true },
+    }),
+  ]);
+
+  const tipContribuabil = (contribuabil?.tip as "PF" | "PJ") ?? "PF";
+  const communeRank = (tenant?.communeRank ?? 5) as BuildingTaxInput["communeRank"];
+
+  // Get all active properties (ordered by ID for deterministic mapping)
   const [buildings, land, vehicles] = await Promise.all([
     prisma.proprietateCladire.findMany({
       where: { tenantId, contribuabilId, status: "activ", deletedAt: null },
+      orderBy: { id: "asc" },
     }),
     prisma.proprietateTeren.findMany({
       where: { tenantId, contribuabilId, status: "activ", deletedAt: null },
+      orderBy: { id: "asc" },
     }),
     prisma.proprietateVehicul.findMany({
       where: { tenantId, contribuabilId, status: "activ", deletedAt: null },
+      orderBy: { id: "asc" },
     }),
   ]);
 
@@ -140,6 +158,8 @@ export async function calculateAllTaxesForContribuabil(
         suprafataNerezidentiala: b.suprafataNerezidentiala
           ? Number(b.suprafataNerezidentiala)
           : undefined,
+        tipContribuabil,
+        communeRank,
       },
       hcl,
       exemptions
