@@ -39,10 +39,12 @@ gcloud redis instances create primaria-cache \
 
 echo "🔐 Creating secrets..."
 gcloud secrets create primaria-database-url --replication-policy=automatic
+gcloud secrets create primaria-direct-database-url --replication-policy=automatic
 gcloud secrets create primaria-nextauth-secret --replication-policy=automatic
 gcloud secrets create primaria-stripe-key --replication-policy=automatic
 gcloud secrets create primaria-stripe-webhook --replication-policy=automatic
-gcloud secrets create primaria-lm-studio-url --replication-policy=automatic
+gcloud secrets create primaria-ai-gateway-url --replication-policy=automatic
+gcloud secrets create primaria-ai-gateway-key --replication-policy=automatic
 
 echo "✅ GCP infrastructure ready!"
 echo "Next steps:"
