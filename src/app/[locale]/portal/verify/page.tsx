@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CheckCircle, XCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 export default async function VerifyPage({
   searchParams,
@@ -19,6 +19,7 @@ export default async function VerifyPage({
 
   const locale = await getLocale();
   const localePrefix = `/${locale}`;
+  const t = await getTranslations("portal");
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
@@ -32,18 +33,16 @@ export default async function VerifyPage({
             )}
           </div>
           <CardTitle>
-            {success ? "Email verificat cu succes!" : "Link invalid sau expirat"}
+            {success ? t("verifySuccessTitle") : t("verifyFailTitle")}
           </CardTitle>
           <CardDescription>
-            {success
-              ? "Contul dumneavoastră a fost activat. Puteți acum să vă autentificați."
-              : "Link-ul de verificare este invalid sau a expirat. Vă rugăm să vă înregistrați din nou."}
+            {success ? t("verifySuccessDescription") : t("verifyFailDescription")}
           </CardDescription>
         </CardHeader>
         <CardFooter className="justify-center">
           <Button asChild className={success ? "bg-portal-primary hover:bg-portal-primary-hover" : ""}>
             <Link href={`${localePrefix}/portal/login`}>
-              {success ? "Autentificare" : "Înapoi la înregistrare"}
+              {success ? t("goToLogin") : t("backToRegister")}
             </Link>
           </Button>
         </CardFooter>

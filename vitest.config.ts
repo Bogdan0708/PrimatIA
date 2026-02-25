@@ -8,7 +8,7 @@ export default defineConfig({
     include: ["src/__tests__/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/tax-engine/**", "src/lib/patrimven/**"],
+      include: ["src/lib/tax-engine/**", "src/lib/patrimven/**", "src/lib/payments/**", "src/lib/anaf/**"],
     },
   },
   resolve: {

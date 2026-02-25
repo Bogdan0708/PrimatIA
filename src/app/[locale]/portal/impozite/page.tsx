@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { TaxExplanationRow } from "@/components/portal/tax-explanation";
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   calculat: "outline",
@@ -65,6 +66,17 @@ export default async function PortalTaxesPage() {
     .map(Number)
     .sort((a, b) => b - a);
 
+  const explanationTranslations = {
+    showCalculation: t("showCalculation"),
+    hideCalculation: t("hideCalculation"),
+    loading: t("explanationLoading"),
+    error: t("explanationError"),
+    installments: t("explanationInstallments"),
+    bonificatie: t("explanationBonificatie"),
+    bonificatieDetail: t("explanationBonificatieDetail"),
+    hclBasis: t("explanationHclBasis"),
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t("myTaxes")}</h1>
@@ -101,7 +113,15 @@ export default async function PortalTaxesPage() {
                     const taxName = (tax.taxType.name as Record<string, string>)?.ro || tax.taxType.code;
                     return (
                       <TableRow key={tax.id}>
-                        <TableCell className="font-medium">{taxName}</TableCell>
+                        <TableCell>
+                          <div>
+                            <span className="font-medium">{taxName}</span>
+                            <TaxExplanationRow
+                              taxId={tax.id}
+                              translations={explanationTranslations}
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">{formatLei(Number(tax.sumaDatorata))}</TableCell>
                         <TableCell className="text-right">{formatLei(Number(tax.sumaPlatita))}</TableCell>
                         <TableCell className={`text-right font-semibold ${outstanding > 0 ? "text-destructive" : "text-portal-primary"}`}>

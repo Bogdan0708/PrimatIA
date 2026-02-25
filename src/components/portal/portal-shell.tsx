@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LOCALES, type Locale } from "@/lib/constants";
+import { NotificationBell } from "@/components/portal/notification-bell";
 
 const localeLabels: Record<Locale, string> = {
   ro: "Română",
@@ -157,6 +158,15 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
               {isLoggedIn ? (
                 <>
+                  {/* Notification bell */}
+                  <NotificationBell
+                    translations={{
+                      notifications: t("notifications"),
+                      noNotifications: t("noNotifications"),
+                      markAllRead: t("markAllRead"),
+                    }}
+                  />
+
                   {/* User menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

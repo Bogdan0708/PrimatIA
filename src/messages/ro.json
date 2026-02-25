@@ -552,7 +552,11 @@
     "preview": "Previzualizare",
     "generate": "Generează",
     "signed": "Semnat",
-    "unsigned": "Nesemnat"
+    "unsigned": "Nesemnat",
+    "groupAssessments": "Decizii de impunere",
+    "groupReceipts": "Chitanțe și borderouri",
+    "groupCertificates": "Certificate și adeverințe",
+    "groupEnforcement": "Executare silită"
   },
   "somatie": {
     "title": "Somații",
@@ -763,7 +767,35 @@
     "sendError": "Eroare la trimiterea mesajului",
     "messageSent": "Mesaj trimis cu succes!",
     "messageSentDescription": "Vă vom răspunde cât mai curând posibil.",
-    "sendAnother": "Trimite alt mesaj"
+    "sendAnother": "Trimite alt mesaj",
+    "showCalculation": "Explicație calcul",
+    "hideCalculation": "Ascunde calcul",
+    "explanationLoading": "Se încarcă...",
+    "explanationError": "Nu s-a putut genera explicația",
+    "explanationInstallments": "Rate",
+    "explanationBonificatie": "Bonificație",
+    "explanationBonificatieDetail": "(plată integrală până la 31 martie)",
+    "explanationHclBasis": "Baza legală",
+    "notifications": "Notificări",
+    "noNotifications": "Nu aveți notificări noi",
+    "markAllRead": "Marchează toate ca citite",
+    "smsNotifications": "Notificări SMS",
+    "smsNotificationsDescription": "Primiți alerte critice prin SMS (somații, termene depășite)",
+    "smsConsent": "Accept să primesc notificări prin SMS",
+    "verifySuccessTitle": "Email verificat cu succes!",
+    "verifySuccessDescription": "Contul dumneavoastră a fost activat. Puteți acum să vă autentificați.",
+    "verifyFailTitle": "Link invalid sau expirat",
+    "verifyFailDescription": "Link-ul de verificare este invalid sau a expirat. Vă rugăm să vă înregistrați din nou.",
+    "goToLogin": "Autentificare",
+    "backToRegister": "Înapoi la înregistrare",
+    "resetPasswordTitle": "Resetare parolă",
+    "resetPasswordSubtitle": "Portal Cetățean",
+    "resetPasswordSuccess": "Parola a fost resetată. Redirecționare către autentificare...",
+    "resetPasswordError": "Resetarea parolei a eșuat.",
+    "resetPasswordInvalidToken": "Link invalid sau lipsă token.",
+    "resetPasswordMinLength": "Parola trebuie să aibă minim 12 caractere.",
+    "resetPasswordMismatch": "Parolele nu se potrivesc.",
+    "resetPasswordSubmit": "Resetează parola"
   },
   "notification": {
     "title": "Notificări",
@@ -856,7 +888,14 @@
     "placeholder": "Scrie întrebarea ta...",
     "poweredBy": "Powered by PrimarIA AI",
     "cannotAnswer": "Îmi pare rău, nu pot răspunde acum.",
-    "error": "Îmi pare rău, a apărut o eroare. Încearcă din nou."
+    "error": "Îmi pare rău, a apărut o eroare. Încearcă din nou.",
+    "suggestions": {
+      "deadlines": "Când sunt scadente impozitele?",
+      "payOnline": "Cum plătesc online?",
+      "bonificatie": "Ce bonificație primesc pentru plata integrală?",
+      "certificate": "Cum obțin un certificat fiscal?",
+      "penalties": "Care sunt penalitățile pentru întârziere?"
+    }
   },
   "rateComparison": {
     "title": "Comparație taxe între ani",
@@ -963,5 +1002,26 @@
     "showLess": "Arată mai puțin",
     "welcomeTitle": "Căutați în legislația fiscală",
     "welcomeDescription": "Introduceți termeni de căutare pentru a găsi articole relevante din Codul Fiscal și Codul de Procedură Fiscală."
+  },
+  "auditLog": {
+    "title": "Jurnal de audit",
+    "description": "Istoricul complet al acțiunilor efectuate în sistem.",
+    "totalEntries": "Total intrări",
+    "today": "Astăzi",
+    "thisWeek": "Ultimele 7 zile",
+    "uniqueUsers": "Utilizatori activi",
+    "entityTypes": "Tipuri entitate",
+    "actions": "Acțiuni",
+    "logEntries": "Intrări jurnal",
+    "logEntriesDesc": "Ultimele 200 de acțiuni înregistrate, ordonate cronologic.",
+    "noEntries": "Nu există intrări în jurnalul de audit.",
+    "timestamp": "Data/Ora",
+    "action": "Acțiune",
+    "entityType": "Tip entitate",
+    "entityId": "ID entitate",
+    "userId": "ID utilizator",
+    "changes": "Modificări",
+    "ipAddress": "Adresă IP",
+    "viewChanges": "Vezi modificări"
   }
 }

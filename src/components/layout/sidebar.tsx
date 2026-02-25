@@ -22,6 +22,7 @@ import {
   Bell,
   TrendingUp,
   BookOpen,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -150,6 +151,12 @@ const adminNavItems: NavItem[] = [
     href: "/admin/previziuni",
     labelKey: "forecast",
     icon: BarChart3,
+    roles: ["super_admin", "primaria_admin"],
+  },
+  {
+    href: "/admin/audit-log",
+    labelKey: "auditLog",
+    icon: ScrollText,
     roles: ["super_admin", "primaria_admin"],
   },
 ];

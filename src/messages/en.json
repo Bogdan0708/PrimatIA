@@ -552,7 +552,11 @@
     "preview": "Preview",
     "generate": "Generate",
     "signed": "Signed",
-    "unsigned": "Unsigned"
+    "unsigned": "Unsigned",
+    "groupAssessments": "Tax Assessments",
+    "groupReceipts": "Receipts & Summaries",
+    "groupCertificates": "Certificates & Statements",
+    "groupEnforcement": "Enforcement"
   },
   "somatie": {
     "title": "Payment Notices",
@@ -763,7 +767,35 @@
     "sendError": "Error sending message",
     "messageSent": "Message sent successfully!",
     "messageSentDescription": "We'll get back to you as soon as possible.",
-    "sendAnother": "Send another message"
+    "sendAnother": "Send another message",
+    "showCalculation": "Calculation details",
+    "hideCalculation": "Hide calculation",
+    "explanationLoading": "Loading...",
+    "explanationError": "Could not generate explanation",
+    "explanationInstallments": "Installments",
+    "explanationBonificatie": "Early payment discount",
+    "explanationBonificatieDetail": "(full payment by March 31)",
+    "explanationHclBasis": "Legal basis",
+    "notifications": "Notifications",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all as read",
+    "smsNotifications": "SMS notifications",
+    "smsNotificationsDescription": "Receive critical alerts via SMS (enforcement notices, overdue deadlines)",
+    "smsConsent": "I agree to receive SMS notifications",
+    "verifySuccessTitle": "Email verified successfully!",
+    "verifySuccessDescription": "Your account has been activated. You can now log in.",
+    "verifyFailTitle": "Invalid or expired link",
+    "verifyFailDescription": "The verification link is invalid or has expired. Please register again.",
+    "goToLogin": "Log in",
+    "backToRegister": "Back to registration",
+    "resetPasswordTitle": "Reset password",
+    "resetPasswordSubtitle": "Citizen Portal",
+    "resetPasswordSuccess": "Password has been reset. Redirecting to login...",
+    "resetPasswordError": "Password reset failed.",
+    "resetPasswordInvalidToken": "Invalid link or missing token.",
+    "resetPasswordMinLength": "Password must be at least 12 characters.",
+    "resetPasswordMismatch": "Passwords do not match.",
+    "resetPasswordSubmit": "Reset password"
   },
   "notification": {
     "title": "Notifications",
@@ -856,7 +888,14 @@
     "placeholder": "Type your question...",
     "poweredBy": "Powered by PrimarIA AI",
     "cannotAnswer": "Sorry, I can't answer right now.",
-    "error": "Sorry, an error occurred. Please try again."
+    "error": "Sorry, an error occurred. Please try again.",
+    "suggestions": {
+      "deadlines": "When are taxes due?",
+      "payOnline": "How do I pay online?",
+      "bonificatie": "What is the early payment discount?",
+      "certificate": "How do I get a fiscal certificate?",
+      "penalties": "What are the late payment penalties?"
+    }
   },
   "rateComparison": {
     "title": "Year-over-year rate comparison",
@@ -963,5 +1002,26 @@
     "showLess": "Show less",
     "welcomeTitle": "Search fiscal legislation",
     "welcomeDescription": "Enter search terms to find relevant articles from the Fiscal Code and Fiscal Procedure Code."
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "description": "Complete history of actions performed in the system.",
+    "totalEntries": "Total entries",
+    "today": "Today",
+    "thisWeek": "Last 7 days",
+    "uniqueUsers": "Active users",
+    "entityTypes": "Entity types",
+    "actions": "Actions",
+    "logEntries": "Log entries",
+    "logEntriesDesc": "Last 200 recorded actions, sorted chronologically.",
+    "noEntries": "No entries in the audit log.",
+    "timestamp": "Timestamp",
+    "action": "Action",
+    "entityType": "Entity type",
+    "entityId": "Entity ID",
+    "userId": "User ID",
+    "changes": "Changes",
+    "ipAddress": "IP Address",
+    "viewChanges": "View changes"
   }
 }

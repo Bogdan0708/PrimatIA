@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CHATBOT_ENTRIES, type ChatbotEntry } from "@/lib/chatbot/knowledge";
+import { generateRAGResponse, streamLLMResponse, getSuggestedQuestions, type ChatMessage } from "@/lib/ai/knowledge-base";
 
-// Fix #4: In-memory rate limiter — 10 requests/minute per IP
+// Rate limiter — 10 requests/minute per IP
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
-const MAX_MESSAGE_LENGTH = 1000; // Fix #5: Input length limit
+const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 5;
-
-type HistoryMessage = { role: "user" | "assistant"; content: string };
 
 const rateLimitMap = new Map<string, number[]>();
 
-// Cleanup stale entries every 5 minutes
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
     const now = Date.now();
@@ -37,66 +34,11 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-const normalizeText = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const scoreEntry = (entry: ChatbotEntry, message: string) => {
-  const normalizedMessage = normalizeText(message);
-  const matchedKeywords = new Set<string>();
-
-  for (const keyword of entry.keywords) {
-    const normalizedKeyword = normalizeText(keyword);
-    if (normalizedKeyword && normalizedMessage.includes(normalizedKeyword)) {
-      matchedKeywords.add(normalizedKeyword);
-    }
-  }
-
-  return matchedKeywords.size;
-};
-
-const getRelevantEntries = (message: string) => {
-  return CHATBOT_ENTRIES
-    .map((entry) => ({
-      entry,
-      score: scoreEntry(entry, message),
-    }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map((item) => item.entry);
-};
-
-const buildFallbackAnswer = (entries: ChatbotEntry[]) => {
-  if (entries.length === 0) {
-    return {
-      answer:
-        "Imi pare rau, nu am gasit un raspuns clar. Te rog reformuleaza intrebarea sau foloseste pagina Contact pentru asistenta.",
-      sources: ["Portal PrimarIA"],
-    };
-  }
-
-  const primary = entries[0];
-  const sources = Array.from(
-    new Set(entries.flatMap((entry) => entry.sources))
-  );
-
-  return {
-    answer: primary.answer,
-    sources,
-  };
-};
-
-function parseHistory(raw: unknown): HistoryMessage[] {
+function parseHistory(raw: unknown): ChatMessage[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter(
-      (h): h is HistoryMessage =>
+      (h): h is ChatMessage =>
         typeof h === "object" &&
         h !== null &&
         (h.role === "user" || h.role === "assistant") &&
@@ -105,47 +47,11 @@ function parseHistory(raw: unknown): HistoryMessage[] {
     .slice(-MAX_HISTORY);
 }
 
-const buildLmStudioPayload = (
-  message: string,
-  entries: ChatbotEntry[],
-  history: HistoryMessage[]
-) => {
-  const context = entries
-    .map((entry) => `- ${entry.question}: ${entry.answer}`)
-    .join("\n");
-
-  const systemPrompt =
-    "Esti asistentul virtual PrimarIA pentru taxe locale. Raspunde in limba romana, politicos si concis. Foloseste informatiile din context. Daca nu stii sigur, spune ca utilizatorul poate verifica in portal sau la primarie.";
-
-  const userPrompt =
-    context.length > 0
-      ? `Context util:\n${context}\n\nIntrebare: ${message}`
-      : `Intrebare: ${message}`;
-
-  return {
-    model: process.env.LM_STUDIO_MODEL || "local-model",
-    temperature: 0.2,
-    messages: [
-      { role: "system" as const, content: systemPrompt },
-      ...history.map((h) => ({ role: h.role, content: h.content })),
-      { role: "user" as const, content: userPrompt },
-    ],
-  };
-};
-
-const getLmStudioEndpoint = (baseUrl: string) => {
-  const trimmed = baseUrl.replace(/\/+$/, "");
-  return trimmed.endsWith("/v1")
-    ? `${trimmed}/chat/completions`
-    : `${trimmed}/v1/chat/completions`;
-};
-
 export async function POST(req: NextRequest) {
-  // Fix #4: Rate limiting
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (isRateLimited(ip)) {
     return NextResponse.json(
-      { answer: "Prea multe cereri. Te rog asteapta un minut." },
+      { answer: "Prea multe cereri. Te rog așteaptă un minut." },
       { status: 429 }
     );
   }
@@ -161,7 +67,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fix #5: Input length limit
     if (message.length > MAX_MESSAGE_LENGTH) {
       return NextResponse.json(
         { answer: `Mesajul este prea lung. Limita este de ${MAX_MESSAGE_LENGTH} caractere.` },
@@ -170,48 +75,53 @@ export async function POST(req: NextRequest) {
     }
 
     const history = parseHistory(body?.history);
-    const relevantEntries = getRelevantEntries(message);
-    const fallback = buildFallbackAnswer(relevantEntries);
-    const lmStudioUrl = process.env.LM_STUDIO_URL;
+    const stream = body?.stream === true;
 
-    if (!lmStudioUrl) {
-      return NextResponse.json(fallback);
-    }
-
-    try {
-      const response = await fetch(getLmStudioEndpoint(lmStudioUrl), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    // Streaming response via SSE
+    if (stream) {
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of streamLLMResponse(message, history)) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`));
+            }
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          } catch {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ content: "A apărut o eroare." })}\n\n`)
+            );
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          } finally {
+            controller.close();
+          }
         },
-        body: JSON.stringify(buildLmStudioPayload(message, relevantEntries, history)),
-        signal: AbortSignal.timeout(10_000),
       });
 
-      if (!response.ok) {
-        return NextResponse.json(fallback);
-      }
-
-      const data = await response.json();
-      const rawAnswer = data?.choices?.[0]?.message?.content?.trim();
-
-      if (!rawAnswer) {
-        return NextResponse.json(fallback);
-      }
-
-      // Sanitize: strip any HTML tags to prevent XSS
-      const answer = rawAnswer.replace(/<[^>]*>/g, "");
-
-      return NextResponse.json({
-        answer,
-        sources: fallback.sources,
+      return new Response(readable, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
       });
-    } catch {
-      return NextResponse.json(fallback);
     }
+
+    // Non-streaming response
+    const result = await generateRAGResponse(message, history);
+
+    // Sanitize HTML
+    const answer = result.answer.replace(/<[^>]*>/g, "");
+
+    return NextResponse.json({
+      answer,
+      sources: result.sources,
+      citations: result.citations,
+      suggestedQuestions: getSuggestedQuestions(),
+    });
   } catch {
     return NextResponse.json(
-      { answer: "A aparut o eroare. Te rog incearca din nou." },
+      { answer: "A apărut o eroare. Te rog încearcă din nou." },
       { status: 500 }
     );
   }

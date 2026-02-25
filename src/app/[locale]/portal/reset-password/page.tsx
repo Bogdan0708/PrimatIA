@@ -34,17 +34,17 @@ export default function PortalResetPasswordPage() {
     setError("");
 
     if (!token) {
-      setError("Link invalid sau lipsă token.");
+      setError(t("resetPasswordInvalidToken"));
       return;
     }
 
     if (password.length < 12) {
-      setError("Parola trebuie să aibă minim 12 caractere.");
+      setError(t("resetPasswordMinLength"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Parolele nu se potrivesc.");
+      setError(t("resetPasswordMismatch"));
       return;
     }
 
@@ -58,7 +58,7 @@ export default function PortalResetPasswordPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        setError(data.error || "Resetarea parolei a eșuat.");
+        setError(data.error || t("resetPasswordError"));
         return;
       }
 
@@ -67,7 +67,7 @@ export default function PortalResetPasswordPage() {
         router.push(`${localePrefix}/portal/login`);
       }, 1200);
     } catch {
-      setError("Resetarea parolei a eșuat.");
+      setError(t("resetPasswordError"));
     } finally {
       setLoading(false);
     }
@@ -77,12 +77,12 @@ export default function PortalResetPasswordPage() {
     <div className="flex min-h-[80vh] items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Resetare parolă</CardTitle>
-          <CardDescription>Portal Cetățean</CardDescription>
+          <CardTitle>{t("resetPasswordTitle")}</CardTitle>
+          <CardDescription>{t("resetPasswordSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           {success ? (
-            <p className="text-sm text-emerald-700">Parola a fost resetată. Redirecționare către autentificare...</p>
+            <p className="text-sm text-emerald-700">{t("resetPasswordSuccess")}</p>
           ) : (
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -96,7 +96,7 @@ export default function PortalResetPasswordPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirmă parola</Label>
+                <Label htmlFor="confirm-password">{t("confirmPassword")}</Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -107,7 +107,7 @@ export default function PortalResetPasswordPage() {
               </div>
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <Button type="submit" className="w-full bg-portal-primary hover:bg-portal-primary-hover" disabled={loading}>
-                {loading ? tCommon("loading") : "Resetează parola"}
+                {loading ? tCommon("loading") : t("resetPasswordSubmit")}
               </Button>
             </form>
           )}

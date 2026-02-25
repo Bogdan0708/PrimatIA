@@ -552,7 +552,11 @@
     "preview": "Előnézet",
     "generate": "Generálás",
     "signed": "Aláírt",
-    "unsigned": "Aláíratlan"
+    "unsigned": "Aláíratlan",
+    "groupAssessments": "Adómegállapítások",
+    "groupReceipts": "Nyugták és összesítők",
+    "groupCertificates": "Igazolások",
+    "groupEnforcement": "Végrehajtás"
   },
   "somatie": {
     "title": "Fizetési felszólítások",
@@ -763,7 +767,35 @@
     "sendError": "Hiba az üzenet küldésekor",
     "messageSent": "Üzenet sikeresen elküldve!",
     "messageSentDescription": "Mielőbb válaszolunk.",
-    "sendAnother": "Másik üzenet küldése"
+    "sendAnother": "Másik üzenet küldése",
+    "showCalculation": "Számítás részletei",
+    "hideCalculation": "Számítás elrejtése",
+    "explanationLoading": "Betöltés...",
+    "explanationError": "Nem sikerült a magyarázat létrehozása",
+    "explanationInstallments": "Részletek",
+    "explanationBonificatie": "Korai fizetési kedvezmény",
+    "explanationBonificatieDetail": "(teljes befizetés március 31-ig)",
+    "explanationHclBasis": "Jogalap",
+    "notifications": "Értesítések",
+    "noNotifications": "Nincsenek új értesítések",
+    "markAllRead": "Összes megjelölése olvasottként",
+    "smsNotifications": "SMS értesítések",
+    "smsNotificationsDescription": "Kritikus figyelmeztetések SMS-ben (végrehajtási értesítések, lejárt határidők)",
+    "smsConsent": "Elfogadom az SMS értesítések fogadását",
+    "verifySuccessTitle": "E-mail sikeresen megerősítve!",
+    "verifySuccessDescription": "Fiókja aktiválva lett. Most már bejelentkezhet.",
+    "verifyFailTitle": "Érvénytelen vagy lejárt link",
+    "verifyFailDescription": "A megerősítő link érvénytelen vagy lejárt. Kérjük, regisztráljon újra.",
+    "goToLogin": "Bejelentkezés",
+    "backToRegister": "Vissza a regisztrációhoz",
+    "resetPasswordTitle": "Jelszó visszaállítás",
+    "resetPasswordSubtitle": "Állampolgári Portál",
+    "resetPasswordSuccess": "A jelszó visszaállítva. Átirányítás a bejelentkezéshez...",
+    "resetPasswordError": "A jelszó visszaállítása sikertelen.",
+    "resetPasswordInvalidToken": "Érvénytelen link vagy hiányzó token.",
+    "resetPasswordMinLength": "A jelszónak legalább 12 karakter hosszúnak kell lennie.",
+    "resetPasswordMismatch": "A jelszavak nem egyeznek.",
+    "resetPasswordSubmit": "Jelszó visszaállítása"
   },
   "notification": {
     "title": "Értesítések",
@@ -856,7 +888,14 @@
     "placeholder": "Írja be kérdését...",
     "poweredBy": "Powered by PrimarIA AI",
     "cannotAnswer": "Sajnálom, jelenleg nem tudok válaszolni.",
-    "error": "Sajnálom, hiba történt. Kérjük, próbálja újra."
+    "error": "Sajnálom, hiba történt. Kérjük, próbálja újra.",
+    "suggestions": {
+      "deadlines": "Mikor esedékesek az adók?",
+      "payOnline": "Hogyan fizethetek online?",
+      "bonificatie": "Milyen kedvezményt kapok teljes befizetés esetén?",
+      "certificate": "Hogyan kaphatok adóigazolást?",
+      "penalties": "Milyen késedelmi büntetések vannak?"
+    }
   },
   "rateComparison": {
     "title": "Adóráta összehasonlítás évek között",
@@ -963,5 +1002,26 @@
     "showLess": "Kevesebb mutatása",
     "welcomeTitle": "Keresés az adójogszabályokban",
     "welcomeDescription": "Írjon be keresési kifejezéseket a releváns cikkek megtalálásához az Adótörvénykönyvből és az Adóeljárási törvénykönyvből."
+  },
+  "auditLog": {
+    "title": "Audit napló",
+    "description": "A rendszerben végrehajtott műveletek teljes előzménye.",
+    "totalEntries": "Összes bejegyzés",
+    "today": "Ma",
+    "thisWeek": "Elmúlt 7 nap",
+    "uniqueUsers": "Aktív felhasználók",
+    "entityTypes": "Entitástípusok",
+    "actions": "Műveletek",
+    "logEntries": "Naplóbejegyzések",
+    "logEntriesDesc": "Az utolsó 200 rögzített művelet, időrendi sorrendben.",
+    "noEntries": "Nincsenek bejegyzések az audit naplóban.",
+    "timestamp": "Időbélyeg",
+    "action": "Művelet",
+    "entityType": "Entitástípus",
+    "entityId": "Entitás ID",
+    "userId": "Felhasználó ID",
+    "changes": "Változások",
+    "ipAddress": "IP cím",
+    "viewChanges": "Változások megtekintése"
   }
 }

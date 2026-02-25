@@ -2,16 +2,17 @@
  * ROeID Authentication Provider
  *
  * Integrates ROeID as an authentication option for the citizen portal.
- * Currently scaffold-only — methods throw NotImplementedError.
+ * When configured, performs real OIDC flow with PKCE.
  */
 
-import { RoeidProvider, type RoeidProfile, RoeidNotImplementedError } from "../roeid";
+import { RoeidProvider, type RoeidProfile } from "../roeid";
+import { prisma } from "@/lib/db";
+import { hashCnp } from "@/lib/crypto";
 
 export interface RoeidAuthResult {
   profile: RoeidProfile;
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: Date;
+  linked: boolean;
+  contribuabilId?: string;
 }
 
 /**
@@ -34,19 +35,24 @@ export class RoeidAuthProvider {
 
   /**
    * Start the ROeID login flow.
-   * Returns a URL to redirect the citizen to ROeID for authentication.
+   * Returns the authorization URL plus state and PKCE verifier
+   * that must be stored in the session/cookie.
    */
-  async startLogin(callbackUrl: string): Promise<string> {
+  async startLogin(callbackUrl: string): Promise<{
+    authorizationUrl: string;
+    state: string;
+    codeVerifier: string;
+  }> {
     return this.provider.initiateAuth(callbackUrl);
   }
 
   /**
    * Complete the ROeID login flow.
-   * Processes the callback from ROeID and returns auth result.
+   * Processes the callback from ROeID and returns the citizen profile.
    */
-  async completeLogin(code: string): Promise<RoeidAuthResult> {
-    void code;
-    throw new RoeidNotImplementedError("completeLogin");
+  async completeLogin(code: string, codeVerifier: string, redirectUri?: string): Promise<RoeidAuthResult> {
+    const profile = await this.provider.handleCallback(code, codeVerifier, redirectUri);
+    return { profile, linked: false };
   }
 
   /**
@@ -56,11 +62,45 @@ export class RoeidAuthProvider {
   async linkToContribuabil(
     tenantId: string,
     citizenUserId: string,
-    profile: RoeidProfile
+    profile: RoeidProfile,
   ): Promise<{ linked: boolean; contribuabilId?: string }> {
-    void tenantId;
-    void citizenUserId;
-    void profile;
-    throw new RoeidNotImplementedError("linkToContribuabil");
+    if (!profile.cnp) {
+      return { linked: false };
+    }
+
+    // Validate CNP structure
+    const isValid = await this.provider.verifyIdentity(profile.cnp);
+    if (!isValid) {
+      return { linked: false };
+    }
+
+    // Find matching Contribuabil by CNP hash
+    const cnpHash = hashCnp(profile.cnp, tenantId);
+    const contribuabil = await prisma.contribuabil.findFirst({
+      where: { tenantId, cnpHash },
+      select: { id: true },
+    });
+
+    if (!contribuabil) {
+      return { linked: false };
+    }
+
+    // Link citizen user to contribuabil
+    const existingLink = await prisma.citizenContribuabilLink.findFirst({
+      where: { citizenUserId, contribuabilId: contribuabil.id },
+    });
+
+    if (!existingLink) {
+      await prisma.citizenContribuabilLink.create({
+        data: {
+          citizenUserId,
+          contribuabilId: contribuabil.id,
+          tenantId,
+          verifiedAt: new Date(),
+        },
+      });
+    }
+
+    return { linked: true, contribuabilId: contribuabil.id };
   }
 }
