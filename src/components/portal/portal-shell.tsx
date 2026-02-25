@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { signOut, useSession } from "next-auth/react";
 import {
   Building2,
   LayoutDashboard,
@@ -56,16 +55,32 @@ const portalNavItems: NavItem[] = [
   { href: "/portal/contact", labelKey: "contact", icon: Phone },
 ];
 
+interface CitizenUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [citizenUser, setCitizenUser] = useState<CitizenUser | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("portal");
   const tCommon = useTranslations("common");
-  const { data: session } = useSession();
 
-  const isLoggedIn = !!session?.user;
+  useEffect(() => {
+    fetch("/api/portal/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.id) setCitizenUser(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const isLoggedIn = !!citizenUser;
 
   const switchLocale = (locale: Locale) => {
     const currentPath = window.location.pathname;
@@ -84,8 +99,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const localePrefix = `/${locale}`;
   const toLocalePath = (path: string) => `${localePrefix}${path}`;
 
-  const initials = session?.user
-    ? `${session.user.firstName?.[0] || ""}${session.user.lastName?.[0] || ""}`
+  const initials = citizenUser
+    ? `${citizenUser.firstName?.[0] || ""}${citizenUser.lastName?.[0] || ""}`
         .toUpperCase()
     : "";
 
@@ -185,10 +200,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                           <p className="text-sm font-medium">
-                            {session.user.firstName} {session.user.lastName}
+                            {citizenUser?.firstName} {citizenUser?.lastName}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {session.user.email}
+                            {citizenUser?.email}
                           </p>
                         </div>
                       </DropdownMenuLabel>
@@ -201,9 +216,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() =>
-                          signOut({ callbackUrl: toLocalePath("/portal/login") })
-                        }
+                        onClick={async () => {
+                          await fetch("/api/portal/auth/logout", { method: "POST" });
+                          setCitizenUser(null);
+                          router.push(toLocalePath("/portal/login"));
+                          router.refresh();
+                        }}
                       >
                         <LogOut className="mr-2 h-4 w-4" />
                         {tCommon("logout")}
