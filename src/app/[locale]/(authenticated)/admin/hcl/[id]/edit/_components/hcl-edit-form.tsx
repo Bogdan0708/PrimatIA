@@ -14,7 +14,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { updateHclDecision } from "../../../_actions/hcl-actions";
+
+interface RateTableEntry {
+  id: string;
+  taxType: string;
+  category: string | null;
+  zona: string | null;
+  rang: number | null;
+  rateType: string;
+  rateValue: number;
+  unit: string | null;
+  minRate: number | null;
+  maxRate: number | null;
+  descriptionRo: string | null;
+  legalArticle: string | null;
+}
 
 interface HclEditFormProps {
   hcl: {
@@ -30,9 +46,10 @@ interface HclEditFormProps {
     status: string;
     documentUrl: string | null;
   };
+  rateTables: RateTableEntry[];
 }
 
-export function HclEditForm({ hcl }: HclEditFormProps) {
+export function HclEditForm({ hcl, rateTables }: HclEditFormProps) {
   const router = useRouter();
   const t = useTranslations("hcl");
   const tc = useTranslations("common");
@@ -128,6 +145,84 @@ export function HclEditForm({ hcl }: HclEditFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      {/* Rate Tables */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {t("rateTables")} ({rateTables.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {rateTables.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{tc("noResults")}</p>
+          ) : (
+            <RateTablesDisplay rateTables={rateTables} />
+          )}
+        </CardContent>
+      </Card>
     </>
+  );
+}
+
+function RateTablesDisplay({ rateTables }: { rateTables: RateTableEntry[] }) {
+  const t = useTranslations("hcl");
+
+  // Group by taxType
+  const grouped = rateTables.reduce<Record<string, RateTableEntry[]>>(
+    (acc, rt) => {
+      if (!acc[rt.taxType]) acc[rt.taxType] = [];
+      acc[rt.taxType].push(rt);
+      return acc;
+    },
+    {}
+  );
+
+  const formatRate = (entry: RateTableEntry) => {
+    if (entry.rateType === "percent") return `${entry.rateValue}%`;
+    if (entry.unit) return `${entry.rateValue} / ${entry.unit}`;
+    return `${entry.rateValue}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {Object.entries(grouped).map(([taxType, entries]) => (
+        <div key={taxType}>
+          <h4 className="font-medium mb-2">{taxType}</h4>
+          <div className="rounded-md border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="h-10 px-3 text-left font-medium">{t("rateValue")}</th>
+                  <th className="h-10 px-3 text-left font-medium">{t("rateType")}</th>
+                  <th className="h-10 px-3 text-left font-medium">Zonă</th>
+                  <th className="h-10 px-3 text-left font-medium">Categorie</th>
+                  <th className="h-10 px-3 text-left font-medium">{t("minRate")}</th>
+                  <th className="h-10 px-3 text-left font-medium">{t("maxRate")}</th>
+                  <th className="h-10 px-3 text-left font-medium">{t("legalArticle")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/50">
+                    <td className="p-3 font-mono font-medium">{formatRate(entry)}</td>
+                    <td className="p-3">
+                      <Badge variant="outline">
+                        {entry.rateType === "percent" ? t("percent") : entry.rateType === "fixed" ? t("fixed") : t("perUnit")}
+                      </Badge>
+                    </td>
+                    <td className="p-3">{entry.zona || "—"}</td>
+                    <td className="p-3">{entry.category || "—"}</td>
+                    <td className="p-3 font-mono text-xs">{entry.minRate !== null ? entry.minRate : "—"}</td>
+                    <td className="p-3 font-mono text-xs">{entry.maxRate !== null ? entry.maxRate : "—"}</td>
+                    <td className="p-3 text-xs">{entry.legalArticle || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

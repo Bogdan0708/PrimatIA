@@ -389,7 +389,9 @@
     "legalArticle": "Legal Article",
     "rateOutOfBounds": "Rate is outside legal bounds ({min} - {max})",
     "activate": "Activate",
-    "deactivate": "Deactivate"
+    "deactivate": "Deactivate",
+    "decisionDetails": "Decision Details",
+    "statusHint": "Status is changed via the activate/deactivate actions"
   },
   "tax": {
     "title": "Taxes",

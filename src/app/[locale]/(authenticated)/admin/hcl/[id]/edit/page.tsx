@@ -36,6 +36,20 @@ export default async function HclEditPage({
           status: hcl.status,
           documentUrl: hcl.documentUrl,
         }}
+        rateTables={hcl.taxRateTables.map((rt) => ({
+          id: rt.id,
+          taxType: rt.taxType,
+          category: rt.category,
+          zona: rt.zona,
+          rang: rt.rang,
+          rateType: rt.rateType,
+          rateValue: Number(rt.rateValue),
+          unit: rt.unit,
+          minRate: rt.minRate ? Number(rt.minRate) : null,
+          maxRate: rt.maxRate ? Number(rt.maxRate) : null,
+          descriptionRo: rt.descriptionRo,
+          legalArticle: rt.legalArticle,
+        }))}
       />
     </div>
   );

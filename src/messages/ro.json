@@ -389,7 +389,9 @@
     "legalArticle": "Articol legal",
     "rateOutOfBounds": "Rata este în afara limitelor legale ({min} - {max})",
     "activate": "Activează",
-    "deactivate": "Dezactivează"
+    "deactivate": "Dezactivează",
+    "decisionDetails": "Detalii hotărâre",
+    "statusHint": "Starea se schimbă prin acțiunile de activare/dezactivare"
   },
   "tax": {
     "title": "Impozite",

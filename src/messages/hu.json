@@ -389,7 +389,9 @@
     "legalArticle": "Jogszabályi cikk",
     "rateOutOfBounds": "Az adókulcs a törvényes határokon kívül esik ({min} - {max})",
     "activate": "Aktiválás",
-    "deactivate": "Deaktiválás"
+    "deactivate": "Deaktiválás",
+    "decisionDetails": "Határozat részletei",
+    "statusHint": "Az állapot az aktiválás/deaktiválás műveletekkel változtatható"
   },
   "tax": {
     "title": "Adók",
