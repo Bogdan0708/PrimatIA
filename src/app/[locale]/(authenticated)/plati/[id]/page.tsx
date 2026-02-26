@@ -172,7 +172,8 @@ export default async function PaymentDetailPage({ params }: Props) {
                 </TableRow>
               ) : (
                 plata.platiDistributie.map((dist) => {
-                  const taxName = (dist.impozit.taxType.name as any)[params.locale] || (dist.impozit.taxType.name as any)["ro"];
+                  const names = dist.impozit.taxType.name as Record<string, string>;
+                  const taxName = names[params.locale] || names["ro"] || dist.impozit.taxType.code;
                   return (
                     <TableRow key={dist.id}>
                       <TableCell>

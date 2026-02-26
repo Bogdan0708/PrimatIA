@@ -11,7 +11,7 @@
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS deps
 
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
@@ -45,7 +45,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS runtime
 
-RUN apk add --no-cache libc6-compat curl
+RUN apk add --no-cache libc6-compat curl openssl
 
 WORKDIR /app
 
@@ -68,6 +68,11 @@ COPY --from=build /app/prisma ./prisma
 # Copy generated Prisma client from node_modules
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+
+# Install prisma CLI globally in runtime to support migrations
+RUN npm install -g prisma@6.0.0 && \
+    mkdir -p /usr/local/lib/node_modules/prisma/node_modules/@prisma/engines && \
+    chown -R nextjs:nodejs /usr/local/lib/node_modules/prisma
 
 USER nextjs
 
