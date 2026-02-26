@@ -396,6 +396,13 @@ async function main() {
       where: { tenantId, codRol },
     });
     if (existing) {
+      // Ensure cnpHash is set for existing PF records
+      if (!existing.cnpHash) {
+        await prisma.contribuabil.update({
+          where: { id: existing.id },
+          data: { cnpHash: `SEED-PF-${String(i + 1).padStart(4, "0")}` },
+        });
+      }
       contribuabilIds.push(existing.id);
     } else {
       const c = await prisma.contribuabil.create({
@@ -759,6 +766,20 @@ async function main() {
       orderBy: { createdAt: "asc" },
     });
     vehicleIds.push(...existingV.map((v) => v.id));
+
+    // Normalize normaPoluare values for existing vehicles (e.g. "Euro 6" → "euro_6")
+    const normMap: Record<string, string> = {
+      "Euro 1": "euro_1", "Euro 2": "euro_2", "Euro 3": "euro_3",
+      "Euro 3A": "euro_3", "Euro 3B": "euro_3",
+      "Euro 4": "euro_4", "Euro 5": "euro_5", "Euro 6": "euro_6",
+      "Non-Euro": "non_euro", "Non Euro": "non_euro",
+    };
+    for (const [oldVal, newVal] of Object.entries(normMap)) {
+      await prisma.proprietateVehicul.updateMany({
+        where: { tenantId, normaPoluare: oldVal },
+        data: { normaPoluare: newVal },
+      });
+    }
   }
   console.log(`Seeded ${vehicleIds.length} vehicles`);
 

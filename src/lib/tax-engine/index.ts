@@ -26,7 +26,7 @@ export async function resolveActiveHcl(
     where: {
       tenantId,
       fiscalYear,
-      status: "active",
+      status: { in: ["active", "activ"] },
     },
     orderBy: { validFrom: "desc" },
   });
