@@ -61,6 +61,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
+COPY --from=build /app/src/messages ./src/messages
 
 # Copy Prisma schema + migrations for runtime migration commands
 COPY --from=build /app/prisma ./prisma
