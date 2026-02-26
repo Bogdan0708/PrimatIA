@@ -53,9 +53,15 @@ export function clearAnomalyCache(tenantId: string): void {
 // ─── Detectors ───────────────────────────────────────────────────────────────
 
 async function detectMissingData(tenantId: string, anomalies: Anomaly[]) {
-  // PF without CNP
+  // PF without CNP (Active only)
   const pfNoCnp = await prisma.contribuabil.findMany({
-    where: { tenantId, tip: 'PF', cnpHash: null, deletedAt: null },
+    where: { 
+      tenantId, 
+      tip: 'PF', 
+      cnpHash: null, 
+      status: 'activ',
+      deletedAt: null 
+    },
     select: { id: true, nume: true, prenume: true },
   });
   for (const c of pfNoCnp) {
@@ -69,9 +75,15 @@ async function detectMissingData(tenantId: string, anomalies: Anomaly[]) {
     });
   }
 
-  // PJ without CUI
+  // PJ without CUI (Active only)
   const pjNoCui = await prisma.contribuabil.findMany({
-    where: { tenantId, tip: 'PJ', cui: null, deletedAt: null },
+    where: { 
+      tenantId, 
+      tip: 'PJ', 
+      cui: null, 
+      status: 'activ',
+      deletedAt: null 
+    },
     select: { id: true, nume: true },
   });
   for (const c of pjNoCui) {
@@ -284,19 +296,24 @@ async function detectOutlierAmounts(tenantId: string, anomalies: Anomaly[]) {
     where: { tenantId, fiscalYear: currentYear },
     select: {
       id: true,
+      contribuabilId: true,
       sumaDatorata: true,
       proprietateType: true,
-      contribuabil: { select: { nume: true, prenume: true } },
+      contribuabil: { select: { tip: true, nume: true, prenume: true } },
     },
   });
 
-  // Group by property type
-  const groups = new Map<string, { id: string; amount: number; name: string }[]>();
+  // Group by property type AND taxpayer type (PF/PJ)
+  const groups = new Map<string, { id: string; taxId: string; amount: number; name: string }[]>();
   for (const t of taxes) {
-    const key = t.proprietateType ?? 'other';
+    const propType = t.proprietateType ?? 'other';
+    const contribType = t.contribuabil.tip;
+    const key = `${propType}:${contribType}`;
+
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push({
-      id: t.id,
+      id: t.contribuabilId,
+      taxId: t.id,
       amount: Number(t.sumaDatorata),
       name: `${t.contribuabil.nume} ${t.contribuabil.prenume ?? ''}`,
     });
@@ -305,23 +322,28 @@ async function detectOutlierAmounts(tenantId: string, anomalies: Anomaly[]) {
   const groupKeys = Array.from(groups.keys());
   for (const key of groupKeys) {
     const items = groups.get(key)!;
-    if (items.length < 5) continue; // Need enough data points
+    if (items.length < 5) continue; // Need enough data points for statistical relevance
 
     const amounts = items.map((i: { amount: number }) => i.amount);
     const mean = amounts.reduce((a: number, b: number) => a + b, 0) / amounts.length;
+    
+    // Avoid calculations if mean is zero
+    if (mean === 0) continue;
+
     const stdDev = Math.sqrt(amounts.reduce((s: number, x: number) => s + (x - mean) ** 2, 0) / amounts.length);
 
     if (stdDev === 0) continue;
 
     for (const item of items) {
       const zScore = Math.abs(item.amount - mean) / stdDev;
+      // High severity for > 3 sigma, Medium for > 2 sigma
       if (zScore > 2) {
         anomalies.push({
           type: 'outlier_amount',
           severity: zScore > 3 ? 'high' : 'medium',
           entityType: 'contribuabil',
           entityId: item.id,
-          description: `Impozit de ${item.amount.toFixed(2)} RON pentru „${item.name}" este semnificativ diferit de media (${mean.toFixed(2)} RON, ${zScore.toFixed(1)}σ).`,
+          description: `Impozit ${item.taxId.slice(0, 8)}… de ${item.amount.toFixed(2)} RON pentru „${item.name}" este semnificativ diferit de media categoriei ${key.split(':')[1]} (${mean.toFixed(2)} RON, ${zScore.toFixed(1)}σ).`,
           suggestedAction: 'Verificați corectitudinea calculului impozitului.',
         });
       }

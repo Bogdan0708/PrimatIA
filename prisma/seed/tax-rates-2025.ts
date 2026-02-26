@@ -7,7 +7,7 @@ import { PrismaClient } from "@prisma/client";
 export async function seedTaxRates2025(prisma: PrismaClient, tenantId: string) {
   // Create HCL Decision for 2025
   let hclDecision = await prisma.hclDecision.findFirst({
-    where: { tenantId, fiscalYear: 2025, status: "activ" },
+    where: { tenantId, fiscalYear: 2025, status: { in: ["active", "activ"] } },
   });
 
   if (!hclDecision) {
@@ -22,9 +22,14 @@ export async function seedTaxRates2025(prisma: PrismaClient, tenantId: string) {
         inflationIndex: 1.054,
         validFrom: new Date("2025-01-01"),
         validTo: new Date("2025-12-31"),
-        status: "activ",
+        status: "active",
         approvedBy: "Consiliul Local Bogdan Vodă",
       },
+    });
+  } else if (hclDecision.status === "activ") {
+    hclDecision = await prisma.hclDecision.update({
+      where: { id: hclDecision.id },
+      data: { status: "active" },
     });
   }
 
@@ -203,6 +208,36 @@ export async function seedTaxRates2025(prisma: PrismaClient, tenantId: string) {
       legalArticle: "Art. 470 alin. (2)",
     },
 
+    // Tractor
+    {
+      taxType: "impozit_mijloace_transport",
+      category: "tractor",
+      zona: null,
+      rang: 12,
+      rateType: "fixed",
+      rateValue: 18,
+      unit: "lei",
+      minRate: null,
+      maxRate: null,
+      descriptionRo: "Tractor — 18 lei",
+      legalArticle: "Art. 470 alin. (2)",
+    },
+
+    // Remorcă
+    {
+      taxType: "impozit_mijloace_transport",
+      category: "remorca",
+      zona: null,
+      rang: 13,
+      rateType: "fixed",
+      rateValue: 12,
+      unit: "lei",
+      minRate: null,
+      maxRate: null,
+      descriptionRo: "Remorcă — 12 lei",
+      legalArticle: "Art. 470 alin. (2)",
+    },
+
     // =========================================================================
     // BUILDING RATES — Art. 457 Cod Fiscal (Residential)
     // Values: lei/mp suprafață construită desfășurată
@@ -301,6 +336,21 @@ export async function seedTaxRates2025(prisma: PrismaClient, tenantId: string) {
       minRate: null,
       maxRate: null,
       descriptionRo: `Teren intravilan curți construcții, zona ${z} — ${[1.5, 1.1, 0.8, 0.5][i]} lei/mp`,
+      legalArticle: "Art. 465",
+    })),
+
+    // Teren curți construcții (impozit_teren_curti)
+    ...(["A", "B", "C", "D"] as const).map((z, i) => ({
+      taxType: "impozit_teren_curti",
+      category: "intravilan_curti",
+      zona: z,
+      rang: null,
+      rateType: "per_unit" as const,
+      rateValue: [1.4, 1.0, 0.7, 0.25][i],
+      unit: "lei/mp",
+      minRate: null,
+      maxRate: null,
+      descriptionRo: `Teren curți construcții, zona ${z} — ${[1.4, 1.0, 0.7, 0.25][i]} lei/mp`,
       legalArticle: "Art. 465",
     })),
 

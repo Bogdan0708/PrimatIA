@@ -9,6 +9,7 @@ import {
   resolveActiveHcl,
   type TaxCalculationResult,
 } from "@/lib/tax-engine";
+import { clearAnomalyCache } from "@/lib/ai/anomaly-detection";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -98,7 +99,7 @@ export async function runMassCalculation(
         // Map results to properties with correct tax type codes
         const allEntries: TaxResultWithProperty[] = [];
         calcResults.buildings.forEach((r, i) => {
-          if (buildings[i]) {
+          if (r && buildings[i]) {
             const dest = buildings[i].destinatie;
             const code = dest === "nerezidentiala"
               ? "impozit_cladiri_nerezidentiale"
@@ -114,7 +115,7 @@ export async function runMassCalculation(
           }
         });
         calcResults.land.forEach((r, i) => {
-          if (land[i]) {
+          if (r && land[i]) {
             const cat = land[i].categorie;
             const code = cat.startsWith("extravilan")
               ? "impozit_teren_extravilan"
@@ -130,7 +131,7 @@ export async function runMassCalculation(
           }
         });
         calcResults.vehicles.forEach((r, i) => {
-          if (vehicles[i]) {
+          if (r && vehicles[i]) {
             allEntries.push({
               result: r,
               proprietateType: "vehicul",
@@ -139,6 +140,8 @@ export async function runMassCalculation(
             });
           }
         });
+
+        errors += calcResults.errors.length;
 
         for (const entry of allEntries) {
           const { result: r } = entry;
@@ -224,12 +227,12 @@ export async function runMassCalculation(
           err
         );
         errors++;
-      }
-    }
-
-    revalidatePath("/admin/calcul");
-    revalidatePath("/contribuabili");
-    return {
+            }
+          }
+      
+          clearAnomalyCache(session.user.tenantId);
+          revalidatePath("/admin/calcul");
+          revalidatePath("/contribuabili");    return {
       success: true,
       data: { processed, taxes: totalTaxes, errors },
     };

@@ -84,9 +84,10 @@ export async function calculateAllTaxesForContribuabil(
   contribuabilId: string,
   fiscalYear: number
 ): Promise<{
-  buildings: TaxCalculationResult[];
-  land: TaxCalculationResult[];
-  vehicles: TaxCalculationResult[];
+  buildings: (TaxCalculationResult | null)[];
+  land: (TaxCalculationResult | null)[];
+  vehicles: (TaxCalculationResult | null)[];
+  errors: { propertyType: string; propertyId: string; error: string }[];
 }> {
   const hcl = await resolveActiveHcl(tenantId, fiscalYear);
   if (!hcl) throw new Error(`No active HCL decision for fiscal year ${fiscalYear}`);
@@ -122,109 +123,146 @@ export async function calculateAllTaxesForContribuabil(
     }),
   ]);
 
-  const buildingResults: TaxCalculationResult[] = [];
+  const errors: { propertyType: string; propertyId: string; error: string }[] = [];
+
+  const buildingResults: (TaxCalculationResult | null)[] = [];
   for (const b of buildings) {
-    const exemptions = await getApplicableExemptions(
-      tenantId,
-      contribuabilId,
-      fiscalYear,
-      "cladire",
-      b.id
-    );
-    const result = await calculateBuildingTax(
-      {
-        buildingId: b.id,
-        contribuabilId,
+    try {
+      const exemptions = await getApplicableExemptions(
         tenantId,
+        contribuabilId,
         fiscalYear,
-        destinatie: b.destinatie as BuildingTaxInput["destinatie"],
-        tipConstructie: b.tipConstructie,
-        anConstructie: b.anConstructie,
-        suprafataConstruita: Number(b.suprafataConstruita),
-        suprafataDesfasurata: b.suprafataDesfasurata
-          ? Number(b.suprafataDesfasurata)
-          : undefined,
-        valoareImpozabila: b.valoareImpozabila
-          ? Number(b.valoareImpozabila)
-          : undefined,
-        valoareInventar: b.valoareInventar ? Number(b.valoareInventar) : undefined,
-        zona: b.zona,
-        cotaParte: Number(b.cotaParte),
-        dataDobandire: b.dataDobandire,
-        dataInstrainare: b.dataInstrainare ?? undefined,
-        suprafataRezidentiala: b.suprafataRezidentiala
-          ? Number(b.suprafataRezidentiala)
-          : undefined,
-        suprafataNerezidentiala: b.suprafataNerezidentiala
-          ? Number(b.suprafataNerezidentiala)
-          : undefined,
-        tipContribuabil,
-        communeRank,
-      },
-      hcl,
-      exemptions
-    );
-    buildingResults.push(result);
+        "cladire",
+        b.id
+      );
+      const result = await calculateBuildingTax(
+        {
+          buildingId: b.id,
+          contribuabilId,
+          tenantId,
+          fiscalYear,
+          destinatie: b.destinatie as BuildingTaxInput["destinatie"],
+          tipConstructie: b.tipConstructie,
+          anConstructie: b.anConstructie,
+          suprafataConstruita: Number(b.suprafataConstruita),
+          suprafataDesfasurata: b.suprafataDesfasurata
+            ? Number(b.suprafataDesfasurata)
+            : undefined,
+          valoareImpozabila: b.valoareImpozabila
+            ? Number(b.valoareImpozabila)
+            : undefined,
+          valoareInventar: b.valoareInventar ? Number(b.valoareInventar) : undefined,
+          zona: b.zona,
+          cotaParte: Number(b.cotaParte),
+          dataDobandire: b.dataDobandire,
+          dataInstrainare: b.dataInstrainare ?? undefined,
+          suprafataRezidentiala: b.suprafataRezidentiala
+            ? Number(b.suprafataRezidentiala)
+            : undefined,
+          suprafataNerezidentiala: b.suprafataNerezidentiala
+            ? Number(b.suprafataNerezidentiala)
+            : undefined,
+          tipContribuabil,
+          communeRank,
+        },
+        hcl,
+        exemptions
+      );
+      buildingResults.push(result);
+    } catch (err) {
+      console.error(`Error calculating building tax ${b.id}:`, err);
+      buildingResults.push(null);
+      errors.push({
+        propertyType: "cladire",
+        propertyId: b.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
-  const landResults: TaxCalculationResult[] = [];
+  const landResults: (TaxCalculationResult | null)[] = [];
   for (const l of land) {
-    const exemptions = await getApplicableExemptions(
-      tenantId,
-      contribuabilId,
-      fiscalYear,
-      "teren",
-      l.id
-    );
-    const result = await calculateLandTax(
-      {
-        landId: l.id,
-        contribuabilId,
+    try {
+      const exemptions = await getApplicableExemptions(
         tenantId,
+        contribuabilId,
         fiscalYear,
-        categorie: l.categorie,
-        suprafataMp: Number(l.suprafataMp),
-        zona: l.zona,
-        cotaParte: Number(l.cotaParte),
-        dataDobandire: l.dataDobandire,
-        dataInstrainare: l.dataInstrainare ?? undefined,
-      },
-      hcl,
-      exemptions
-    );
-    landResults.push(result);
+        "teren",
+        l.id
+      );
+      const result = await calculateLandTax(
+        {
+          landId: l.id,
+          contribuabilId,
+          tenantId,
+          fiscalYear,
+          categorie: l.categorie,
+          suprafataMp: Number(l.suprafataMp),
+          zona: l.zona,
+          cotaParte: Number(l.cotaParte),
+          dataDobandire: l.dataDobandire,
+          dataInstrainare: l.dataInstrainare ?? undefined,
+        },
+        hcl,
+        exemptions
+      );
+      landResults.push(result);
+    } catch (err) {
+      console.error(`Error calculating land tax ${l.id}:`, err);
+      landResults.push(null);
+      errors.push({
+        propertyType: "teren",
+        propertyId: l.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
-  const vehicleResults: TaxCalculationResult[] = [];
+  const vehicleResults: (TaxCalculationResult | null)[] = [];
   for (const v of vehicles) {
-    const exemptions = await getApplicableExemptions(
-      tenantId,
-      contribuabilId,
-      fiscalYear,
-      "vehicul",
-      v.id
-    );
-    const result = await calculateVehicleTax(
-      {
-        vehicleId: v.id,
-        contribuabilId,
+    try {
+      const exemptions = await getApplicableExemptions(
         tenantId,
+        contribuabilId,
         fiscalYear,
-        tipVehicul: v.tipVehicul,
-        cilindreeCmc: v.cilindreeCmc ?? undefined,
-        putereKw: v.putereKw ? Number(v.putereKw) : undefined,
-        masaTotalaKg: v.masaTotalaKg ?? undefined,
-        nrLocuri: v.nrLocuri ?? undefined,
-        normaPoluare: v.normaPoluare ?? undefined,
-        anFabricatie: v.anFabricatie,
-        dataDobandire: v.dataDobandire,
-        dataInstrainare: v.dataInstrainare ?? undefined,
-      },
-      hcl,
-      exemptions
-    );
-    vehicleResults.push(result);
+        "vehicul",
+        v.id
+      );
+      const result = await calculateVehicleTax(
+        {
+          vehicleId: v.id,
+          contribuabilId,
+          tenantId,
+          fiscalYear,
+          tipVehicul: v.tipVehicul,
+          cilindreeCmc: v.cilindreeCmc ?? undefined,
+          putereKw: v.putereKw ? Number(v.putereKw) : undefined,
+          masaTotalaKg: v.masaTotalaKg ?? undefined,
+          nrLocuri: v.nrLocuri ?? undefined,
+          normaPoluare: v.normaPoluare ?? undefined,
+          anFabricatie: v.anFabricatie,
+          dataDobandire: v.dataDobandire,
+          dataInstrainare: v.dataInstrainare ?? undefined,
+        },
+        hcl,
+        exemptions
+      );
+      vehicleResults.push(result);
+    } catch (err) {
+      console.error(`Error calculating vehicle tax ${v.id}:`, err);
+      vehicleResults.push(null);
+      errors.push({
+        propertyType: "vehicul",
+        propertyId: v.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
-  return { buildings: buildingResults, land: landResults, vehicles: vehicleResults };
+  return {
+    buildings: buildingResults,
+    land: landResults,
+    vehicles: vehicleResults,
+    errors,
+  };
 }

@@ -403,7 +403,7 @@ async function main() {
           tenantId,
           tip: "PF",
           cnp: null,
-          cnpHash: null,
+          cnpHash: `SEED-PF-${String(i + 1).padStart(4, "0")}`,
           cui: null,
           nume: pf.nume,
           prenume: pf.prenume,
@@ -688,42 +688,42 @@ async function main() {
     contribuabilIdx: number;
   }> = [
     // Autoturisme sub 1600cc (3)
-    { tipVehicul: "autoturism", marca: "Dacia", model: "Logan 1.2", anFabricatie: 2018, cilindreeCmc: 1199, putereKw: 55, masaTotalaKg: 1410, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "benzina", numarInmatriculare: "MM-01-BVD", contribuabilIdx: 0 },
-    { tipVehicul: "autoturism", marca: "Dacia", model: "Sandero 1.0", anFabricatie: 2020, cilindreeCmc: 999, putereKw: 49, masaTotalaKg: 1320, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "benzina", numarInmatriculare: "MM-02-BVD", contribuabilIdx: 1 },
-    { tipVehicul: "autoturism", marca: "Renault", model: "Clio 1.5 dCi", anFabricatie: 2016, cilindreeCmc: 1461, putereKw: 66, masaTotalaKg: 1400, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-03-BVD", contribuabilIdx: 2 },
+    { tipVehicul: "autoturism", marca: "Dacia", model: "Logan 1.2", anFabricatie: 2018, cilindreeCmc: 1199, putereKw: 55, masaTotalaKg: 1410, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "benzina", numarInmatriculare: "MM-01-BVD", contribuabilIdx: 0 },
+    { tipVehicul: "autoturism", marca: "Dacia", model: "Sandero 1.0", anFabricatie: 2020, cilindreeCmc: 999, putereKw: 49, masaTotalaKg: 1320, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "benzina", numarInmatriculare: "MM-02-BVD", contribuabilIdx: 1 },
+    { tipVehicul: "autoturism", marca: "Renault", model: "Clio 1.5 dCi", anFabricatie: 2016, cilindreeCmc: 1461, putereKw: 66, masaTotalaKg: 1400, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-03-BVD", contribuabilIdx: 2 },
 
     // Autoturisme 1601-2000cc (4)
-    { tipVehicul: "autoturism", marca: "Volkswagen", model: "Golf 1.6 TDI", anFabricatie: 2017, cilindreeCmc: 1598, putereKw: 77, masaTotalaKg: 1540, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-04-BVD", contribuabilIdx: 3 },
-    { tipVehicul: "autoturism", marca: "Skoda", model: "Octavia 1.8 TSI", anFabricatie: 2019, cilindreeCmc: 1798, putereKw: 132, masaTotalaKg: 1590, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "benzina", numarInmatriculare: "MM-05-BVD", contribuabilIdx: 5 },
-    { tipVehicul: "autoturism", marca: "Ford", model: "Focus 2.0 TDCi", anFabricatie: 2015, cilindreeCmc: 1997, putereKw: 110, masaTotalaKg: 1600, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-06-BVD", contribuabilIdx: 6 },
-    { tipVehicul: "autoturism", marca: "Dacia", model: "Duster 1.6", anFabricatie: 2021, cilindreeCmc: 1598, putereKw: 84, masaTotalaKg: 1650, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "benzina", numarInmatriculare: "MM-07-BVD", contribuabilIdx: 10 },
+    { tipVehicul: "autoturism", marca: "Volkswagen", model: "Golf 1.6 TDI", anFabricatie: 2017, cilindreeCmc: 1598, putereKw: 77, masaTotalaKg: 1540, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-04-BVD", contribuabilIdx: 3 },
+    { tipVehicul: "autoturism", marca: "Skoda", model: "Octavia 1.8 TSI", anFabricatie: 2019, cilindreeCmc: 1798, putereKw: 132, masaTotalaKg: 1590, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "benzina", numarInmatriculare: "MM-05-BVD", contribuabilIdx: 5 },
+    { tipVehicul: "autoturism", marca: "Ford", model: "Focus 2.0 TDCi", anFabricatie: 2015, cilindreeCmc: 1997, putereKw: 110, masaTotalaKg: 1600, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-06-BVD", contribuabilIdx: 6 },
+    { tipVehicul: "autoturism", marca: "Dacia", model: "Duster 1.6", anFabricatie: 2021, cilindreeCmc: 1598, putereKw: 84, masaTotalaKg: 1650, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "benzina", numarInmatriculare: "MM-07-BVD", contribuabilIdx: 10 },
 
     // Autoturisme 2001-2600cc (3)
-    { tipVehicul: "autoturism", marca: "BMW", model: "320d", anFabricatie: 2018, cilindreeCmc: 2000, putereKw: 140, masaTotalaKg: 1700, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-08-BVD", contribuabilIdx: 4 },
-    { tipVehicul: "autoturism", marca: "Audi", model: "A4 2.0 TDI", anFabricatie: 2019, cilindreeCmc: 2000, putereKw: 150, masaTotalaKg: 1750, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-09-BVD", contribuabilIdx: 8 },
-    { tipVehicul: "autoturism", marca: "Mercedes-Benz", model: "C220d", anFabricatie: 2020, cilindreeCmc: 2143, putereKw: 143, masaTotalaKg: 1770, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-10-BVD", contribuabilIdx: 9 },
+    { tipVehicul: "autoturism", marca: "BMW", model: "320d", anFabricatie: 2018, cilindreeCmc: 2000, putereKw: 140, masaTotalaKg: 1700, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-08-BVD", contribuabilIdx: 4 },
+    { tipVehicul: "autoturism", marca: "Audi", model: "A4 2.0 TDI", anFabricatie: 2019, cilindreeCmc: 2000, putereKw: 150, masaTotalaKg: 1750, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-09-BVD", contribuabilIdx: 8 },
+    { tipVehicul: "autoturism", marca: "Mercedes-Benz", model: "C220d", anFabricatie: 2020, cilindreeCmc: 2143, putereKw: 143, masaTotalaKg: 1770, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-10-BVD", contribuabilIdx: 9 },
 
     // Autoturisme 2601-3000cc (1)
-    { tipVehicul: "autoturism", marca: "BMW", model: "530d xDrive", anFabricatie: 2019, cilindreeCmc: 2993, putereKw: 195, masaTotalaKg: 1950, nrLocuri: 5, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-11-BVD", contribuabilIdx: 34 },
+    { tipVehicul: "autoturism", marca: "BMW", model: "530d xDrive", anFabricatie: 2019, cilindreeCmc: 2993, putereKw: 195, masaTotalaKg: 1950, nrLocuri: 5, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-11-BVD", contribuabilIdx: 34 },
 
     // Autoturisme peste 3000cc (1)
-    { tipVehicul: "autoturism", marca: "Toyota", model: "Land Cruiser 4.5 V8", anFabricatie: 2017, cilindreeCmc: 4461, putereKw: 200, masaTotalaKg: 2740, nrLocuri: 7, normaPoluare: "Euro 5", tipCombustibil: "motorina", numarInmatriculare: "MM-12-BVD", contribuabilIdx: 35 },
+    { tipVehicul: "autoturism", marca: "Toyota", model: "Land Cruiser 4.5 V8", anFabricatie: 2017, cilindreeCmc: 4461, putereKw: 200, masaTotalaKg: 2740, nrLocuri: 7, normaPoluare: "euro_5", tipCombustibil: "motorina", numarInmatriculare: "MM-12-BVD", contribuabilIdx: 35 },
 
     // Camioane (3) — PJ
-    { tipVehicul: "camion", marca: "MAN", model: "TGL 12.250", anFabricatie: 2016, cilindreeCmc: 6871, putereKw: 184, masaTotalaKg: 12000, nrLocuri: 3, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-13-BVD", contribuabilIdx: 39 },
-    { tipVehicul: "camion", marca: "Iveco", model: "Eurocargo 7.5t", anFabricatie: 2018, cilindreeCmc: 3920, putereKw: 125, masaTotalaKg: 7500, nrLocuri: 3, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-14-BVD", contribuabilIdx: 35 },
-    { tipVehicul: "camion", marca: "Mercedes-Benz", model: "Atego 1530", anFabricatie: 2020, cilindreeCmc: 7698, putereKw: 220, masaTotalaKg: 15000, nrLocuri: 3, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-15-BVD", contribuabilIdx: 40 },
+    { tipVehicul: "camion", marca: "MAN", model: "TGL 12.250", anFabricatie: 2016, cilindreeCmc: 6871, putereKw: 184, masaTotalaKg: 12000, nrLocuri: 3, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-13-BVD", contribuabilIdx: 39 },
+    { tipVehicul: "camion", marca: "Iveco", model: "Eurocargo 7.5t", anFabricatie: 2018, cilindreeCmc: 3920, putereKw: 125, masaTotalaKg: 7500, nrLocuri: 3, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-14-BVD", contribuabilIdx: 35 },
+    { tipVehicul: "camion", marca: "Mercedes-Benz", model: "Atego 1530", anFabricatie: 2020, cilindreeCmc: 7698, putereKw: 220, masaTotalaKg: 15000, nrLocuri: 3, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-15-BVD", contribuabilIdx: 40 },
 
     // Motociclete (2)
-    { tipVehicul: "motocicleta", marca: "Honda", model: "CB500F", anFabricatie: 2021, cilindreeCmc: 471, putereKw: 35, masaTotalaKg: 189, nrLocuri: 2, normaPoluare: "Euro 5", tipCombustibil: "benzina", numarInmatriculare: "MM-16-BVD", contribuabilIdx: 22 },
-    { tipVehicul: "motocicleta", marca: "Yamaha", model: "MT-07", anFabricatie: 2022, cilindreeCmc: 689, putereKw: 54, masaTotalaKg: 184, nrLocuri: 2, normaPoluare: "Euro 5", tipCombustibil: "benzina", numarInmatriculare: "MM-17-BVD", contribuabilIdx: 23 },
+    { tipVehicul: "motocicleta", marca: "Honda", model: "CB500F", anFabricatie: 2021, cilindreeCmc: 471, putereKw: 35, masaTotalaKg: 189, nrLocuri: 2, normaPoluare: "euro_5", tipCombustibil: "benzina", numarInmatriculare: "MM-16-BVD", contribuabilIdx: 22 },
+    { tipVehicul: "motocicleta", marca: "Yamaha", model: "MT-07", anFabricatie: 2022, cilindreeCmc: 689, putereKw: 54, masaTotalaKg: 184, nrLocuri: 2, normaPoluare: "euro_5", tipCombustibil: "benzina", numarInmatriculare: "MM-17-BVD", contribuabilIdx: 23 },
 
     // Autobuz (1) — PJ
-    { tipVehicul: "autobuz", marca: "Mercedes-Benz", model: "Sprinter 519 CDI", anFabricatie: 2019, cilindreeCmc: 2987, putereKw: 140, masaTotalaKg: 5500, nrLocuri: 22, normaPoluare: "Euro 6", tipCombustibil: "motorina", numarInmatriculare: "MM-18-BVD", contribuabilIdx: 39 },
+    { tipVehicul: "autobuz", marca: "Mercedes-Benz", model: "Sprinter 519 CDI", anFabricatie: 2019, cilindreeCmc: 2987, putereKw: 140, masaTotalaKg: 5500, nrLocuri: 22, normaPoluare: "euro_6", tipCombustibil: "motorina", numarInmatriculare: "MM-18-BVD", contribuabilIdx: 39 },
 
     // Tractor (2) — PJ
-    { tipVehicul: "tractor", marca: "John Deere", model: "5075E", anFabricatie: 2018, cilindreeCmc: 2900, putereKw: 55, masaTotalaKg: 3200, nrLocuri: 1, normaPoluare: "Euro 3A", tipCombustibil: "motorina", numarInmatriculare: "MM-19-BVD", contribuabilIdx: 36 },
-    { tipVehicul: "tractor", marca: "New Holland", model: "T4.75", anFabricatie: 2020, cilindreeCmc: 2930, putereKw: 55, masaTotalaKg: 3050, nrLocuri: 1, normaPoluare: "Euro 3B", tipCombustibil: "motorina", numarInmatriculare: "MM-20-BVD", contribuabilIdx: 42 },
+    { tipVehicul: "tractor", marca: "John Deere", model: "5075E", anFabricatie: 2018, cilindreeCmc: 2900, putereKw: 55, masaTotalaKg: 3200, nrLocuri: 1, normaPoluare: "euro_3", tipCombustibil: "motorina", numarInmatriculare: "MM-19-BVD", contribuabilIdx: 36 },
+    { tipVehicul: "tractor", marca: "New Holland", model: "T4.75", anFabricatie: 2020, cilindreeCmc: 2930, putereKw: 55, masaTotalaKg: 3050, nrLocuri: 1, normaPoluare: "euro_3", tipCombustibil: "motorina", numarInmatriculare: "MM-20-BVD", contribuabilIdx: 42 },
   ];
 
   const vehicleIds: string[] = [];
@@ -767,7 +767,11 @@ async function main() {
   // =============================================================================
 
   let hclDecision = await prisma.hclDecision.findFirst({
-    where: { tenantId, fiscalYear: 2026, status: "activ" },
+    where: {
+      tenantId,
+      fiscalYear: 2026,
+      status: { in: ["active", "activ"] },
+    },
   });
 
   if (!hclDecision) {
@@ -781,9 +785,14 @@ async function main() {
         inflationIndex: 1.056,
         validFrom: new Date("2026-01-01"),
         validTo: new Date("2026-12-31"),
-        status: "activ",
+        status: "active",
         approvedBy: "Consiliul Local Bogdan Vodă",
       },
+    });
+  } else if (hclDecision.status === "activ") {
+    hclDecision = await prisma.hclDecision.update({
+      where: { id: hclDecision.id },
+      data: { status: "active" },
     });
   }
 
@@ -801,11 +810,14 @@ async function main() {
     descriptionRo: string;
     legalArticle: string;
   }> = [
-    // Building rates — residential
-    { taxType: "impozit_cladiri_rezidentiale", category: "cadre_beton", zona: "A", rang: null, rateType: "percent", rateValue: 0.0008, unit: null, descriptionRo: "Clădiri rezidențiale, cadre beton, zona A — 0.08%", legalArticle: "Art. 457" },
-    { taxType: "impozit_cladiri_rezidentiale", category: "cadre_beton", zona: "B", rang: null, rateType: "percent", rateValue: 0.0006, unit: null, descriptionRo: "Clădiri rezidențiale, cadre beton, zona B — 0.06%", legalArticle: "Art. 457" },
     { taxType: "impozit_cladiri_rezidentiale", category: "pereti_caramida", zona: "A", rang: null, rateType: "percent", rateValue: 0.0008, unit: null, descriptionRo: "Clădiri rezidențiale, pereți cărămidă, zona A — 0.08%", legalArticle: "Art. 457" },
     { taxType: "impozit_cladiri_rezidentiale", category: "pereti_caramida", zona: "B", rang: null, rateType: "percent", rateValue: 0.0006, unit: null, descriptionRo: "Clădiri rezidențiale, pereți cărămidă, zona B — 0.06%", legalArticle: "Art. 457" },
+    { taxType: "impozit_cladiri_rezidentiale", category: "pereti_caramida", zona: "C", rang: null, rateType: "percent", rateValue: 0.0004, unit: null, descriptionRo: "Clădiri rezidențiale, pereți cărămidă, zona C — 0.04%", legalArticle: "Art. 457" },
+    { taxType: "impozit_cladiri_rezidentiale", category: "pereti_caramida", zona: "D", rang: null, rateType: "percent", rateValue: 0.0002, unit: null, descriptionRo: "Clădiri rezidențiale, pereți cărămidă, zona D — 0.02%", legalArticle: "Art. 457" },
+    { taxType: "impozit_cladiri_rezidentiale", category: "cadre_beton", zona: "A", rang: null, rateType: "percent", rateValue: 0.0008, unit: null, descriptionRo: "Clădiri rezidențiale, cadre beton, zona A — 0.08%", legalArticle: "Art. 457" },
+    { taxType: "impozit_cladiri_rezidentiale", category: "cadre_beton", zona: "B", rang: null, rateType: "percent", rateValue: 0.0006, unit: null, descriptionRo: "Clădiri rezidențiale, cadre beton, zona B — 0.06%", legalArticle: "Art. 457" },
+    { taxType: "impozit_cladiri_rezidentiale", category: "cadre_beton", zona: "C", rang: null, rateType: "percent", rateValue: 0.0004, unit: null, descriptionRo: "Clădiri rezidențiale, cadre beton, zona C — 0.04%", legalArticle: "Art. 457" },
+    { taxType: "impozit_cladiri_rezidentiale", category: "cadre_beton", zona: "D", rang: null, rateType: "percent", rateValue: 0.0002, unit: null, descriptionRo: "Clădiri rezidențiale, cadre beton, zona D — 0.02%", legalArticle: "Art. 457" },
     { taxType: "impozit_cladiri_rezidentiale", category: "lemn", zona: "A", rang: null, rateType: "percent", rateValue: 0.0006, unit: null, descriptionRo: "Clădiri rezidențiale, lemn, zona A — 0.06%", legalArticle: "Art. 457" },
     { taxType: "impozit_cladiri_rezidentiale", category: "lemn", zona: "B", rang: null, rateType: "percent", rateValue: 0.0006, unit: null, descriptionRo: "Clădiri rezidențiale, lemn, zona B — 0.06%", legalArticle: "Art. 457" },
     { taxType: "impozit_cladiri_rezidentiale", category: "lemn", zona: "C", rang: null, rateType: "percent", rateValue: 0.0004, unit: null, descriptionRo: "Clădiri rezidențiale, lemn, zona C — 0.04%", legalArticle: "Art. 457" },
@@ -823,6 +835,12 @@ async function main() {
     { taxType: "impozit_teren_intravilan", category: "intravilan_curti", zona: "C", rang: null, rateType: "per_unit", rateValue: 0.8, unit: "lei/mp", descriptionRo: "Teren intravilan curți, zona C — 0.80 lei/mp", legalArticle: "Art. 465" },
     { taxType: "impozit_teren_intravilan", category: "intravilan_curti", zona: "D", rang: null, rateType: "per_unit", rateValue: 0.5, unit: "lei/mp", descriptionRo: "Teren intravilan curți, zona D — 0.50 lei/mp", legalArticle: "Art. 465" },
 
+    // Land rates — intravilan_arabil
+    { taxType: "impozit_teren_intravilan", category: "intravilan_arabil", zona: "A", rang: null, rateType: "per_unit", rateValue: 0.8, unit: "lei/mp", descriptionRo: "Teren intravilan arabil, zona A — 0.80 lei/mp", legalArticle: "Art. 465" },
+    { taxType: "impozit_teren_intravilan", category: "intravilan_arabil", zona: "B", rang: null, rateType: "per_unit", rateValue: 0.6, unit: "lei/mp", descriptionRo: "Teren intravilan arabil, zona B — 0.60 lei/mp", legalArticle: "Art. 465" },
+    { taxType: "impozit_teren_intravilan", category: "intravilan_arabil", zona: "C", rang: null, rateType: "per_unit", rateValue: 0.4, unit: "lei/mp", descriptionRo: "Teren intravilan arabil, zona C — 0.40 lei/mp", legalArticle: "Art. 465" },
+    { taxType: "impozit_teren_intravilan", category: "intravilan_arabil", zona: "D", rang: null, rateType: "per_unit", rateValue: 0.2, unit: "lei/mp", descriptionRo: "Teren intravilan arabil, zona D — 0.20 lei/mp", legalArticle: "Art. 465" },
+
     // Land rates — extravilan
     { taxType: "impozit_teren_extravilan", category: "extravilan_arabil", zona: null, rang: null, rateType: "per_unit", rateValue: 50, unit: "lei/ha", descriptionRo: "Teren extravilan arabil — 50 lei/ha", legalArticle: "Art. 465" },
     { taxType: "impozit_teren_extravilan", category: "extravilan_pasuni", zona: null, rang: null, rateType: "per_unit", rateValue: 28, unit: "lei/ha", descriptionRo: "Teren extravilan pășuni — 28 lei/ha", legalArticle: "Art. 465" },
@@ -831,6 +849,7 @@ async function main() {
     { taxType: "impozit_teren_curti", category: "intravilan_curti", zona: "A", rang: null, rateType: "per_unit", rateValue: 1.5, unit: "lei/mp", descriptionRo: "Teren curți construcții, zona A — 1.50 lei/mp", legalArticle: "Art. 465" },
     { taxType: "impozit_teren_curti", category: "intravilan_curti", zona: "B", rang: null, rateType: "per_unit", rateValue: 1.1, unit: "lei/mp", descriptionRo: "Teren curți construcții, zona B — 1.10 lei/mp", legalArticle: "Art. 465" },
     { taxType: "impozit_teren_curti", category: "intravilan_curti", zona: "C", rang: null, rateType: "per_unit", rateValue: 0.8, unit: "lei/mp", descriptionRo: "Teren curți construcții, zona C — 0.80 lei/mp", legalArticle: "Art. 465" },
+    { taxType: "impozit_teren_curti", category: "intravilan_curti", zona: "D", rang: null, rateType: "per_unit", rateValue: 0.3, unit: "lei/mp", descriptionRo: "Teren curți construcții, zona D — 0.30 lei/mp", legalArticle: "Art. 465" },
 
     // Vehicle rates — autoturisme by cc bracket
     { taxType: "impozit_mijloace_transport", category: "autoturism_sub_1600", zona: null, rang: 1, rateType: "per_unit", rateValue: 8, unit: "lei/200cc", descriptionRo: "Autoturism sub 1600 cmc — 8 lei/200 cmc", legalArticle: "Art. 470" },
@@ -843,6 +862,8 @@ async function main() {
     { taxType: "impozit_mijloace_transport", category: "motocicleta_sub_200", zona: null, rang: 8, rateType: "fixed", rateValue: 8, unit: "lei", descriptionRo: "Motocicletă sub 200 cmc — 8 lei", legalArticle: "Art. 470" },
     { taxType: "impozit_mijloace_transport", category: "motocicleta_201_500", zona: null, rang: 9, rateType: "fixed", rateValue: 18, unit: "lei", descriptionRo: "Motocicletă 201–500 cmc — 18 lei", legalArticle: "Art. 470" },
     { taxType: "impozit_mijloace_transport", category: "motocicleta_peste_500", zona: null, rang: 10, rateType: "fixed", rateValue: 36, unit: "lei", descriptionRo: "Motocicletă peste 500 cmc — 36 lei", legalArticle: "Art. 470" },
+    { taxType: "impozit_mijloace_transport", category: "tractor", zona: null, rang: 11, rateType: "fixed", rateValue: 18, unit: "lei", descriptionRo: "Tractor — 18 lei", legalArticle: "Art. 470" },
+    { taxType: "impozit_mijloace_transport", category: "remorca", zona: null, rang: 12, rateType: "fixed", rateValue: 12, unit: "lei", descriptionRo: "Remorcă (fallback) — 12 lei", legalArticle: "Art. 470" },
   ];
 
   // Delete existing rate tables for this HCL to avoid duplicates

@@ -25,7 +25,7 @@ export default async function RateComparisonPage() {
 
   // Get all HCL decisions ordered by fiscal year
   const hclDecisions = await prisma.hclDecision.findMany({
-    where: { tenantId, status: "activ" },
+    where: { tenantId, status: "active" },
     orderBy: { fiscalYear: "asc" },
     select: { id: true, fiscalYear: true },
   });
