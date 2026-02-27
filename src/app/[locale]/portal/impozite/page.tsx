@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { TaxExplanationRow } from "@/components/portal/tax-explanation";
+import { getOutstanding } from "@/lib/tax-engine/liability-utils";
 
 const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   calculat: "outline",
@@ -109,7 +110,7 @@ export default async function PortalTaxesPage() {
                 </TableHeader>
                 <TableBody>
                   {taxesByYear[year].map((tax) => {
-                    const outstanding = Number(tax.sumaDatorata) - Number(tax.sumaPlatita);
+                    const outstanding = getOutstanding(tax);
                     const taxName = (tax.taxType.name as Record<string, string>)?.ro || tax.taxType.code;
                     return (
                       <TableRow key={tax.id}>

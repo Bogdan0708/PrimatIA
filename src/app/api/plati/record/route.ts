@@ -1,6 +1,13 @@
 import { auth } from "@/lib/auth";
-import { prisma, setTenantContext } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { plataSchema } from "@/lib/validations";
+import { generateDocumentNumber } from "@/lib/formatting";
+import { Prisma } from "@prisma/client";
+import type { Role } from "@/lib/constants";
+
+// Roles allowed to record payments
+const PAYMENT_ROLES: Role[] = ["super_admin", "primaria_admin", "operator", "contabil"];
 
 // ============================================================================
 // Payment Recording API
@@ -12,90 +19,120 @@ export async function POST(request: NextRequest) {
     const session = await auth();
 
     // Require staff authentication
-    if (!session?.user?.tenantId) {
+    if (!session?.user?.tenantId || !session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
+    // Role check: only staff roles can record payments
+    const userRole = session.user.role as Role;
+    if (!PAYMENT_ROLES.includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
     const tenantId = session.user.tenantId;
     const userId = session.user.id;
 
-    await setTenantContext(tenantId);
-
-    // Parse request body
+    // Validate request body with Zod schema
     const body = await request.json();
-    const {
-      contribuabilId,
-      suma,
-      modalitate,
-      dataPlata,
-      nrChitanta,
-      nrDocument,
-      nota,
-    } = body;
-
-    // Validate required fields
-    if (!contribuabilId || !suma || !modalitate || !dataPlata) {
+    const parsed = plataSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing required fields: contribuabilId, suma, modalitate, dataPlata",
+          error: parsed.error.issues.map((e: { message: string }) => e.message).join("; "),
         },
         { status: 400 }
       );
     }
 
-    if (Number(suma) <= 0) {
+    const { contribuabilId, suma, modalitate, dataPlata, nrDocument, nota } = parsed.data;
+    let { nrChitanta } = parsed.data;
+
+    return await withTenantScope(tenantId, async () => {
+      // Verify the taxpayer exists
+      const contribuabil = await prisma.contribuabil.findFirst({
+        where: {
+          id: contribuabilId,
+          tenantId,
+          deletedAt: null,
+        },
+      });
+
+      if (!contribuabil) {
+        return NextResponse.json(
+          { success: false, error: "Taxpayer not found" },
+          { status: 404 }
+        );
+      }
+
+      // Auto-generate receipt number for cash payments if not provided
+      if (modalitate === "numerar" && !nrChitanta) {
+        const year = new Date(dataPlata).getFullYear();
+        const seqResult = await prisma.$queryRaw<Array<{ next_val: bigint }>>(
+          Prisma.sql`INSERT INTO "ChitantaSequence" ("tenantId", "year", "currentVal")
+                     VALUES (${tenantId}::uuid, ${year}, 1)
+                     ON CONFLICT ("tenantId", "year")
+                     DO UPDATE SET "currentVal" = "ChitantaSequence"."currentVal" + 1
+                     RETURNING "currentVal" AS next_val`
+        );
+        const seqNum = Number(seqResult[0].next_val);
+        nrChitanta = generateDocumentNumber("CHT", year, seqNum);
+      }
+
+      // Create the payment record
+      const plata = await prisma.plata.create({
+        data: {
+          tenantId,
+          contribuabilId,
+          suma,
+          dataPlata: new Date(dataPlata),
+          modalitate,
+          nrChitanta: nrChitanta || undefined,
+          nrDocument: nrDocument || undefined,
+          nota: nota || undefined,
+          inregistratDeId: userId,
+          distribuit: false,
+        },
+      });
+
+      // Auto-distribute payment to outstanding debts
+      await distributePayment(tenantId, plata.id, contribuabilId, suma);
+
+      // Audit log for payment creation
+      await prisma.auditLog.create({
+        data: {
+          tenantId,
+          action: "create",
+          entityType: "plata",
+          entityId: plata.id,
+          newValues: {
+            suma,
+            modalitate,
+            contribuabilId,
+            nrChitanta: nrChitanta || null,
+            dataPlata: new Date(dataPlata).toISOString(),
+          },
+          userId,
+          ipAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+          userAgent: request.headers.get("user-agent") || null,
+        },
+      });
+
       return NextResponse.json(
-        { success: false, error: "Amount must be positive" },
-        { status: 400 }
+        {
+          success: true,
+          id: plata.id,
+          nrChitanta: nrChitanta || null,
+        },
+        { status: 201 }
       );
-    }
-
-    // Verify the taxpayer exists
-    const contribuabil = await prisma.contribuabil.findFirst({
-      where: {
-        id: contribuabilId,
-        tenantId,
-        deletedAt: null,
-      },
     });
-
-    if (!contribuabil) {
-      return NextResponse.json(
-        { success: false, error: "Taxpayer not found" },
-        { status: 404 }
-      );
-    }
-
-    // Create the payment record
-    const plata = await prisma.plata.create({
-      data: {
-        tenantId,
-        contribuabilId,
-        suma: Number(suma),
-        dataPlata: new Date(dataPlata),
-        modalitate,
-        nrChitanta: nrChitanta || undefined,
-        nrDocument: nrDocument || undefined,
-        nota: nota || undefined,
-        inregistratDeId: userId,
-        distribuit: false,
-      },
-    });
-
-    // Auto-distribute payment to outstanding debts
-    await distributePayment(tenantId, plata.id, contribuabilId, Number(suma));
-
-    return NextResponse.json(
-      {
-        success: true,
-        id: plata.id,
-      },
-      { status: 201 }
-    );
   } catch (error) {
     console.error("Error recording payment:", error);
     return NextResponse.json(

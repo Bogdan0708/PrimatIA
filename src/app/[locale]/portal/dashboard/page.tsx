@@ -3,6 +3,7 @@ import { prisma, setTenantContext } from "@/lib/db";
 import { getLocale, getTranslations } from "next-intl/server";
 import { formatLei, formatDate } from "@/lib/formatting";
 import Link from "next/link";
+import { getOutstanding } from "@/lib/tax-engine/liability-utils";
 import {
   Card,
   CardContent,
@@ -91,7 +92,7 @@ export default async function PortalDashboardPage() {
   ]);
 
   const totalOwed = taxes.reduce(
-    (sum, tax) => sum + (Number(tax.sumaDatorata) - Number(tax.sumaPlatita)),
+    (sum, tax) => sum + getOutstanding(tax),
     0
   );
   const totalPaid = taxes.reduce(
@@ -145,9 +146,7 @@ export default async function PortalDashboardPage() {
         (tax.taxType.name as Record<string, string>)?.ro ||
         tax.taxType.code;
       const outstanding =
-        Number(tax.sumaDatorata) +
-        Number(tax.sumaPenalitati) -
-        Number(tax.sumaPlatita);
+        getOutstanding(tax);
       return {
         id: tax.id,
         name: taxName,

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
+import { getOutstanding, getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
         for (const debt of selectedDebts) {
           const impozit = await tx.impozit.findUnique({ where: { id: debt.impozitId } });
           if (!impozit) throw new Error(`Impozit ${debt.impozitId} not found`);
-          const remaining = Number(impozit.sumaDatorata) - Number(impozit.sumaPlatita);
+          const remaining = getOutstanding(impozit);
           if (debt.amount > remaining + 0.01) {
             throw new Error(`Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`);
           }
@@ -138,8 +139,7 @@ export async function POST(request: NextRequest) {
 
           if (impozit) {
             const newPaid = Number(impozit.sumaPlatita) + debt.amount;
-            const totalOwed = Number(impozit.sumaDatorata);
-            const newStatus = newPaid >= totalOwed ? "platit" : "partial_platit";
+            const newStatus = getStatusAfterPayment(impozit, debt.amount, impozit.status);
 
             await tx.impozit.update({
               where: { id: debt.impozitId },

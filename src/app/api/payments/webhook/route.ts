@@ -3,6 +3,7 @@ import { getStripeClient } from "@/lib/stripe";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
+import { getOutstanding, getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
 import {
   fetchSubscriptionFromInvoice,
   markTenantInvoiceOutcome,
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // Stripe event ID deduplication
+    // Quick pre-check (non-transactional) to avoid unnecessary work
     const existingEvent = await prisma.onlinePayment.findFirst({
       where: { stripeEventId: event.id },
     });
@@ -181,6 +182,14 @@ export async function POST(request: NextRequest) {
       // Use withTenantScope to ensure SET LOCAL + all queries share one transaction.
       await withTenantScope(metadata.tenantId, async () => {
         const tx = prisma; // prisma proxy routes to the withTenantScope transaction
+
+        // Transactional dedup: re-check stripeEventId inside the transaction
+        // to close the race window between the pre-check and this point
+        const alreadyProcessed = await tx.onlinePayment.findFirst({
+          where: { stripeEventId: event.id },
+        });
+        if (alreadyProcessed) return;
+
         // Lock and validate debts inside transaction to prevent concurrent modifications
         if (selectedDebts && selectedDebts.length > 0) {
           const ids = selectedDebts.map((d) => d.impozitId);
@@ -195,7 +204,7 @@ export async function POST(request: NextRequest) {
           for (const debt of selectedDebts) {
             const impozit = await tx.impozit.findUnique({ where: { id: debt.impozitId } });
             if (!impozit) throw new Error(`Impozit ${debt.impozitId} not found`);
-            const remaining = Number(impozit.sumaDatorata) - Number(impozit.sumaPlatita);
+            const remaining = getOutstanding(impozit);
             if (debt.amount > remaining + 0.01) {
               throw new Error(`Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`);
             }
@@ -264,8 +273,7 @@ export async function POST(request: NextRequest) {
 
             if (impozit) {
               const newPaid = Number(impozit.sumaPlatita) + debt.amount;
-              const totalOwed = Number(impozit.sumaDatorata);
-              const newStatus = newPaid >= totalOwed ? "platit" : "partial_platit";
+              const newStatus = getStatusAfterPayment(impozit, debt.amount, impozit.status);
 
               await tx.impozit.update({
                 where: { id: debt.impozitId },
