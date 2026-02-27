@@ -40,6 +40,7 @@ export function DocumentImportForm() {
   const [fields, setFields] = useState<ExtractedField[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [useAi, setUseAi] = useState(false);
+  const [aiUsed, setAiUsed] = useState<{ used: boolean; provider: string | null } | null>(null);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -51,6 +52,7 @@ export function DocumentImportForm() {
     if (!documentType) return;
     setLoading(true);
     setError(null);
+    setAiUsed(null);
 
     try {
       let response: Response;
@@ -78,10 +80,17 @@ export function DocumentImportForm() {
 
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || "Processing failed");
+        if (data.error === "unsupported_file_type") {
+          setError(t("unsupportedFileType"));
+        } else {
+          setError(data.error || "Processing failed");
+        }
         return;
       }
       setFields(data.data.fields);
+      if (data.usedAi !== undefined) {
+        setAiUsed({ used: data.usedAi, provider: data.aiProvider || null });
+      }
     } catch {
       setError("Network error");
     } finally {
@@ -140,7 +149,7 @@ export function DocumentImportForm() {
           id="file-input"
           type="file"
           className="hidden"
-          accept="image/*,.pdf,.txt"
+          accept=".txt,text/plain"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
       </div>
@@ -171,6 +180,14 @@ export function DocumentImportForm() {
         <Label htmlFor="use-ai">{t("useAi")}</Label>
       </div>
 
+      {/* AI Privacy Notice */}
+      {useAi && (
+        <div className="flex items-start gap-2 bg-warning/10 text-warning-foreground border border-warning/30 p-3 rounded-md text-sm">
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <span>{t("aiPrivacyNotice")}</span>
+        </div>
+      )}
+
       {/* Process Button */}
       <Button
         onClick={handleProcess}
@@ -179,6 +196,13 @@ export function DocumentImportForm() {
         {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
         {t("process")}
       </Button>
+
+      {aiUsed?.used && (
+        <div className="flex items-center gap-2 bg-info/10 text-info-foreground border border-info/30 p-3 rounded-md text-sm">
+          <CheckCircle className="h-4 w-4 flex-shrink-0" />
+          <span>{t("aiUsedNotice")}{aiUsed.provider ? ` (${aiUsed.provider})` : ""}</span>
+        </div>
+      )}
 
       {error && (
         <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">

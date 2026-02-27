@@ -9,6 +9,7 @@ export interface LLMConfig {
   apiKey?: string;
   baseUrl?: string;
   model: string;
+  gatewayProvider?: string;
 }
 
 export function getLLMConfig(): LLMConfig {
@@ -19,6 +20,7 @@ export function getLLMConfig(): LLMConfig {
       baseUrl: process.env.AI_GATEWAY_URL,
       apiKey: process.env.AI_GATEWAY_KEY,
       model: process.env.AI_GATEWAY_MODEL || "gemini",
+      gatewayProvider: process.env.AI_GATEWAY_PROVIDER || process.env.AI_GATEWAY_MODEL || "gemini",
     };
   }
 

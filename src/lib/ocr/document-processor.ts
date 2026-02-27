@@ -192,7 +192,7 @@ function getLLMEndpoint(): { url: string; headers: Record<string, string>; model
       },
       model: config.model,
       useJsonMode: false,
-      provider: 'gemini',
+      provider: config.gatewayProvider || 'gemini',
     };
   }
 

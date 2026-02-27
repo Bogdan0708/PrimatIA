@@ -20,6 +20,7 @@ const RATE_LIMIT_CONFIGS: Record<string, { maxRequests: number; windowMs: number
   "/api/portal/payments/initiate": { maxRequests: 20, windowMs: 60_000 },
   "/api/portal/contact": { maxRequests: 5, windowMs: 60_000 },
   "/api/plati/record": { maxRequests: 60, windowMs: 60_000 },
+  "/api/chatbot": { maxRequests: 15, windowMs: 60_000 },
   // Default for all other API routes
   default: { maxRequests: 120, windowMs: 60_000 },
 };

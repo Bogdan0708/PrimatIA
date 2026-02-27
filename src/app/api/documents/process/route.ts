@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
         if (file.type.startsWith("text/") || file.name.endsWith(".txt")) {
           text = await file.text();
         } else {
-          // For images/PDF: read as text fallback or use AI
-          // In production, this would use an OCR service
-          text = await file.text();
-          useAi = true;
+          return NextResponse.json(
+            { error: "unsupported_file_type" },
+            { status: 415 }
+          );
         }
       } else {
         return NextResponse.json({ error: "No file or text provided" }, { status: 400 });
@@ -66,9 +66,18 @@ export async function POST(request: NextRequest) {
 
     const result = await processDocument(text, documentType, useAi);
 
+    let aiProvider: string | null = null;
+    if (useAi) {
+      const { getLLMConfig } = await import("@/lib/ai/config");
+      const llmConfig = getLLMConfig();
+      aiProvider = llmConfig.provider !== "none" ? llmConfig.provider : null;
+    }
+
     return NextResponse.json({
       success: true,
       data: result,
+      usedAi: useAi && aiProvider !== null,
+      aiProvider,
     });
   } catch (error: unknown) {
     console.error("Document processing error:", error);

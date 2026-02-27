@@ -1,38 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRAGResponse, streamLLMResponse, getSuggestedQuestions, type ChatMessage } from "@/lib/ai/knowledge-base";
 
-// Rate limiter — 10 requests/minute per IP
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 10;
+// Rate limiting is handled by middleware (15 req/min for /api/chatbot)
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 5;
-
-const rateLimitMap = new Map<string, number[]>();
-
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    rateLimitMap.forEach((timestamps, ip) => {
-      const valid = timestamps.filter((t: number) => now - t < RATE_LIMIT_WINDOW_MS);
-      if (valid.length === 0) rateLimitMap.delete(ip);
-      else rateLimitMap.set(ip, valid);
-    });
-  }, 300_000);
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (rateLimitMap.get(ip) ?? []).filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS
-  );
-  if (timestamps.length >= RATE_LIMIT_MAX) {
-    rateLimitMap.set(ip, timestamps);
-    return true;
-  }
-  timestamps.push(now);
-  rateLimitMap.set(ip, timestamps);
-  return false;
-}
 
 function parseHistory(raw: unknown): ChatMessage[] {
   if (!Array.isArray(raw)) return [];
@@ -48,14 +19,6 @@ function parseHistory(raw: unknown): ChatMessage[] {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { answer: "Prea multe cereri. Te rog așteaptă un minut." },
-      { status: 429 }
-    );
-  }
-
   try {
     const body = await req.json();
     const message = typeof body?.message === "string" ? body.message.trim() : "";
@@ -84,7 +47,8 @@ export async function POST(req: NextRequest) {
         async start(controller) {
           try {
             for await (const chunk of streamLLMResponse(message, history)) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`));
+              const sanitized = chunk.replace(/<[^>]*>/g, "");
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: sanitized })}\n\n`));
             }
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           } catch {
