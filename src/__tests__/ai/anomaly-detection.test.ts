@@ -24,7 +24,7 @@ describe("anomaly detection", () => {
     vi.clearAllMocks();
     clearAnomalyCache("tenant-1");
 
-    mockedContribuabilFindMany.mockResolvedValue([] as any);
+    mockedContribuabilFindMany.mockResolvedValue([]);
     mockedCladireFindMany.mockResolvedValue([]);
     mockedTerenFindMany.mockResolvedValue([]);
     mockedVehiculFindMany.mockResolvedValue([]);
@@ -43,7 +43,7 @@ describe("anomaly detection", () => {
       { id: "t9", contribuabilId: "pj4", sumaDatorata: 50500, proprietateType: "cladire", contribuabil: { tip: "PJ", nume: "PJ4", prenume: null } },
       { id: "t10", contribuabilId: "pj5", sumaDatorata: 51500, proprietateType: "cladire", contribuabil: { tip: "PJ", nume: "PJ5", prenume: null } },
     ];
-    mockedImpozitFindMany.mockResolvedValue(taxes as any);
+    mockedImpozitFindMany.mockResolvedValue(taxes as unknown as Parameters<typeof mockedImpozitFindMany.mockResolvedValue>[0]);
 
     const anomalies = await detectAnomalies("tenant-1");
     const outliers = anomalies.filter((a) => a.type === "outlier_amount");
@@ -60,7 +60,7 @@ describe("anomaly detection", () => {
       { id: "imp-a5", contribuabilId: "c5", sumaDatorata: 100, proprietateType: "teren", contribuabil: { tip: "PF", nume: "E", prenume: null } },
       { id: "imp-outlier", contribuabilId: "c-outlier", sumaDatorata: 2000, proprietateType: "teren", contribuabil: { tip: "PF", nume: "Out", prenume: null } },
     ];
-    mockedImpozitFindMany.mockResolvedValue(taxes as any);
+    mockedImpozitFindMany.mockResolvedValue(taxes as unknown as Parameters<typeof mockedImpozitFindMany.mockResolvedValue>[0]);
 
     const anomalies = await detectAnomalies("tenant-1");
     const outlier = anomalies.find((a) => a.type === "outlier_amount");
