@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
-    branches: [master]
+    branches: [main, master]
 
 jobs:
   ci:
@@ -20,16 +20,19 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U test"
+          --health-cmd="pg_isready -U test -d primaria_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/primaria_test
+      DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/primaria_test
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -51,8 +54,24 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
       - name: Run database migrations
         run: npx prisma migrate deploy
+
+      - name: Check migration drift
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^prisma/"; then
+            echo "Prisma files changed — checking for migration drift..."
+            npx prisma migrate diff \
+              --from-migrations ./prisma/migrations \
+              --to-schema-datamodel ./prisma/schema.prisma \
+              --exit-code
+          else
+            echo "No prisma/ changes — skipping drift check"
+          fi
 
       - name: Run tests
         run: npm test
