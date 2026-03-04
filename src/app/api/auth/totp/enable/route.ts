@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { verifyTOTPToken } from "@/lib/totp";
+import { encryptString } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 
 /**
@@ -29,10 +30,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save the verified secret
+    // Save the verified secret (encrypted at rest)
     await prisma.tenantUser.update({
       where: { id: session.user.id },
-      data: { totpSecret: secret },
+      data: { totpSecret: encryptString(secret) },
     });
 
     return NextResponse.json({ success: true });

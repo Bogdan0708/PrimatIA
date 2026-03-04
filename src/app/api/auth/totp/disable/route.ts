@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { verifyTOTPToken } from "@/lib/totp";
+import { decryptString } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 
 /**
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!verifyTOTPToken(user.totpSecret, token)) {
+    if (!verifyTOTPToken(decryptString(user.totpSecret), token)) {
       return NextResponse.json(
         { error: "Invalid TOTP code" },
         { status: 400 }

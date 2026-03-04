@@ -4,6 +4,7 @@ import { compare } from "bcryptjs";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/lib/constants";
 import { verifyTOTPToken } from "@/lib/totp";
+import { decryptString } from "@/lib/crypto";
 
 declare module "next-auth" {
   interface User {
@@ -84,7 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // Password correct but TOTP required — signal client to show TOTP input
             throw new Error("totp_required");
           }
-          if (!verifyTOTPToken(user.totpSecret, totpCode)) {
+          if (!verifyTOTPToken(decryptString(user.totpSecret), totpCode)) {
             // Invalid TOTP code — count as failed attempt
             const attempts = user.loginAttempts + 1;
             await prisma.tenantUser.update({
