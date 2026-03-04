@@ -27,7 +27,7 @@ export interface InitiatePaymentResult {
 }
 
 export interface PaymentStatusResult {
-  status: "pending" | "confirmed" | "failed" | "cancelled" | "expired";
+  status: "initiated" | "pending" | "confirmed" | "failed" | "cancelled" | "expired";
   gatewayRef: string;
   amount: number;
   confirmedAt?: Date;

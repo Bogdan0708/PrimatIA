@@ -7,10 +7,16 @@ import type {
   SuspensionType,
 } from "./types";
 import {
+  applyMultiplierToMicroLei,
+  applyPercentToMicroLei,
   calculateTaxableMonths,
+  prorateMicroLei,
+  roundMicroLeiToLei,
   roundToLei,
   splitInstallments,
   calculateBonificatie,
+  toMicroLei,
+  toSafeNumber,
 } from "./utils";
 
 /**
@@ -293,7 +299,7 @@ export async function calculateVehicleTax(
 
   let bazaImpozabila: number;
   let rataAplicata: number;
-  let sumaCalculata: number;
+  let sumaCalculataMicroLei: number;
   let rateTableId = "";
   let category = "";
 
@@ -314,11 +320,11 @@ export async function calculateVehicleTax(
 
     rateTableId = rateEntry.id;
     bazaImpozabila = cmc;
-    rataAplicata = Number(rateEntry.rateValue);
+    rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
 
     // Rate is per 200 cm3
     const units = Math.ceil(cmc / 200);
-    sumaCalculata = units * rataAplicata;
+    sumaCalculataMicroLei = units * toMicroLei(rataAplicata);
   } else if (input.tipVehicul === "motocicleta") {
     const cmc = input.cilindreeCmc ?? 0;
     const bracket =
@@ -336,8 +342,8 @@ export async function calculateVehicleTax(
 
     rateTableId = rateEntry.id;
     bazaImpozabila = cmc;
-    rataAplicata = Number(rateEntry.rateValue);
-    sumaCalculata = rataAplicata; // Flat rate for motorcycles
+    rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
+    sumaCalculataMicroLei = toMicroLei(rataAplicata); // Flat rate for motorcycles
   } else if (input.tipVehicul === "autobuz") {
     category = "autobuz";
     const rateEntry = await findVehicleRate(
@@ -350,15 +356,15 @@ export async function calculateVehicleTax(
 
     rateTableId = rateEntry.id;
     bazaImpozabila = input.nrLocuri ?? 0;
-    rataAplicata = Number(rateEntry.rateValue);
-    sumaCalculata = bazaImpozabila * rataAplicata; // Per seat
+    rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
+    sumaCalculataMicroLei = bazaImpozabila * toMicroLei(rataAplicata); // Per seat
   } else if (input.tipVehicul === "camion") {
     // Try axle-weight table first (Art. 470 proper)
     const truckResult = calculateTruckTax(input);
     if (truckResult) {
       bazaImpozabila = truckResult.bazaImpozabila;
       rataAplicata = truckResult.rataAplicata;
-      sumaCalculata = truckResult.sumaCalculata;
+      sumaCalculataMicroLei = toMicroLei(truckResult.sumaCalculata);
       category = truckResult.category;
       rateTableId = `weight_table_${category}`;
     } else {
@@ -374,8 +380,8 @@ export async function calculateVehicleTax(
 
       rateTableId = rateEntry.id;
       bazaImpozabila = (input.masaTotalaKg ?? 0) / 1000;
-      rataAplicata = Number(rateEntry.rateValue);
-      sumaCalculata = bazaImpozabila * rataAplicata;
+      rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
+      sumaCalculataMicroLei = bazaImpozabila * toMicroLei(rataAplicata);
     }
   } else if (input.tipVehicul === "remorca") {
     // Trailer: axle-weight table (Art. 470)
@@ -383,7 +389,7 @@ export async function calculateVehicleTax(
     if (trailerResult) {
       bazaImpozabila = trailerResult.bazaImpozabila;
       rataAplicata = trailerResult.rataAplicata;
-      sumaCalculata = trailerResult.sumaCalculata;
+      sumaCalculataMicroLei = toMicroLei(trailerResult.sumaCalculata);
       category = trailerResult.category;
       rateTableId = `weight_table_${category}`;
     } else {
@@ -399,8 +405,8 @@ export async function calculateVehicleTax(
 
       rateTableId = rateEntry.id;
       bazaImpozabila = 1;
-      rataAplicata = Number(rateEntry.rateValue);
-      sumaCalculata = rataAplicata;
+      rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
+      sumaCalculataMicroLei = toMicroLei(rataAplicata);
     }
   } else {
     // Tractor, etc. -- flat rate by category
@@ -415,15 +421,15 @@ export async function calculateVehicleTax(
 
     rateTableId = rateEntry.id;
     bazaImpozabila = 1;
-    rataAplicata = Number(rateEntry.rateValue);
-    sumaCalculata = rataAplicata;
+    rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
+    sumaCalculataMicroLei = toMicroLei(rataAplicata);
   }
 
   // Apply Euro norm adjustment (not applied to weight-table trucks/trailers)
   const isWeightTable = rateTableId.startsWith("weight_table_");
   if (!isWeightTable) {
     const normAdjustment = EURO_NORM_ADJUSTMENTS[input.normaPoluare ?? "euro_4"] ?? 1.0;
-    sumaCalculata = sumaCalculata * normAdjustment;
+    sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, normAdjustment);
   }
 
   // Partial year proration
@@ -432,12 +438,15 @@ export async function calculateVehicleTax(
     input.dataDobandire,
     input.dataInstrainare
   );
-  sumaCalculata = roundToLei((sumaCalculata * months) / 12);
+  const sumaCalculata = roundMicroLeiToLei(prorateMicroLei(sumaCalculataMicroLei, months));
 
   // Exemptions
   let sumaScutire = 0;
+  const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
   for (const exemption of exemptions) {
-    sumaScutire += roundToLei(sumaCalculata * (exemption.discountPercent / 100));
+    sumaScutire += roundMicroLeiToLei(
+      applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
+    );
   }
   sumaScutire = Math.min(sumaScutire, sumaCalculata);
 

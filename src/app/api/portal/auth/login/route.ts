@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
@@ -40,11 +41,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prefer the header injected by middleware (from TENANT_ID env var in production).
-    // Fall back to the single active tenant for single-tenant deployments and local dev
-    // where TENANT_ID is not configured. This is safe: if multiple tenants exist and no
-    // header is present, the query returns null and we return 400.
-    let tenantId = request.headers.get("x-tenant-id");
+    // Tenant identity must be derived server-side from trusted context.
+    // Fall back to the single active tenant for single-tenant deployments and local dev.
+    let tenantId = await resolveTenantIdFromHeaders(request.headers);
     if (!tenantId) {
       const tenant = await prisma.tenant.findFirst({
         where: { status: { in: ["active", "trial"] }, deletedAt: null },
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
       });
       if (!tenant) {
         return NextResponse.json(
-          { error: "Tenant identification required" },
+          { error: "Tenant could not be resolved for this domain." },
           { status: 400 }
         );
       }
@@ -112,6 +111,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// getDefaultTenantId removed — was a cross-tenant bypass (P0-SEC-3).
-// Tenant must always be explicitly identified via x-tenant-id header.

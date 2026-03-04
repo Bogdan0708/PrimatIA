@@ -5,6 +5,12 @@ import { prisma } from "@/lib/db";
 import type { Role } from "@/lib/constants";
 import { verifyTOTPToken } from "@/lib/totp";
 import { decryptString } from "@/lib/crypto";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
+
+const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+if (!nextAuthSecret) {
+  throw new Error("NEXTAUTH_SECRET must be configured");
+}
 
 declare module "next-auth" {
   interface User {
@@ -27,6 +33,7 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
+  secret: nextAuthSecret,
   providers: [
     Credentials({
       name: "credentials",
@@ -35,8 +42,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
         totp: { label: "TOTP Code", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        const tenantId = request?.headers
+          ? await resolveTenantIdFromHeaders(request.headers)
+          : null;
+        if (!tenantId) {
           return null;
         }
 
@@ -46,17 +60,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.tenantUser.findFirst({
           where: {
+            tenantId,
             email,
             isActive: true,
             deletedAt: null,
-          },
-          include: {
-            tenant: true,
+            tenant: {
+              status: { in: ["active", "trial"] },
+              deletedAt: null,
+            },
           },
         });
 
         if (!user) return null;
-        if (!["active", "trial"].includes(user.tenant.status)) return null;
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
           return null;

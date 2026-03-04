@@ -1,9 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRAGResponse, streamLLMResponse, getSuggestedQuestions, type ChatMessage } from "@/lib/ai/knowledge-base";
+import { checkChatbotRateLimit } from "@/lib/rate-limit/chatbot-rate-limit";
 
 // Rate limiting is handled by middleware (15 req/min for /api/chatbot)
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 5;
+const MAX_HISTORY_MESSAGE_LENGTH = 500;
+const MAX_OUTPUT_LENGTH = 1200;
+const OUTPUT_DISCLAIMER =
+  "Nota: raspuns informativ, nu reprezinta consultanta fiscala sau juridica oficiala.";
+const DELIMITER_START = "<UNTRUSTED_INPUT>";
+const DELIMITER_END = "</UNTRUSTED_INPUT>";
+
+const INVISIBLE_OR_BIDI_PATTERN = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/g;
+const CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+
+const PROMPT_INJECTION_PATTERNS = [
+  /ignore.{0,40}(previous|prior|all).{0,40}(instructions|rules|system|prompt)/i,
+  /ignora.{0,40}(instructiunile|regulile|promptul|sistemul)/i,
+  /(bypass|override|disable|disregard).{0,40}(safety|guard|policy|instructions|rules)/i,
+  /(ocoleste|dezactiveaza|anuleaza).{0,40}(regulile|protectiile|filtrele)/i,
+  /(reveal|show|print|display).{0,40}(system prompt|developer message|hidden instructions)/i,
+  /(arata|dezvaluie|afiseaza).{0,40}(promptul de sistem|mesajul dezvoltatorului)/i,
+  /(you are now|act as|roleplay as|pretend to be).{0,40}(admin|system|developer)/i,
+  /(run|execute|call).{0,40}(sql|query|command|tool|function)/i,
+];
+
+const BLOCKED_OUTPUT_PATTERNS = [
+  /(system prompt|prompt de sistem|developer message|mesajul dezvoltatorului|hidden instructions|internal policy)/i,
+  /(api key|cheie api|access token|secret key|password|parola|credential)/i,
+  /\btenant[\s_-]?(id|uuid)\b/i,
+  /(am executat|am efectuat|executed|run command|deleted records|updated records)/i,
+];
+
+function sanitizeUntrustedText(value: string): string {
+  return value
+    .normalize("NFKC")
+    .replace(INVISIBLE_OR_BIDI_PATTERN, "")
+    .replace(CONTROL_CHAR_PATTERN, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isPromptInjectionAttempt(content: string): boolean {
+  const normalized = sanitizeUntrustedText(content);
+  return PROMPT_INJECTION_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+function isSensitiveOrUnsafeOutput(content: string): boolean {
+  if (content.includes(DELIMITER_START) || content.includes(DELIMITER_END)) {
+    return true;
+  }
+  return BLOCKED_OUTPUT_PATTERNS.some((pattern) => pattern.test(content));
+}
 
 function parseHistory(raw: unknown): ChatMessage[] {
   if (!Array.isArray(raw)) return [];
@@ -15,13 +64,32 @@ function parseHistory(raw: unknown): ChatMessage[] {
         (h.role === "user" || h.role === "assistant") &&
         typeof h.content === "string"
     )
+    .map((h) => ({
+      ...h,
+      content: sanitizeUntrustedText(h.content).slice(0, MAX_HISTORY_MESSAGE_LENGTH),
+    }))
     .slice(-MAX_HISTORY);
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rateLimit = await checkChatbotRateLimit(ip);
+  if (rateLimit.limited) {
+    return NextResponse.json(
+      { answer: "Prea multe cereri. Te rog asteapta un minut." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
-    const message = typeof body?.message === "string" ? body.message.trim() : "";
+    const rawMessage = typeof body?.message === "string" ? body.message : "";
+    const message = sanitizeUntrustedText(rawMessage);
 
     if (!message) {
       return NextResponse.json(
@@ -39,6 +107,21 @@ export async function POST(req: NextRequest) {
 
     const history = parseHistory(body?.history);
     const stream = body?.stream === true;
+
+    // Block prompt injection attempts
+    if (
+      isPromptInjectionAttempt(message) ||
+      history.some((entry) => isPromptInjectionAttempt(entry.content))
+    ) {
+      console.warn("Blocked prompt injection attempt in chatbot route", { ip });
+      return NextResponse.json({
+        answer:
+          "Nu pot procesa cereri care incearca sa schimbe regulile asistentului, sa obtina date sensibile sau sa execute actiuni." +
+          "\n\n" +
+          OUTPUT_DISCLAIMER,
+        sources: ["Portal PrimarIA"],
+      });
+    }
 
     // Streaming response via SSE
     if (stream) {
@@ -74,8 +157,16 @@ export async function POST(req: NextRequest) {
     // Non-streaming response
     const result = await generateRAGResponse(message, history);
 
-    // Sanitize HTML
-    const answer = result.answer.replace(/<[^>]*>/g, "");
+    // Sanitize HTML and check for sensitive output
+    let answer = result.answer.replace(/<[^>]*>/g, "");
+    answer = sanitizeUntrustedText(answer).slice(0, MAX_OUTPUT_LENGTH);
+
+    if (!answer || isSensitiveOrUnsafeOutput(answer)) {
+      answer =
+        "Imi pare rau, nu am gasit un raspuns clar. Te rog reformuleaza intrebarea sau foloseste pagina Contact pentru asistenta." +
+        "\n\n" +
+        OUTPUT_DISCLAIMER;
+    }
 
     return NextResponse.json({
       answer,

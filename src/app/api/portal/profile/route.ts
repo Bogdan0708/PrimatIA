@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  await setTenantContext(citizen.tenantId);
+
   const user = await prisma.citizenUser.findUnique({
     where: { id: citizen.sub },
     select: {
@@ -23,8 +25,6 @@ export async function GET(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-
-  await setTenantContext(citizen.tenantId);
 
   // Get email consent
   const links = await prisma.citizenContribuabilLink.findMany({
@@ -61,6 +61,8 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { firstName, lastName, phone, limbaPreferata, emailNotifications } = body;
 
+    await setTenantContext(citizen.tenantId);
+
     await prisma.citizenUser.update({
       where: { id: citizen.sub },
       data: {
@@ -70,8 +72,6 @@ export async function PUT(request: NextRequest) {
         limbaPreferata: limbaPreferata || "ro",
       },
     });
-
-    await setTenantContext(citizen.tenantId);
 
     // Update email consent for all linked contribuabili
     const links = await prisma.citizenContribuabilLink.findMany({

@@ -47,6 +47,17 @@ export function validateCui(cui: string): boolean {
 }
 
 // ============================================================================
+// Authentication Schemas
+// ============================================================================
+
+export const strongPasswordSchema = z
+  .string()
+  .min(8, "Parola trebuie să aibă cel puțin 8 caractere")
+  .regex(/[a-z]/, "Parola trebuie să conțină cel puțin o literă mică")
+  .regex(/[A-Z]/, "Parola trebuie să conțină cel puțin o literă mare")
+  .regex(/[0-9]/, "Parola trebuie să conțină cel puțin o cifră");
+
+// ============================================================================
 // Address Schema
 // ============================================================================
 

@@ -1151,6 +1151,16 @@ model OnlinePayment {
   @@map("online_payments")
 }
 
+model StripeWebhookEvent {
+  tenantId      String   @map("tenant_id") @db.Uuid
+  stripeEventId String   @id @map("stripe_event_id") @db.VarChar(255)
+  gatewayRef    String?  @map("gateway_ref") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, createdAt])
+  @@map("stripe_webhook_events")
+}
+
 // =============================================================================
 // 14. PHASE 4: CONTACT MESSAGES
 // =============================================================================

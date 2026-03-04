@@ -5,6 +5,11 @@ import { generateDocumentNumber } from "@/lib/formatting";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { getOutstanding, getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
 import { Prisma } from "@prisma/client";
+import {
+  allowedFromStatusesFor,
+  assertOnlinePaymentTransition,
+  isOnlinePaymentStatus,
+} from "@/lib/payments/online-payment-state-machine";
 
 export async function POST(request: NextRequest) {
   const paymentMode =
@@ -33,92 +38,73 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load DB payment first; idempotency is determined by DB record state
-    const onlinePayment = await prisma.onlinePayment.findFirst({
-      where: { gatewayRef },
-    });
+    const mock = getMockGatewayProvider();
 
-    if (!onlinePayment) {
-      return NextResponse.json(
-        { error: "Payment record not found" },
-        { status: 404 }
-      );
-    }
+    const processResult = await withTenantScope(citizen.tenantId, async () => {
+      const onlinePayment = await prisma.onlinePayment.findFirst({
+        where: { tenantId: citizen.tenantId, gatewayRef },
+      });
 
-    if (
-      onlinePayment.citizenUserId !== citizen.sub ||
-      onlinePayment.tenantId !== citizen.tenantId
-    ) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-
-    const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }>;
-
-    return await withTenantScope(onlinePayment.tenantId, async () => {
-      const [lockedPayment] = await prisma.$queryRaw<
-        Array<{ status: string; plataId: string | null }>
-      >(
-        Prisma.sql`SELECT status, "plataId" FROM "OnlinePayment" WHERE id = ${onlinePayment.id} FOR UPDATE`
-      );
-
-      if (!lockedPayment) {
-        return NextResponse.json(
-          { error: "Payment record not found" },
-          { status: 404 }
-        );
+      if (!onlinePayment) {
+        return { kind: "not_found" as const };
       }
 
-      if (lockedPayment.status === "confirmed") {
-        return NextResponse.json({ success: true, plataId: lockedPayment.plataId });
+      if (onlinePayment.citizenUserId !== citizen.sub) {
+        return { kind: "forbidden" as const };
       }
 
-      // Confirm at gateway after DB lock. Treat already-confirmed gateway status as success.
-      const mock = getMockGatewayProvider();
+      if (!isOnlinePaymentStatus(onlinePayment.status)) {
+        return {
+          kind: "invalid_state" as const,
+          message: `Unsupported payment status: ${onlinePayment.status}`,
+        };
+      }
+
+      try {
+        assertOnlinePaymentTransition(onlinePayment.status, "confirmed", gatewayRef);
+      } catch (error) {
+        return {
+          kind: "invalid_state" as const,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Payment is already processed or in an invalid state.",
+        };
+      }
+
       const confirmed = await mock.confirmMockPayment(gatewayRef);
       if (!confirmed) {
-        const gatewayStatus = await mock.getPaymentStatus(gatewayRef);
-        if (gatewayStatus.status !== "confirmed") {
-          return NextResponse.json(
-            { error: "Payment not found or already processed" },
-            { status: 400 }
-          );
-        }
+        return {
+          kind: "invalid_state" as const,
+          message: "Payment not found or already processed.",
+        };
       }
 
-      // Validate selected debts before mutating payment/tax records
-      if (selectedDebts && selectedDebts.length > 0) {
-        const ids = selectedDebts.map((d) => d.impozitId);
-        await prisma.$queryRaw`SELECT id FROM "Impozit" WHERE id::text = ANY(${ids}) FOR UPDATE`;
+      const transition = await prisma.onlinePayment.updateMany({
+        where: {
+          id: onlinePayment.id,
+          tenantId: citizen.tenantId,
+          status: { in: allowedFromStatusesFor("confirmed") },
+        },
+        data: {
+          status: "confirmed",
+          confirmedAt: new Date(),
+          gatewayResponse: { confirmed: true, transactionId: `TXN-${gatewayRef}` },
+        },
+      });
 
-        for (const debt of selectedDebts) {
-          const impozit = await prisma.impozit.findUnique({
-            where: { id: debt.impozitId },
-          });
-
-          if (!impozit) {
-            return NextResponse.json(
-              { error: `Debt ${debt.impozitId} not found` },
-              { status: 404 }
-            );
-          }
-
-          const remaining = getOutstanding(impozit);
-          if (debt.amount > remaining + 0.01) {
-            return NextResponse.json(
-              {
-                error: `Overpayment on debt ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining.toFixed(2)}`,
-              },
-              { status: 400 }
-            );
-          }
-        }
+      if (transition.count !== 1) {
+        return {
+          kind: "invalid_state" as const,
+          message: "Payment is already processed or in an invalid state.",
+        };
       }
 
       // Generate chitanță number atomically
       const year = new Date().getFullYear();
       const seqResult = await prisma.$queryRaw<Array<{ next_val: bigint }>>(
         Prisma.sql`INSERT INTO "ChitantaSequence" ("tenantId", "year", "currentVal")
-                   VALUES (${onlinePayment.tenantId}::uuid, ${year}, 1)
+                   VALUES (${citizen.tenantId}, ${year}, 1)
                    ON CONFLICT ("tenantId", "year")
                    DO UPDATE SET "currentVal" = "ChitantaSequence"."currentVal" + 1
                    RETURNING "currentVal" AS next_val`
@@ -129,34 +115,31 @@ export async function POST(request: NextRequest) {
       // Create actual Plata record
       const plata = await prisma.plata.create({
         data: {
-          tenantId: onlinePayment.tenantId,
+          tenantId: citizen.tenantId,
           contribuabilId: onlinePayment.contribuabilId,
           suma: onlinePayment.suma,
           dataPlata: new Date(),
           modalitate: "card",
           nrChitanta,
-          gatewayRef: gatewayRef,
+          gatewayRef,
           distribuit: false,
         },
       });
 
-      // Update online payment status
       await prisma.onlinePayment.update({
         where: { id: onlinePayment.id },
         data: {
-          status: "confirmed",
-          confirmedAt: new Date(),
           plataId: plata.id,
-          gatewayResponse: { confirmed: true, transactionId: `TXN-${gatewayRef}` },
         },
       });
 
       // Auto-distribute payment to debts
+      const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }>;
       if (selectedDebts && selectedDebts.length > 0) {
         for (const debt of selectedDebts) {
           await prisma.plataDistributie.create({
             data: {
-              tenantId: onlinePayment.tenantId,
+              tenantId: citizen.tenantId,
               plataId: plata.id,
               impozitId: debt.impozitId,
               sumaDebit: debt.amount,
@@ -191,7 +174,7 @@ export async function POST(request: NextRequest) {
       // Generate chitanță document
       await prisma.document.create({
         data: {
-          tenantId: onlinePayment.tenantId,
+          tenantId: citizen.tenantId,
           contribuabilId: onlinePayment.contribuabilId,
           tip: "chitanta",
           numarDocument: nrChitanta,
@@ -207,8 +190,22 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({ success: true, plataId: plata.id });
+      return { kind: "processed" as const, plataId: plata.id };
     });
+
+    if (processResult.kind === "not_found") {
+      return NextResponse.json({ error: "Payment record not found" }, { status: 404 });
+    }
+
+    if (processResult.kind === "forbidden") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    if (processResult.kind === "invalid_state") {
+      return NextResponse.json({ error: processResult.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, plataId: processResult.plataId });
   } catch (error) {
     console.error("Payment confirmation error:", error);
     return NextResponse.json(
