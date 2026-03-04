@@ -28,6 +28,13 @@ jobs:
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/primaria_test
       DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/primaria_test
+      NEXTAUTH_SECRET: ci-test-secret-not-real
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_SECRET: ci-test-secret-not-real
+      AUTH_TRUST_HOST: "true"
+      JWT_SECRET: ci-test-jwt-secret-not-real
+      CNP_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      CNP_TENANT_SALT_SECRET: ci-test-salt-not-real
 
     steps:
       - uses: actions/checkout@v4
