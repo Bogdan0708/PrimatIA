@@ -85,7 +85,9 @@
     "roeidDisabled": "Disabled",
     "roeidDescription": "Electronic authentication via Romanian digital identity (eIDAS)",
     "identityVerified": "Identity verified ✓",
-    "eidasCompliant": "eIDAS compliant"
+    "eidasCompliant": "eIDAS compliant",
+    "totpCode": "Authentication Code",
+    "totpDescription": "Enter the 6-digit code from your authenticator app"
   },
   "dashboard": {
     "title": "Dashboard",

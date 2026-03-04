@@ -85,7 +85,9 @@
     "roeidDisabled": "Kikapcsolva",
     "roeidDescription": "Elektronikus hitelesítés román digitális személyazonosítóval (eIDAS)",
     "identityVerified": "Azonosság igazolva ✓",
-    "eidasCompliant": "eIDAS kompatibilis"
+    "eidasCompliant": "eIDAS kompatibilis",
+    "totpCode": "Hitelesítési kód",
+    "totpDescription": "Adja meg a 6 jegyű kódot a hitelesítő alkalmazásból"
   },
   "dashboard": {
     "title": "Irányítópult",

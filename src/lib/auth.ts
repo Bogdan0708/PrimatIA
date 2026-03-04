@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/lib/constants";
+import { verifyTOTPToken } from "@/lib/totp";
 
 declare module "next-auth" {
   interface User {
@@ -31,6 +32,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totp: { label: "TOTP Code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -39,6 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const email = credentials.email as string;
         const password = credentials.password as string;
+        const totpCode = (credentials.totp as string) || "";
 
         const user = await prisma.tenantUser.findFirst({
           where: {
@@ -73,6 +76,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           });
           return null;
+        }
+
+        // TOTP verification: if user has TOTP enabled, require valid code
+        if (user.totpSecret) {
+          if (!totpCode) {
+            // Password correct but TOTP required — signal client to show TOTP input
+            throw new Error("totp_required");
+          }
+          if (!verifyTOTPToken(user.totpSecret, totpCode)) {
+            // Invalid TOTP code — count as failed attempt
+            const attempts = user.loginAttempts + 1;
+            await prisma.tenantUser.update({
+              where: { id: user.id },
+              data: {
+                loginAttempts: attempts,
+                lockedUntil:
+                  attempts >= 5
+                    ? new Date(Date.now() + 15 * 60 * 1000)
+                    : undefined,
+              },
+            });
+            return null;
+          }
         }
 
         await prisma.tenantUser.update({
