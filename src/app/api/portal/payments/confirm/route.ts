@@ -3,7 +3,7 @@ import { getMockGatewayProvider } from "@/lib/payments/payment-gateway";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
-import { getOutstanding, getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
+import { getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
 import { Prisma } from "@prisma/client";
 import {
   allowedFromStatusesFor,
