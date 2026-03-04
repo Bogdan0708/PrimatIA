@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   const citizen = await getCitizenFromRequest(request);
@@ -107,7 +108,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Profile update error:", error);
+    logger.error({ err: error }, "Profile update error:");
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 }

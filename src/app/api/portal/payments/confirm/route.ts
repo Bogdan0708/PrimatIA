@@ -10,6 +10,7 @@ import {
   assertOnlinePaymentTransition,
   isOnlinePaymentStatus,
 } from "@/lib/payments/online-payment-state-machine";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const paymentMode =
@@ -207,7 +208,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, plataId: processResult.plataId });
   } catch (error) {
-    console.error("Payment confirmation error:", error);
+    logger.error({ err: error }, "Payment confirmation error:");
     return NextResponse.json(
       { error: "Failed to confirm payment" },
       { status: 500 }

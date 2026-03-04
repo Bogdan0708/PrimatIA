@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const citizen = await getCitizenFromRequest(request);
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, requestId: request_.id });
   } catch (error) {
-    console.error("Certificate request error:", error);
+    logger.error({ err: error }, "Certificate request error:");
     return NextResponse.json(
       { error: "Failed to create request" },
       { status: 500 }

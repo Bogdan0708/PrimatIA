@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/auth-utils";
 import { generateTOTPSecret, generateTOTPKeyURI } from "@/lib/totp";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/auth/totp/setup
@@ -30,7 +31,7 @@ export async function GET() {
 
     return NextResponse.json({ secret, keyURI });
   } catch (error) {
-    console.error("TOTP setup error:", error);
+    logger.error({ err: error }, "TOTP setup error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

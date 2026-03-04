@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { setTenantContext } from "@/lib/db";
 import { reversePayment } from "@/lib/payments/reversal";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const session = await requireAdmin();
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       stornoPlataId: result.stornoPlataId,
     });
   } catch (error) {
-    console.error("Payment reversal error:", error);
+    logger.error({ err: error }, "Payment reversal error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

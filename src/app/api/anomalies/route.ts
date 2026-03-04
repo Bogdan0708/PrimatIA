@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { detectAnomalies } from "@/lib/ai/anomaly-detection";
 import { setTenantContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -20,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: anomalies });
   } catch (error) {
-    console.error("Error detecting anomalies:", error);
+    logger.error({ err: error }, "Error detecting anomalies");
     return NextResponse.json(
       { error: "Failed to detect anomalies" },
       { status: 500 }

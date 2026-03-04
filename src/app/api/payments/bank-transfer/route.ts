@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const citizen = await getCitizenFromRequest(request);
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Bank transfer initiation error:", error);
+    logger.error({ err: error }, "Bank transfer initiation error:");
     return NextResponse.json(
       { error: "Failed to generate bank transfer reference" },
       { status: 500 }

@@ -8,6 +8,7 @@ import {
   assertOnlinePaymentTransition,
   isOnlinePaymentStatus,
 } from "@/lib/payments/online-payment-state-machine";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Bank transfer confirmation error:", error);
+    logger.error({ err: error }, "Bank transfer confirmation error:");
     return NextResponse.json({ error: "Confirmation failed" }, { status: 500 });
   }
 }

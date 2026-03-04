@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestCitizenPasswordReset } from "@/lib/password-reset";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
       try {
         await requestCitizenPasswordReset(tenantId, email);
       } catch (error) {
-        console.error("Citizen forgot-password email send failed:", error);
+        logger.error({ err: error }, "Citizen forgot-password email send failed:");
       }
     }
 

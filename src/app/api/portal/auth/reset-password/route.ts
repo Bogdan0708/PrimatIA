@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { resetPasswordWithToken } from "@/lib/password-reset";
 import { strongPasswordSchema } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 const resetPasswordSchema = z.object({
   token: z.string().trim().min(1, "Token and password are required"),
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Citizen reset-password failed:", error);
+    logger.error({ err: error }, "Citizen reset-password failed:");
     return NextResponse.json(
       { error: "Failed to reset password" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, withTenantScope } from "@/lib/db";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Contact form error:", error);
+    logger.error({ err: error }, "Contact form error:");
     return NextResponse.json(
       { error: "Failed to send message" },
       { status: 500 }

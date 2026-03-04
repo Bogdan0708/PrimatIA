@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/auth-utils";
 import { verifyTOTPToken } from "@/lib/totp";
 import { encryptString } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 /**
  * POST /api/auth/totp/enable
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("TOTP enable error:", error);
+    logger.error({ err: error }, "TOTP enable error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

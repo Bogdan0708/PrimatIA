@@ -5,6 +5,7 @@ import { plataSchema } from "@/lib/validations";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
 import type { Role } from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 // Roles allowed to record payments
 const PAYMENT_ROLES: Role[] = ["super_admin", "primaria_admin", "operator", "contabil"];
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
       );
     });
   } catch (error) {
-    console.error("Error recording payment:", error);
+    logger.error({ err: error }, "Error recording payment:");
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

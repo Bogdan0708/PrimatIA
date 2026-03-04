@@ -1,0 +1,67 @@
+# Release Gate Checklist
+# Run these checks before any production deployment.
+# Automated checks should pass in CI; manual checks require human verification.
+
+automated:
+  - name: Type check
+    command: npm run type-check
+    required: true
+
+  - name: Unit tests
+    command: npm test
+    required: true
+
+  - name: Lint
+    command: npm run lint
+    required: true
+
+  - name: Production build
+    command: npm run build
+    required: true
+
+  - name: Prisma schema validation
+    command: npx prisma validate
+    required: true
+
+  - name: Migration deploy (dry run)
+    command: npx prisma migrate deploy
+    required: true
+    note: "Run against staging DB first"
+
+conditional:
+  - name: Migration drift check
+    command: npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma
+    when: "PR touches prisma/migrations/"
+    required: true
+
+  - name: Import/rollback verification
+    command: "npm test -- --grep 'import'"
+    when: "PR touches src/app/api/plati/ or src/lib/import/"
+    required: true
+
+  - name: Payment flow verification
+    command: "npm test -- --grep 'payment'"
+    when: "PR touches src/app/api/payments/ or src/lib/payments/"
+    required: true
+
+manual:
+  - name: Health endpoint check
+    description: "curl /api/health returns 200 with status: ok"
+    required: true
+
+  - name: Deep health check
+    description: "curl /api/health/deep returns 200 with all components ok"
+    required: true
+
+  - name: Smoke test
+    description: "Log in as staff, view dashboard, check a taxpayer record"
+    required: true
+
+  - name: Rollback tested
+    description: "Run deploy/rollback.sh --dry-run to verify previous revision exists"
+    required: true
+
+  - name: Canary soak
+    description: "deploy-canary.sh ran successfully with 60s soak period"
+    required: false
+    note: "Required for high-risk changes"
