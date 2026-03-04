@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
 import { getPresignedUrl } from "@/lib/storage";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/documents/[id]/download
@@ -56,7 +57,7 @@ export async function GET(
     const url = await getPresignedUrl(doc.fileUrl);
     return NextResponse.redirect(url);
   } catch (error) {
-    console.error("Error generating presigned URL:", error);
+    logger.error({ err: error }, "Error generating presigned URL");
     return NextResponse.json(
       { error: "Failed to generate download URL" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { generateBatch } from "@/lib/documents/auto-generator";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const session = await requireAdmin();
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ...result, success: true });
   } catch (error: unknown) {
-    console.error("Batch generation error:", error);
+    logger.error({ err: error }, "Batch generation error:");
     const message = error instanceof Error ? error.message : "Batch generation failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

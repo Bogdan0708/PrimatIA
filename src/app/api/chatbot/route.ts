@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRAGResponse, streamLLMResponse, getSuggestedQuestions, type ChatMessage } from "@/lib/ai/knowledge-base";
 import { checkChatbotRateLimit } from "@/lib/rate-limit/chatbot-rate-limit";
+import { logger } from "@/lib/logger";
 
 // Rate limiting is handled by middleware (15 req/min for /api/chatbot)
 const MAX_MESSAGE_LENGTH = 1000;
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
       isPromptInjectionAttempt(message) ||
       history.some((entry) => isPromptInjectionAttempt(entry.content))
     ) {
-      console.warn("Blocked prompt injection attempt in chatbot route", { ip });
+      logger.warn({ ip }, "Blocked prompt injection attempt in chatbot route");
       return NextResponse.json({
         answer:
           "Nu pot procesa cereri care incearca sa schimbe regulile asistentului, sa obtina date sensibile sau sa execute actiuni." +

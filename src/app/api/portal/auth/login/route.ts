@@ -4,6 +4,7 @@ import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 /** Lazily resolved at request time so the module can be imported during build. */
 function getJwtSecret(): Uint8Array {
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Citizen login error:", error);
+    logger.error({ err: error }, "Citizen login error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

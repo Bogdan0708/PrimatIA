@@ -4,7 +4,11 @@ import { prisma } from '@/lib/db';
 export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ status: 'ok', timestamp: new Date().toISOString() });
+    return NextResponse.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      revision: process.env.K_REVISION || 'local',
+    });
   } catch {
     return NextResponse.json(
       { status: 'error', message: 'Database unreachable' },

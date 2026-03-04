@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { generateDocument, type GeneratableDocType } from "@/lib/documents/auto-generator";
+import { logger } from "@/lib/logger";
 
 const VALID_TYPES: GeneratableDocType[] = [
   "decizie", "chitanta", "certificat", "somatie", "titlu_executoriu",
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, documentId });
   } catch (error: unknown) {
-    console.error("Document generation error:", error);
+    logger.error({ err: error }, "Document generation error:");
     const message = error instanceof Error ? error.message : "Generation failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

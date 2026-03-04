@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateMonthlyReport } from "@/lib/reports/monthly-report";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: report });
   } catch (error) {
-    console.error("Error generating monthly report:", error);
+    logger.error({ err: error }, "Error generating monthly report:");
     return NextResponse.json(
       { error: "Failed to generate monthly report" },
       { status: 500 }

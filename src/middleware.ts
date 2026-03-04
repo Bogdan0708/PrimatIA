@@ -236,7 +236,14 @@ export default function middleware(request: NextRequest) {
 
   // Skip i18n middleware for API routes
   if (pathname.startsWith("/api/")) {
-    const response = NextResponse.next();
+    const requestId = crypto.randomUUID();
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-request-id", requestId);
+
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    response.headers.set("x-request-id", requestId);
     addSecurityHeaders(response);
     if (pathname.startsWith("/api/portal")) {
       addCorsHeaders(response, request);

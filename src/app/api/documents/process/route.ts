@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { processDocument, type DocumentType } from "@/lib/ocr/document-processor";
+import { logger } from "@/lib/logger";
 
 const VALID_TYPES: DocumentType[] = [
   'carte_identitate',
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
       aiProvider,
     });
   } catch (error: unknown) {
-    console.error("Document processing error:", error);
+    logger.error({ err: error }, "Document processing error:");
     const message = error instanceof Error ? error.message : "Processing failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { getPaymentGateway } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const citizen = await getCitizenFromRequest(request);
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
       gatewayRef: result.gatewayRef,
     });
   } catch (error) {
-    console.error("Payment initiation error:", error);
+    logger.error({ err: error }, "Payment initiation error:");
     return NextResponse.json(
       { error: "Failed to initiate payment" },
       { status: 500 }

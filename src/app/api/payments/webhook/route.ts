@@ -14,6 +14,7 @@ import {
   canTransitionOnlinePaymentStatus,
   isOnlinePaymentStatus,
 } from "@/lib/payments/online-payment-state-machine";
+import { createRequestLogger } from "@/lib/logger";
 
 function getInvoiceSubscriptionId(invoice: unknown): string | undefined {
   const obj = invoice as { subscription?: string | null };
@@ -37,6 +38,10 @@ type CheckoutSessionProcessResult =
   | "not_found";
 
 export async function POST(request: NextRequest) {
+  const log = createRequestLogger(
+    "POST /api/payments/webhook",
+    request.headers.get("x-request-id") || undefined
+  );
   const body = await request.text();
   const sig = request.headers.get("stripe-signature");
 
@@ -46,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    console.error("STRIPE_WEBHOOK_SECRET not configured");
+    log.error("STRIPE_WEBHOOK_SECRET not configured");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
@@ -54,7 +59,7 @@ export async function POST(request: NextRequest) {
   try {
     event = getStripeClient().webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    log.error({ err }, "Webhook signature verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
     const session = event.data.object;
     const tenantId = getMetadataValue(session.metadata, "tenantId");
     if (!tenantId) {
-      console.error("Missing tenantId metadata in checkout.session.expired:", session.id);
+      log.error({ sessionId: session.id }, "Missing tenantId metadata in checkout.session.expired");
       return NextResponse.json({ received: true });
     }
     try {
@@ -76,7 +81,7 @@ export async function POST(request: NextRequest) {
         data: { status: "expired" },
       });
     } catch (error) {
-      console.error("Error handling expired session:", error);
+      log.error({ err: error }, "Error handling expired session");
     }
     return NextResponse.json({ received: true });
   }
@@ -93,7 +98,7 @@ export async function POST(request: NextRequest) {
         typeof subscription.customer === "string" ? subscription.customer : undefined
       );
     } catch (error) {
-      console.error("Error syncing tenant subscription status:", error);
+      log.error({ err: error }, "Error syncing tenant subscription status");
       return NextResponse.json({ error: "Subscription sync failed" }, { status: 500 });
     }
     return NextResponse.json({ received: true });
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
         paid: false,
       });
     } catch (error) {
-      console.error("Error handling tenant invoice failure:", error);
+      log.error({ err: error }, "Error handling tenant invoice failure");
     }
     return NextResponse.json({ received: true });
   }
@@ -132,7 +137,7 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (error) {
-      console.error("Error handling tenant invoice success:", error);
+      log.error({ err: error }, "Error handling tenant invoice success");
     }
     return NextResponse.json({ received: true });
   }
@@ -142,7 +147,7 @@ export async function POST(request: NextRequest) {
     const paymentIntent = event.data.object;
     const tenantId = getMetadataValue(paymentIntent.metadata, "tenantId");
     if (!tenantId) {
-      console.error("Missing tenantId metadata in payment_intent.payment_failed:", paymentIntent.id);
+      log.error({ paymentIntentId: paymentIntent.id }, "Missing tenantId metadata in payment_intent.payment_failed");
       return NextResponse.json({ received: true });
     }
     try {
@@ -198,7 +203,7 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (error) {
-      console.error("Error handling failed payment intent:", error);
+      log.error({ err: error }, "Error handling failed payment intent");
     }
     return NextResponse.json({ received: true });
   }
@@ -224,7 +229,7 @@ export async function POST(request: NextRequest) {
     const contribuabilId = getMetadataValue(metadata, "contribuabilId");
 
     if (!tenantId || !contribuabilId) {
-      console.error("Missing metadata in Stripe session:", gatewayRef);
+      log.error({ gatewayRef }, "Missing metadata in Stripe session");
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
 
@@ -255,13 +260,13 @@ export async function POST(request: NextRequest) {
         );
 
         if (!onlinePayment) {
-          console.error("OnlinePayment not found for tenant/ref:", tenantId, gatewayRef);
+          log.error({ tenantId, gatewayRef }, "OnlinePayment not found for tenant/ref");
           return "not_found";
         }
 
         // Metadata and DB row must agree on owner
         if (onlinePayment.contribuabilId !== contribuabilId) {
-          console.error("Metadata contribuabilId mismatch for ref:", gatewayRef);
+          log.error({ gatewayRef }, "Metadata contribuabilId mismatch for ref");
           return "metadata_mismatch";
         }
 
@@ -270,15 +275,11 @@ export async function POST(request: NextRequest) {
           return "already_processed";
         }
         if (!isOnlinePaymentStatus(onlinePayment.status)) {
-          console.error(
-            `Invalid payment status value for ref ${gatewayRef}: ${onlinePayment.status}`
-          );
+          log.error({ gatewayRef, status: onlinePayment.status }, "Invalid payment status value");
           return "invalid_state";
         }
         if (!canTransitionOnlinePaymentStatus(onlinePayment.status, "confirmed")) {
-          console.error(
-            `Invalid payment transition for ref ${gatewayRef}: ${onlinePayment.status} -> confirmed`
-          );
+          log.error({ gatewayRef, from: onlinePayment.status, to: "confirmed" }, "Invalid payment transition");
           return "invalid_state";
         }
 
@@ -449,7 +450,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
     } catch (error) {
-      console.error("Error processing Stripe webhook:", error);
+      log.error({ err: error }, "Error processing Stripe webhook");
       return NextResponse.json({ error: "Processing failed" }, { status: 500 });
     }
   }

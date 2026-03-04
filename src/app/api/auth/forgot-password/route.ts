@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestStaffPasswordReset } from "@/lib/password-reset";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
       try {
         await requestStaffPasswordReset(email);
       } catch (error) {
-        console.error("Staff forgot-password email send failed:", error);
+        logger.error({ err: error }, "Staff forgot-password email send failed");
       }
     }
 

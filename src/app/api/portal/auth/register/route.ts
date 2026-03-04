@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 import { checkDistributedRateLimit } from "@/lib/rate-limit";
 import { strongPasswordSchema } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 
 const registerCitizenSchema = z
   .object({
@@ -115,13 +116,13 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
+      logger.error({ err: emailError }, "Failed to send verification email:");
       // Registration still succeeds even if email fails
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Citizen registration error:", error);
+    logger.error({ err: error }, "Citizen registration error:");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

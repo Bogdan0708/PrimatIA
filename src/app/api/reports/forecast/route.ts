@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateRevenueForecast } from "@/lib/ai/revenue-forecast";
 import { setTenantContext } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: forecast });
   } catch (error) {
-    console.error("Error generating forecast:", error);
+    logger.error({ err: error }, "Error generating forecast:");
     return NextResponse.json(
       { error: "Failed to generate forecast" },
       { status: 500 }
