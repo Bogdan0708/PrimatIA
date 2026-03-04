@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCitizenFromRequest, resolvePortalTenant } from "@/lib/portal-auth";
+import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
 import { z } from "zod";
 
@@ -14,10 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = await resolvePortalTenant(request);
-  if (!tenantId) {
-    return NextResponse.json({ error: "Tenant not found" }, { status: 400 });
-  }
+  const tenantId = citizen.tenantId;
   await setTenantContext(tenantId);
 
   // Get the citizen's contribuabil IDs
@@ -72,10 +69,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = await resolvePortalTenant(request);
-  if (!tenantId) {
-    return NextResponse.json({ error: "Tenant not found" }, { status: 400 });
-  }
+  const tenantId = citizen.tenantId;
   await setTenantContext(tenantId);
 
   const json = await request.json();

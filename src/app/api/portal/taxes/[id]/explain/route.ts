@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCitizenFromRequest, resolvePortalTenant } from "@/lib/portal-auth";
+import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { setTenantContext, prisma } from "@/lib/db";
 import { generateTaxExplanation } from "@/lib/tax-engine/tax-explainer";
 
@@ -12,10 +12,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tenantId = await resolvePortalTenant(request);
-  if (!tenantId) {
-    return NextResponse.json({ error: "Tenant not found" }, { status: 400 });
-  }
+  const tenantId = citizen.tenantId;
   await setTenantContext(tenantId);
 
   const { id: impozitId } = await params;
