@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { PENALTY_DAILY_RATE, INTEREST_DAILY_RATE } from "./types";
-import { roundToLei } from "./utils";
+import { roundToLei, toSafeNumber } from "./utils";
 
 /**
  * Calculate penalties for overdue taxes per Cod Procedura Fiscala.
@@ -17,8 +17,8 @@ export async function calculatePenalties(
 
   if (!impozit) throw new Error(`Tax record not found: ${impozitId}`);
 
-  const sumaDatorata = Number(impozit.sumaDatorata);
-  const sumaPlatita = Number(impozit.sumaPlatita);
+  const sumaDatorata = toSafeNumber(impozit.sumaDatorata, "impozit.sumaDatorata");
+  const sumaPlatita = toSafeNumber(impozit.sumaPlatita, "impozit.sumaPlatita");
   const outstanding = sumaDatorata - sumaPlatita;
 
   if (outstanding <= 0) return { totalPenalties: 0, totalInterest: 0, newRecords: 0 };

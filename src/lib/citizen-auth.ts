@@ -1,7 +1,11 @@
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { hash } from "bcryptjs";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
+
+function hashVerificationToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 /**
  * Authenticate a citizen user by email and password.
@@ -121,6 +125,7 @@ export async function registerCitizen(params: {
 
   const passwordHash = await hash(password, 12);
   const verificationToken = randomBytes(32).toString("hex");
+  const verificationTokenHash = hashVerificationToken(verificationToken);
   const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
   const citizen = await prisma.citizenUser.create({
@@ -131,7 +136,7 @@ export async function registerCitizen(params: {
       firstName,
       lastName,
       phone,
-      verificationToken,
+      verificationToken: verificationTokenHash,
       verificationExpires,
       limbaPreferata: limbaPreferata || "ro",
     },
@@ -154,9 +159,10 @@ export async function registerCitizen(params: {
  * Verify a citizen's email address.
  */
 export async function verifyCitizenEmail(token: string): Promise<boolean> {
+  const verificationTokenHash = hashVerificationToken(token);
   const citizen = await prisma.citizenUser.findFirst({
     where: {
-      verificationToken: token,
+      verificationToken: verificationTokenHash,
       verificationExpires: { gte: new Date() },
       emailVerified: false,
     },

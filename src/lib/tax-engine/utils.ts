@@ -49,6 +49,150 @@ export function roundToLei(amount: number): number {
   return Math.round(amount);
 }
 
+const BANI_PER_LEU = 100;
+const MICRO_LEI_PER_LEU = 1_000_000;
+const PERCENT_SCALE = 10_000;
+const PERCENT_DIVISOR = 100 * PERCENT_SCALE;
+const MULTIPLIER_SCALE = MICRO_LEI_PER_LEU;
+const MAX_MICRO_LEI_SAFE_ABS = Number.MAX_SAFE_INTEGER / MICRO_LEI_PER_LEU;
+
+type DecimalLike = {
+  toNumber(): number;
+  toString(): string;
+};
+
+function isDecimalLike(value: unknown): value is DecimalLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "toNumber" in value &&
+    typeof (value as { toNumber?: unknown }).toNumber === "function" &&
+    "toString" in value &&
+    typeof (value as { toString?: unknown }).toString === "function"
+  );
+}
+
+function getDecimalPlaces(raw: string): number {
+  const normalized = raw.trim();
+  const numericPattern = /^[+-]?\d+(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/;
+  const match = normalized.match(numericPattern);
+
+  if (!match) return NaN;
+
+  const fractionalDigits = match[1]?.length ?? 0;
+  const exponent = Number(match[2] ?? "0");
+  return Math.max(0, fractionalDigits - exponent);
+}
+
+function assertMicroLeiCompatible(value: number, fieldName: string): void {
+  if (Math.abs(value) > MAX_MICRO_LEI_SAFE_ABS) {
+    throw new Error(`Numeric value for ${fieldName} exceeds supported range`);
+  }
+
+  const scaled = value * MICRO_LEI_PER_LEU;
+  if (!Number.isFinite(scaled) || !Number.isSafeInteger(Math.round(scaled))) {
+    throw new Error(`Numeric value for ${fieldName} exceeds supported precision`);
+  }
+}
+
+export function toSafeNumber(
+  value: number | string | { toString(): string } | null | undefined,
+  fieldName: string
+): number {
+  if (value == null) {
+    throw new Error(`Missing numeric value for ${fieldName}`);
+  }
+
+  let parsed: number;
+
+  if (typeof value === "number") {
+    parsed = value;
+  } else if (isDecimalLike(value)) {
+    const raw = value.toString().trim();
+    const decimalPlaces = getDecimalPlaces(raw);
+    if (!Number.isFinite(decimalPlaces)) {
+      throw new Error(`Invalid numeric value for ${fieldName}`);
+    }
+    if (decimalPlaces > 6) {
+      throw new Error(`Invalid numeric precision for ${fieldName}: max 6 decimal places`);
+    }
+    parsed = value.toNumber();
+  } else {
+    const raw = value.toString().trim();
+    const decimalPlaces = getDecimalPlaces(raw);
+    if (!Number.isFinite(decimalPlaces)) {
+      throw new Error(`Invalid numeric value for ${fieldName}`);
+    }
+    if (decimalPlaces > 6) {
+      throw new Error(`Invalid numeric precision for ${fieldName}: max 6 decimal places`);
+    }
+    parsed = Number(raw);
+  }
+
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid numeric value for ${fieldName}`);
+  }
+
+  return parsed;
+}
+
+export function toBani(amountLei: number): number {
+  return Math.round(amountLei * BANI_PER_LEU);
+}
+
+export function toMicroLei(amountLei: number): number {
+  assertMicroLeiCompatible(amountLei, "amountLei");
+  return Math.round(amountLei * MICRO_LEI_PER_LEU);
+}
+
+export function percentToBasisPoints(percent: number): number {
+  return Math.round(percent * PERCENT_SCALE);
+}
+
+export function multiplierToBasisPoints(multiplier: number): number {
+  return Math.round(multiplier * MULTIPLIER_SCALE);
+}
+
+export function applyPercentToMicroLei(amountMicroLei: number, percent: number): number {
+  const percentBps = percentToBasisPoints(percent);
+  return (amountMicroLei * percentBps) / PERCENT_DIVISOR;
+}
+
+export function applyMultiplierToMicroLei(amountMicroLei: number, multiplier: number): number {
+  const multiplierBps = multiplierToBasisPoints(multiplier);
+  return (amountMicroLei * multiplierBps) / MULTIPLIER_SCALE;
+}
+
+export function prorateMicroLei(amountMicroLei: number, months: number): number {
+  return (amountMicroLei * months) / 12;
+}
+
+export function roundMicroLeiToLei(amountMicroLei: number): number {
+  return roundToLei(amountMicroLei / MICRO_LEI_PER_LEU);
+}
+
+function divideAndRound(value: number, divisor: number): number {
+  return Math.round(value / divisor);
+}
+
+export function applyPercentToBani(amountBani: number, percent: number): number {
+  const percentBps = percentToBasisPoints(percent);
+  return divideAndRound(amountBani * percentBps, PERCENT_DIVISOR);
+}
+
+export function applyMultiplierToBani(amountBani: number, multiplier: number): number {
+  const multiplierBps = multiplierToBasisPoints(multiplier);
+  return divideAndRound(amountBani * multiplierBps, MULTIPLIER_SCALE);
+}
+
+export function prorateBani(amountBani: number, months: number): number {
+  return divideAndRound(amountBani * months, 12);
+}
+
+export function roundBaniToLei(amountBani: number): number {
+  return roundToLei(amountBani / BANI_PER_LEU);
+}
+
 /**
  * Split tax into 2 installments (Art. 462 Cod Fiscal).
  * First installment: March 31

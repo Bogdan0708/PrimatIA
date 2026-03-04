@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestCitizenPasswordReset } from "@/lib/password-reset";
-import { resolvePortalTenant } from "@/lib/portal-auth";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const email = typeof body?.email === "string" ? body.email : "";
 
-    const tenantId = await resolvePortalTenant(request);
+    // Tenant identity must be derived server-side from trusted context.
+    const tenantId = await resolveTenantIdFromHeaders(request.headers);
 
     if (email && tenantId) {
       try {
@@ -23,4 +24,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   }
 }
-

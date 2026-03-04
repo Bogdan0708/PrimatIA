@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCitizenFromRequest, resolvePortalTenant } from "@/lib/portal-auth";
+import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, withTenantScope } from "@/lib/db";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,10 +16,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tenantId = citizen?.tenantId || await resolvePortalTenant(request);
+    // Authenticated tenant is read from JWT; anonymous requests derive tenant from domain.
+    const tenantId = citizen?.tenantId ?? await resolveTenantIdFromHeaders(request.headers);
     if (!tenantId) {
       return NextResponse.json(
-        { error: "Tenant identification required" },
+        { error: "Tenant could not be resolved for this domain." },
         { status: 400 }
       );
     }
@@ -46,4 +48,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

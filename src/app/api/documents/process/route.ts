@@ -9,6 +9,61 @@ const VALID_TYPES: DocumentType[] = [
   'certificat_urbanism',
 ];
 
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const ALLOWED_UPLOAD_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  DOCX_MIME,
+]);
+
+function hasSignature(bytes: Uint8Array, signature: number[]): boolean {
+  if (bytes.length < signature.length) return false;
+  return signature.every((value, index) => bytes[index] === value);
+}
+
+function isLikelyDocx(fileName: string, bytes: Uint8Array): boolean {
+  const lowerName = fileName.toLowerCase();
+  if (!lowerName.endsWith(".docx")) {
+    return false;
+  }
+
+  const zipSignature =
+    hasSignature(bytes, [0x50, 0x4b, 0x03, 0x04]) ||
+    hasSignature(bytes, [0x50, 0x4b, 0x05, 0x06]) ||
+    hasSignature(bytes, [0x50, 0x4b, 0x07, 0x08]);
+  if (!zipSignature) {
+    return false;
+  }
+
+  const body = Buffer.from(bytes);
+  return (
+    body.includes(Buffer.from("[Content_Types].xml")) &&
+    body.includes(Buffer.from("word/"))
+  );
+}
+
+function detectMimeFromMagicBytes(fileName: string, bytes: Uint8Array): string | null {
+  if (hasSignature(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d])) {
+    return "application/pdf";
+  }
+  if (hasSignature(bytes, [0xff, 0xd8, 0xff])) {
+    return "image/jpeg";
+  }
+  if (hasSignature(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    return "image/png";
+  }
+  if (isLikelyDocx(fileName, bytes)) {
+    return DOCX_MIME;
+  }
+  return null;
+}
+
+function allowedFileTypesMessage(): string {
+  return "Allowed file types: PDF, JPG, PNG, DOCX.";
+}
+
 export async function POST(request: NextRequest) {
   await requireAdmin();
 
@@ -35,16 +90,35 @@ export async function POST(request: NextRequest) {
       if (pastedText && pastedText.trim().length > 0) {
         text = pastedText.trim();
       } else if (file) {
-        // For text-based files, read as text
-        // For images/PDFs, we'd need OCR — fallback to AI extraction
-        if (file.type.startsWith("text/") || file.name.endsWith(".txt")) {
-          text = await file.text();
-        } else {
+        if (file.size === 0) {
           return NextResponse.json(
-            { error: "unsupported_file_type" },
-            { status: 415 }
+            { error: "Uploaded file is empty." },
+            { status: 400 }
           );
         }
+
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          return NextResponse.json(
+            { error: "File too large. Maximum allowed size is 10MB." },
+            { status: 413 }
+          );
+        }
+
+        const fileBytes = new Uint8Array(await file.arrayBuffer());
+        const detectedMime = detectMimeFromMagicBytes(file.name, fileBytes);
+
+        if (!detectedMime || !ALLOWED_UPLOAD_MIME_TYPES.has(detectedMime)) {
+          return NextResponse.json(
+            {
+              error: `Unsupported file type. ${allowedFileTypesMessage()}`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // OCR extraction is out of scope here; keep existing behavior and force AI mode.
+        text = await file.text();
+        useAi = true;
       } else {
         return NextResponse.json({ error: "No file or text provided" }, { status: 400 });
       }

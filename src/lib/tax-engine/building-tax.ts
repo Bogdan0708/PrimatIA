@@ -8,9 +8,15 @@ import type {
   CommuneRank,
 } from "./types";
 import {
+  applyMultiplierToMicroLei,
+  applyPercentToMicroLei,
   calculateTaxableMonths,
+  prorateMicroLei,
+  roundMicroLeiToLei,
   roundToLei,
   splitInstallments,
+  toMicroLei,
+  toSafeNumber,
   calculateBonificatie,
   getBuildingAgeCoefficient,
 } from "./utils";
@@ -117,21 +123,21 @@ export async function calculateBuildingTax(
     rataAplicata = rateEntry.rateValue;
   }
 
-  // 3. Apply rate
-  let sumaCalculata = bazaImpozabila * (rataAplicata / 100);
+  // 3. Apply rate in micro-lei to preserve Decimal(12,6) precision.
+  let sumaCalculataMicroLei = applyPercentToMicroLei(toMicroLei(bazaImpozabila), rataAplicata);
 
   // 4. Apply age coefficient (Art. 457) — PF only
   if (input.tipContribuabil !== "PJ") {
     const ageCoeff = getBuildingAgeCoefficient(input.anConstructie, input.fiscalYear);
-    sumaCalculata = sumaCalculata * ageCoeff;
+    sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, ageCoeff);
   }
 
   // 4b. Apply commune rank zone multiplier (Art. 457)
   const zoneMultiplier = getCommuneRankMultiplier(input.communeRank);
-  sumaCalculata = sumaCalculata * zoneMultiplier;
+  sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, zoneMultiplier);
 
   // 5. Apply co-ownership
-  sumaCalculata = sumaCalculata * (input.cotaParte / 100);
+  sumaCalculataMicroLei = applyPercentToMicroLei(sumaCalculataMicroLei, input.cotaParte);
 
   // 6. Apply partial year proration
   const { months, startDate, endDate } = calculateTaxableMonths(
@@ -139,12 +145,15 @@ export async function calculateBuildingTax(
     input.dataDobandire,
     input.dataInstrainare
   );
-  sumaCalculata = roundToLei((sumaCalculata * months) / 12);
+  const sumaCalculata = roundMicroLeiToLei(prorateMicroLei(sumaCalculataMicroLei, months));
 
   // 7. Apply exemptions
   let sumaScutire = 0;
+  const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
   for (const exemption of exemptions) {
-    sumaScutire += roundToLei(sumaCalculata * (exemption.discountPercent / 100));
+    sumaScutire += roundMicroLeiToLei(
+      applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
+    );
   }
   sumaScutire = Math.min(sumaScutire, sumaCalculata);
 
@@ -224,10 +233,14 @@ async function findRateTableEntry(
     return {
       id: fallback.id,
       rateType: fallback.rateType,
-      rateValue: Number(fallback.rateValue),
+      rateValue: toSafeNumber(fallback.rateValue, "taxRateTable.rateValue"),
       unit: fallback.unit ?? undefined,
-      minRate: fallback.minRate ? Number(fallback.minRate) : undefined,
-      maxRate: fallback.maxRate ? Number(fallback.maxRate) : undefined,
+      minRate: fallback.minRate != null
+        ? toSafeNumber(fallback.minRate, "taxRateTable.minRate")
+        : undefined,
+      maxRate: fallback.maxRate != null
+        ? toSafeNumber(fallback.maxRate, "taxRateTable.maxRate")
+        : undefined,
       category: fallback.category ?? undefined,
       zona: fallback.zona ?? undefined,
     };
@@ -236,10 +249,14 @@ async function findRateTableEntry(
   return {
     id: entry.id,
     rateType: entry.rateType,
-    rateValue: Number(entry.rateValue),
+    rateValue: toSafeNumber(entry.rateValue, "taxRateTable.rateValue"),
     unit: entry.unit ?? undefined,
-    minRate: entry.minRate ? Number(entry.minRate) : undefined,
-    maxRate: entry.maxRate ? Number(entry.maxRate) : undefined,
+    minRate: entry.minRate != null
+      ? toSafeNumber(entry.minRate, "taxRateTable.minRate")
+      : undefined,
+    maxRate: entry.maxRate != null
+      ? toSafeNumber(entry.maxRate, "taxRateTable.maxRate")
+      : undefined,
     category: entry.category ?? undefined,
     zona: entry.zona ?? undefined,
   };

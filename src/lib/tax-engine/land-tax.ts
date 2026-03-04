@@ -7,10 +7,15 @@ import type {
   ExemptionContext,
 } from "./types";
 import {
+  applyPercentToMicroLei,
   calculateTaxableMonths,
+  prorateMicroLei,
+  roundMicroLeiToLei,
   roundToLei,
   splitInstallments,
   calculateBonificatie,
+  toMicroLei,
+  toSafeNumber,
 } from "./utils";
 
 /**
@@ -48,18 +53,18 @@ export async function calculateLandTax(
   // 3. Calculate base (area in mp)
   const bazaImpozabila = input.suprafataMp;
 
-  // 4. Apply rate (lei per m2 or lei per ha)
+  // 4. Apply rate (lei per m2 or lei per ha) in micro-lei arithmetic
   const rataAplicata = rateEntry.rateValue;
-  let sumaCalculata: number;
+  let sumaCalculataMicroLei: number;
   if (rateEntry.unit === "lei/ha") {
-    sumaCalculata = (bazaImpozabila / 10000) * rataAplicata;
+    sumaCalculataMicroLei = (bazaImpozabila * toMicroLei(rataAplicata)) / 10000;
   } else {
     // lei/mp
-    sumaCalculata = bazaImpozabila * rataAplicata;
+    sumaCalculataMicroLei = bazaImpozabila * toMicroLei(rataAplicata);
   }
 
   // 5. Apply co-ownership
-  sumaCalculata = sumaCalculata * (input.cotaParte / 100);
+  sumaCalculataMicroLei = applyPercentToMicroLei(sumaCalculataMicroLei, input.cotaParte);
 
   // 6. Partial year proration
   const { months, startDate, endDate } = calculateTaxableMonths(
@@ -67,12 +72,15 @@ export async function calculateLandTax(
     input.dataDobandire,
     input.dataInstrainare
   );
-  sumaCalculata = roundToLei((sumaCalculata * months) / 12);
+  const sumaCalculata = roundMicroLeiToLei(prorateMicroLei(sumaCalculataMicroLei, months));
 
   // 7. Exemptions
   let sumaScutire = 0;
+  const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
   for (const exemption of exemptions) {
-    sumaScutire += roundToLei(sumaCalculata * (exemption.discountPercent / 100));
+    sumaScutire += roundMicroLeiToLei(
+      applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
+    );
   }
   sumaScutire = Math.min(sumaScutire, sumaCalculata);
 
@@ -121,18 +129,26 @@ async function findLandRateEntry(
     return {
       id: fallback.id,
       rateType: fallback.rateType,
-      rateValue: Number(fallback.rateValue),
+      rateValue: toSafeNumber(fallback.rateValue, "taxRateTable.rateValue"),
       unit: fallback.unit ?? undefined,
-      minRate: fallback.minRate ? Number(fallback.minRate) : undefined,
-      maxRate: fallback.maxRate ? Number(fallback.maxRate) : undefined,
+      minRate: fallback.minRate != null
+        ? toSafeNumber(fallback.minRate, "taxRateTable.minRate")
+        : undefined,
+      maxRate: fallback.maxRate != null
+        ? toSafeNumber(fallback.maxRate, "taxRateTable.maxRate")
+        : undefined,
     };
   }
   return {
     id: entry.id,
     rateType: entry.rateType,
-    rateValue: Number(entry.rateValue),
+    rateValue: toSafeNumber(entry.rateValue, "taxRateTable.rateValue"),
     unit: entry.unit ?? undefined,
-    minRate: entry.minRate ? Number(entry.minRate) : undefined,
-    maxRate: entry.maxRate ? Number(entry.maxRate) : undefined,
+    minRate: entry.minRate != null
+      ? toSafeNumber(entry.minRate, "taxRateTable.minRate")
+      : undefined,
+    maxRate: entry.maxRate != null
+      ? toSafeNumber(entry.maxRate, "taxRateTable.maxRate")
+      : undefined,
   };
 }
