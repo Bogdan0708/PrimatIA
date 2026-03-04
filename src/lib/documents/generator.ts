@@ -100,17 +100,14 @@ async function getNextDocumentNumber(
   prefix: string,
   year: number
 ): Promise<string> {
-  const count = await prisma.document.count({
-    where: {
-      tenantId,
-      tip: { startsWith: prefix === "DI" ? "decizie" : prefix === "SM" ? "somatie" : prefix === "CA" ? "certificat" : prefix === "CH" ? "chitanta" : "borderou" },
-      dataDocument: {
-        gte: new Date(`${year}-01-01`),
-        lt: new Date(`${year + 1}-01-01`),
-      },
-    },
-  });
-  return generateDocumentNumber(prefix, year, count + 1);
+  const result = await prisma.$queryRaw<[{ next_val: number }]>`
+    INSERT INTO "document_sequences" ("tenant_id", "prefix", "year", "current_val")
+    VALUES (${tenantId}, ${prefix}, ${year}, 1)
+    ON CONFLICT ("tenant_id", "prefix", "year")
+    DO UPDATE SET "current_val" = "document_sequences"."current_val" + 1
+    RETURNING "current_val" AS next_val
+  `;
+  return generateDocumentNumber(prefix, year, result[0].next_val);
 }
 
 // ============================================================================

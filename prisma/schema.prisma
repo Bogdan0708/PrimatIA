@@ -80,6 +80,7 @@ model Tenant {
   certificateRequests   CertificateRequest[]
   contactMessages       ContactMessage[]
   chitantaSequences     ChitantaSequence[]
+  documentSequences     DocumentSequence[]
   passwordResetTokens   PasswordResetToken[]
 
   @@map("tenants")
@@ -113,6 +114,7 @@ model TenantUser {
   scutiriApproved         ScutireContribuabil[] @relation("ApprovedByUser")
   documentseSemnate       Document[]            @relation("SignedByUser")
   platiInregistrate       Plata[]               @relation("RegisteredByUser")
+  platiReversed           Plata[]               @relation("ReversedByUser")
   importBatchesImported   ImportBatch[]         @relation("ImportedByUser")
   importBatchesRolledBack ImportBatch[]         @relation("RolledBackByUser")
   exportJobsRequested    ExportJob[]           @relation("ExportRequestedByUser")
@@ -608,12 +610,22 @@ model Plata {
 
   inregistratDeId String? @map("inregistrat_de") @db.Uuid
 
+  // Reversal/storno tracking
+  reversalStatus  String?   @map("reversal_status") @db.VarChar(20) // "reversed" | "partial"
+  reversedAt      DateTime? @map("reversed_at") @db.Timestamptz
+  reversedById    String?   @map("reversed_by") @db.Uuid
+  reversalReason  String?   @map("reversal_reason") @db.VarChar(500)
+  originalPlataId String?   @map("original_plata_id") @db.Uuid
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relations
   tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   contribuabil     Contribuabil       @relation(fields: [contribuabilId], references: [id])
   inregistratDe    TenantUser?        @relation("RegisteredByUser", fields: [inregistratDeId], references: [id])
+  reversedBy       TenantUser?        @relation("ReversedByUser", fields: [reversedById], references: [id])
+  originalPlata    Plata?             @relation("StornoLink", fields: [originalPlataId], references: [id])
+  stornoPlati      Plata[]            @relation("StornoLink")
   platiDistributie PlataDistributie[]
 
   @@index([tenantId, contribuabilId, dataPlata])
@@ -1177,6 +1189,19 @@ model ChitantaSequence {
 
   @@id([tenantId, year])
   @@map("chitanta_sequences")
+}
+
+// Atomic sequence for document numbers (avoids race conditions)
+model DocumentSequence {
+  tenantId   String @map("tenant_id") @db.Uuid
+  prefix     String @db.VarChar(10)
+  year       Int
+  currentVal Int    @default(0) @map("current_val")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, prefix, year])
+  @@map("document_sequences")
 }
 
 // =============================================================================

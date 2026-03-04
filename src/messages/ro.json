@@ -85,7 +85,9 @@
     "roeidDisabled": "Dezactivat",
     "roeidDescription": "Autentificare electronică prin identitate digitală românească (eIDAS)",
     "identityVerified": "Identitate verificată ✓",
-    "eidasCompliant": "Conform eIDAS"
+    "eidasCompliant": "Conform eIDAS",
+    "totpCode": "Cod de autentificare",
+    "totpDescription": "Introduceți codul de 6 cifre din aplicația de autentificare"
   },
   "dashboard": {
     "title": "Panou principal",

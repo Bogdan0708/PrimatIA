@@ -13,6 +13,7 @@
 import { searchRegulations } from "@/lib/search/regulation-search";
 import { CHATBOT_ENTRIES, type ChatbotEntry } from "@/lib/chatbot/knowledge";
 import { getLLMConfig } from "./config";
+import { redactPII } from "./pii-redact";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -198,9 +199,13 @@ export async function* streamLLMResponse(
     .map((c) => `[${c.source}]\n${c.content}`)
     .join("\n\n");
 
+  // Redact PII before sending to external LLM
+  const sanitizedQuery = redactPII(query);
+  const sanitizedHistory = history.map((m) => ({ ...m, content: redactPII(m.content) }));
+
   const userPrompt = contextText
-    ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${query}\n</user_query>`
-    : `<user_query>\n${query}\n</user_query>`;
+    ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${sanitizedQuery}\n</user_query>`
+    : `<user_query>\n${sanitizedQuery}\n</user_query>`;
 
   // For streaming, we need the OpenAI-compatible API (Gateway, LM Studio or OpenAI)
   if (config.provider === "gateway" || config.provider === "openai" || config.provider === "lm_studio") {
@@ -229,7 +234,7 @@ export async function* streamLLMResponse(
           stream: true,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            ...history.map((m) => ({ role: m.role, content: m.content })),
+            ...sanitizedHistory.map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content: userPrompt },
           ],
           ...(config.provider === "gateway" && config.gatewayProvider && { provider: config.gatewayProvider }),
@@ -330,12 +335,15 @@ export async function generateRAGResponse(
     .map((c) => `[${c.source}]\n${c.content}`)
     .join("\n\n");
 
+  // Redact PII before sending to external LLM
+  const sanitizedQuery = redactPII(query);
+
   const userPrompt = contextText
-    ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${query}\n</user_query>`
-    : `<user_query>\n${query}\n</user_query>`;
+    ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${sanitizedQuery}\n</user_query>`
+    : `<user_query>\n${sanitizedQuery}\n</user_query>`;
 
   const messages = [
-    ...history.map((m) => ({ role: m.role, content: m.content })),
+    ...history.map((m) => ({ role: m.role, content: redactPII(m.content) })),
     { role: "user", content: userPrompt },
   ];
 

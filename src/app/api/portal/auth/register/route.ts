@@ -4,9 +4,20 @@ import { hashCnp } from "@/lib/crypto";
 import { sendNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/db";
 import { resolvePortalTenant } from "@/lib/portal-auth";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Distributed rate limiting (Redis) — second layer after in-memory middleware
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = await checkDistributedRateLimit(`rl:register:${ip}`, 5, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const body = await request.json();
     const { firstName, lastName, email, password, tip, cnp, cui, phone, limbaPreferata } = body;
 
@@ -54,17 +65,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      if (result.error === "email_exists") {
-        return NextResponse.json(
-          { error: "Email already registered" },
-          { status: 409 }
-        );
-      }
-      if (result.error === "no_match") {
-        return NextResponse.json(
-          { error: "no_match" },
-          { status: 404 }
-        );
+      if (result.error === "email_exists" || result.error === "no_match") {
+        // Return same response as success to prevent email enumeration
+        return NextResponse.json({ success: true });
       }
       return NextResponse.json(
         { error: "Registration failed" },

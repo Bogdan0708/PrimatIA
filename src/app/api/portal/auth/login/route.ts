@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
 import { SignJWT } from "jose";
 import { prisma } from "@/lib/db";
+import { checkDistributedRateLimit } from "@/lib/rate-limit";
 
 /** Lazily resolved at request time so the module can be imported during build. */
 function getJwtSecret(): Uint8Array {
@@ -19,6 +20,16 @@ function getJwtSecret(): Uint8Array {
 
 export async function POST(request: NextRequest) {
   try {
+    // Distributed rate limiting (Redis) — second layer after in-memory middleware
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = await checkDistributedRateLimit(`rl:login:${ip}`, 10, 60);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many login attempts. Try again later." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
