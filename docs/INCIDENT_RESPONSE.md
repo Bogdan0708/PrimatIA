@@ -137,8 +137,38 @@ If high risk to rights/freedoms (e.g., unencrypted CNP exposure):
 - **Audit log review**: Monthly review of authentication and access anomalies
 - **Backup restoration test**: Quarterly verification of database backup integrity
 
-## 9. Document History
+## 9. Operational Playbooks
+
+For detailed step-by-step remediation of common operational issues, see **[docs/OPS_RUNBOOK.md](./OPS_RUNBOOK.md)**:
+
+| Playbook | Scope |
+|---|---|
+| CI Pipeline Failure | Build/test failures in GitHub Actions |
+| Database Migration Failure | Failed Prisma migrations in production |
+| AI Gateway Unreachable | AI fallback chain and degraded mode |
+| Rate Limiter Reset During Deploy | Expected behavior with in-memory rate limiting |
+| Tenant Data Leak Suspected | RLS bypass detection and cross-tenant exposure |
+
+### Service Degraded (Non-Critical Component)
+
+When `/api/health/deep` shows degraded status but `/api/health` returns 200:
+
+1. Identify which component is degraded (Redis, AI Gateway)
+2. These are non-critical — core tax/payment functionality continues working
+3. Check the specific component per the relevant OPS_RUNBOOK playbook
+4. Monitor SLO dashboards for impact on error budget
+
+### Migration Failed in Production
+
+See OPS_RUNBOOK.md Playbook 2 for detailed steps. Key actions:
+1. **Do NOT retry** the migration blindly
+2. Check `_prisma_migrations` for partial state
+3. Use `npx prisma migrate resolve` to mark as rolled back if needed
+4. Consider rollback via `deploy/rollback.sh` if the app is broken
+
+## 10. Document History
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-02-12 | Phase 3 Build | Initial version |
+| 1.1 | 2026-03-04 | Ops Hardening | Added operational playbooks cross-reference, service degraded and migration failure appendix |

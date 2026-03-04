@@ -1,0 +1,93 @@
+{
+  "alerts": [
+    {
+      "displayName": "P1 — Service Down (0 instances for 2 min)",
+      "severity": "CRITICAL",
+      "conditions": [
+        {
+          "displayName": "No running instances",
+          "conditionThreshold": {
+            "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"primaria\" AND metric.type=\"run.googleapis.com/container/instance_count\"",
+            "comparison": "COMPARISON_LT",
+            "thresholdValue": 1,
+            "duration": "120s",
+            "aggregations": [
+              {
+                "alignmentPeriod": "60s",
+                "perSeriesAligner": "ALIGN_MAX"
+              }
+            ]
+          }
+        }
+      ],
+      "notificationChannels": ["projects/${PROJECT_ID}/notificationChannels/${CHANNEL_ID}"],
+      "documentation": {
+        "content": "# Service Down\n\nPrimarIA has 0 running instances for 2+ minutes.\n\n## Immediate Actions\n1. Check Cloud Run console for error logs\n2. Check recent deployments: `gcloud run revisions list`\n3. If new deploy caused it: `bash deploy/rollback.sh`\n4. Check `/api/health` after recovery\n\n## Runbook\nSee docs/OPS_RUNBOOK.md"
+      }
+    },
+    {
+      "displayName": "P1 — High Error Rate (5xx > 5% for 5 min)",
+      "severity": "CRITICAL",
+      "conditions": [
+        {
+          "displayName": "5xx rate > 5%",
+          "conditionThreshold": {
+            "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"primaria\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.labels.response_code_class=\"5xx\"",
+            "comparison": "COMPARISON_GT",
+            "thresholdValue": 0.05,
+            "duration": "300s",
+            "aggregations": [
+              {
+                "alignmentPeriod": "60s",
+                "perSeriesAligner": "ALIGN_RATE",
+                "crossSeriesReducer": "REDUCE_SUM"
+              }
+            ]
+          }
+        }
+      ],
+      "documentation": {
+        "content": "# High Error Rate\n\n5xx error rate exceeds 5% for 5+ minutes.\n\n## Immediate Actions\n1. Check structured logs: `gcloud logging read 'severity>=ERROR' --limit 20`\n2. Check `/api/health/deep` for component failures\n3. If DB-related: check Cloud SQL status\n4. If recent deploy: consider rollback\n\n## SLO Impact\nError budget: 1% target. At 5%, budget burns 5x faster."
+      }
+    },
+    {
+      "displayName": "P2 — High Latency (p95 > 3s for 10 min)",
+      "severity": "WARNING",
+      "conditions": [
+        {
+          "displayName": "p95 latency > 3s",
+          "conditionThreshold": {
+            "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"primaria\" AND metric.type=\"run.googleapis.com/request_latencies\"",
+            "comparison": "COMPARISON_GT",
+            "thresholdValue": 3000,
+            "duration": "600s",
+            "aggregations": [
+              {
+                "alignmentPeriod": "60s",
+                "perSeriesAligner": "ALIGN_PERCENTILE_95"
+              }
+            ]
+          }
+        }
+      ],
+      "documentation": {
+        "content": "# High Latency\n\np95 latency exceeds 3s for 10+ minutes.\n\n## Possible Causes\n1. Database query performance (check Cloud SQL metrics)\n2. AI gateway slow response (check `/api/health/deep`)\n3. Cold starts after scale-to-zero\n4. Memory pressure causing GC pauses\n\n## SLO\nTarget: p95 < 500ms, p99 < 2s"
+      }
+    },
+    {
+      "displayName": "P1 — DB Unreachable (health 503 for 1 min)",
+      "severity": "CRITICAL",
+      "conditions": [
+        {
+          "displayName": "Health endpoint returning 503",
+          "conditionMonitoringQueryLanguage": {
+            "query": "fetch cloud_run_revision | metric 'run.googleapis.com/request_count' | filter resource.service_name == 'primaria' | filter metric.response_code == 503 | filter metadata.user_labels.path == '/api/health' | align rate(1m) | condition val() > 0.5 '1/s'"
+          }
+        }
+      ],
+      "documentation": {
+        "content": "# Database Unreachable\n\n`/api/health` returns 503 — database connectivity lost.\n\n## Immediate Actions\n1. Check Cloud SQL instance status in GCP Console\n2. Check PgBouncer connection pool (if configured)\n3. Verify DATABASE_URL secret is correct: `gcloud secrets versions access latest --secret=primaria-database-url`\n4. Check if Cloud SQL is in maintenance window\n\n## Runbook\nSee docs/OPS_RUNBOOK.md Playbook 2"
+      }
+    }
+  ]
+}

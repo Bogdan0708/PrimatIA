@@ -7,11 +7,14 @@ SERVICE="primaria"
 REPO="primaria"
 IMAGE="europe-central2-docker.pkg.dev/$PROJECT_ID/$REPO/app"
 
-echo "🏗️  Building Docker image..."
-docker build -t "$IMAGE:latest" .
+GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+echo "🏗️  Building Docker image (SHA: $GIT_SHA)..."
+docker build -t "$IMAGE:latest" -t "$IMAGE:$GIT_SHA" .
 
 echo "📤 Pushing to Artifact Registry..."
 docker push "$IMAGE:latest"
+docker push "$IMAGE:$GIT_SHA"
 
 echo "🚀 Deploying to Cloud Run..."
 gcloud run deploy "$SERVICE" \
