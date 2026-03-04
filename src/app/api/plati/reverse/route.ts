@@ -4,8 +4,9 @@ import { setTenantContext } from "@/lib/db";
 import { reversePayment } from "@/lib/payments/reversal";
 
 export async function POST(request: NextRequest) {
+  const session = await requireAdmin();
+
   try {
-    const session = await requireAdmin();
     const { plataId, reason } = await request.json();
 
     if (!plataId || !reason) {

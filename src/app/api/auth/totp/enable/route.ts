@@ -9,8 +9,9 @@ import { prisma } from "@/lib/db";
  * Body: { secret: string, token: string }
  */
 export async function POST(request: NextRequest) {
+  const session = await requireStaff();
+
   try {
-    const session = await requireStaff();
     const { secret, token } = await request.json();
 
     if (!secret || !token) {

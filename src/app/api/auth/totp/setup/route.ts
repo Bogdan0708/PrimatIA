@@ -9,9 +9,9 @@ import { prisma } from "@/lib/db";
  * Does NOT save the secret — the user must verify it first via /api/auth/totp/enable.
  */
 export async function GET() {
-  try {
-    const session = await requireStaff();
+  const session = await requireStaff();
 
+  try {
     // Check if TOTP is already enabled
     const user = await prisma.tenantUser.findUnique({
       where: { id: session.user.id },
