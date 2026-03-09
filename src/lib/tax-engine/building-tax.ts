@@ -217,7 +217,9 @@ export async function calculateBuildingTax(
   sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, zoneMultiplier);
 
   // 4c. Apply HCL inflation coefficient when configured
-  sumaCalculata = applyInflationIndex(sumaCalculata, hclDecision.inflationIndex);
+  sumaCalculataMicroLei = toMicroLei(
+    applyInflationIndex(roundMicroLeiToLei(sumaCalculataMicroLei), hclDecision.inflationIndex)
+  );
 
   // 5. Apply co-ownership
   sumaCalculataMicroLei = applyPercentToMicroLei(sumaCalculataMicroLei, input.cotaParte);

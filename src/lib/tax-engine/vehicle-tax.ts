@@ -17,7 +17,6 @@ import {
   calculateBonificatie,
   toMicroLei,
   toSafeNumber,
-  applyInflationIndex,
 } from "./utils";
 
 /**

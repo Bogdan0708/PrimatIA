@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Authenticator code is required" }, { status: 400 });
     }
 
-    const pendingToken = request.cookies.get(getStaffTotpStatus ? getTotpSetupCookieName() : "totp-setup")?.value;
+    const pendingToken = request.cookies.get(getTotpSetupCookieName())?.value;
     if (!pendingToken) {
       logWarn({ message: "TOTP enable rejected: setup session expired", ...logContext });
       return NextResponse.json({ error: "TOTP setup session expired" }, { status: 400 });

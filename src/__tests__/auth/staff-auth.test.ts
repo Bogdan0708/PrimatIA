@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { compareMock, verifyTotpCodeMock, prismaMock } = vi.hoisted(() => ({
+const { compareMock, verifyTotpCodeMock, decryptStringMock, prismaMock } = vi.hoisted(() => ({
   compareMock: vi.fn(),
   verifyTotpCodeMock: vi.fn(),
+  decryptStringMock: vi.fn(),
   prismaMock: {
     tenantUser: {
       findFirst: vi.fn(),
@@ -19,6 +20,10 @@ vi.mock("@/lib/totp", () => ({
   verifyTotpCode: verifyTotpCodeMock,
 }));
 
+vi.mock("@/lib/crypto", () => ({
+  decryptString: decryptStringMock,
+}));
+
 vi.mock("@/lib/db", () => ({
   prisma: prismaMock,
 }));
@@ -28,6 +33,7 @@ import { authorizeStaffCredentials } from "@/lib/staff-auth";
 describe("authorizeStaffCredentials", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    decryptStringMock.mockReturnValue("decrypted-secret");
   });
 
   it("authenticates password-only users", async () => {
@@ -50,6 +56,7 @@ describe("authorizeStaffCredentials", () => {
     const result = await authorizeStaffCredentials({
       email: "user@example.com",
       password: "password",
+      tenantId: "tenant-1",
     });
 
     expect(result).toEqual(
@@ -57,6 +64,14 @@ describe("authorizeStaffCredentials", () => {
         id: "user-1",
         tenantId: "tenant-1",
         role: "operator",
+      })
+    );
+    expect(prismaMock.tenantUser.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          email: "user@example.com",
+          tenantId: "tenant-1",
+        }),
       })
     );
     expect(verifyTotpCodeMock).not.toHaveBeenCalled();
@@ -83,9 +98,12 @@ describe("authorizeStaffCredentials", () => {
       email: "admin@example.com",
       password: "password",
       totpCode: "123456",
+      tenantId: "tenant-1",
     });
 
     expect(result).toBeNull();
+    expect(decryptStringMock).toHaveBeenCalledWith("SECRET123");
+    expect(verifyTotpCodeMock).toHaveBeenCalledWith("decrypted-secret", "123456");
     expect(prismaMock.tenantUser.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "user-2" },

@@ -6,17 +6,18 @@ import { getRequestLogContext, logError } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const logContext = getRequestLogContext(request);
-  try {
-    const rateLimit = await checkSharedRateLimit({
-      request,
-      bucket: "portal-contact",
-      limit: 5,
-      windowMs: 60_000,
-    });
-    if (!rateLimit.allowed) {
-      return createRateLimitExceededResponse(rateLimit);
-    }
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "portal-contact",
+    limit: 5,
+    windowMs: 60_000,
+  });
 
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
+
+  try {
     const citizen = await getCitizenFromRequest(request);
     const body = await request.json();
     const { name, email, phone, subject, message } = body;

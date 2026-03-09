@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { getStripeClient } from "@/lib/stripe";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
@@ -16,6 +17,41 @@ import {
 } from "@/lib/payments/online-payment-state-machine";
 import { validateSelectedDebtsForContribuabil } from "@/lib/payments/selected-debts";
 import { logger, getRequestLogContext } from "@/lib/logger";
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function amountsMatch(left: number, right: number): boolean {
+  return Math.abs(roundCurrency(left) - roundCurrency(right)) <= 0.01;
+}
+
+function parseSelectedDebtItems(
+  value: Prisma.JsonValue
+): Array<{ impozitId: string; amount: number }> | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const items = value.flatMap((item) => {
+    if (
+      item &&
+      typeof item === "object" &&
+      !Array.isArray(item)
+    ) {
+      const entry = item as Record<string, unknown>;
+      if (
+        typeof entry.impozitId === "string" &&
+        typeof entry.amount === "number"
+      ) {
+        return [{ impozitId: entry.impozitId, amount: entry.amount }];
+      }
+    }
+    return [];
+  });
+
+  return items.length === value.length ? items : null;
+}
 
 function getInvoiceSubscriptionId(invoice: unknown): string | undefined {
   const obj = invoice as { subscription?: string | null };
@@ -53,7 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
-  let event;
+  let event: Stripe.Event;
   try {
     event = getStripeClient().webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
@@ -63,7 +99,7 @@ export async function POST(request: NextRequest) {
 
   // Handle expired checkout sessions
   if (event.type === "checkout.session.expired") {
-    const session = event.data.object as any;
+    const session = event.data.object as Stripe.Checkout.Session;
     const tenantId = getMetadataValue(session.metadata, "tenantId");
     if (!tenantId) {
       logger.error({ sessionId: session.id, ...logContext }, "Missing tenantId metadata in checkout.session.expired");
@@ -89,7 +125,7 @@ export async function POST(request: NextRequest) {
     event.type === "customer.subscription.updated" ||
     event.type === "customer.subscription.deleted"
   ) {
-    const subscription = event.data.object as any;
+    const subscription = event.data.object as Stripe.Subscription;
     try {
       await syncTenantFromStripeSubscription(
         subscription,
@@ -103,7 +139,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (event.type === "invoice.payment_failed") {
-    const invoice = event.data.object as any;
+    const invoice = event.data.object as Stripe.Invoice;
     try {
       await markTenantInvoiceOutcome({
         customerId: typeof invoice.customer === "string" ? invoice.customer : undefined,
@@ -118,7 +154,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (event.type === "invoice.payment_succeeded") {
-    const invoice = event.data.object as any;
+    const invoice = event.data.object as Stripe.Invoice;
     try {
       await markTenantInvoiceOutcome({
         customerId: typeof invoice.customer === "string" ? invoice.customer : undefined,
@@ -142,7 +178,7 @@ export async function POST(request: NextRequest) {
 
   // Handle failed payment intents
   if (event.type === "payment_intent.payment_failed") {
-    const paymentIntent = event.data.object as any;
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
     const tenantId = getMetadataValue(paymentIntent.metadata, "tenantId");
     if (!tenantId) {
       logger.error({ paymentIntentId: paymentIntent.id, ...logContext }, "Missing tenantId metadata in payment_intent.payment_failed");
@@ -205,7 +241,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object as any;
+    const session = event.data.object as Stripe.Checkout.Session;
 
     if (session.payment_status !== "paid") {
       return NextResponse.json({ received: true });
@@ -290,9 +326,15 @@ export async function POST(request: NextRequest) {
         if (typeof session.amount_total !== "number") {
           throw new Error(`Missing Stripe amount_total for ref ${gatewayRef}`);
         }
-        const paidAmount = session.amount_total / 100;
-        
-        const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
+        const paidAmount = roundCurrency(session.amount_total / 100);
+        const persistedAmount = roundCurrency(Number(onlinePayment.suma));
+        const selectedDebts = parseSelectedDebtItems(onlinePayment.selectedDebts);
+
+        if (!amountsMatch(paidAmount, persistedAmount)) {
+          throw new Error(
+            `Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${persistedAmount}`
+          );
+        }
 
         if (selectedDebts && selectedDebts.length > 0) {
           const ids = selectedDebts.map((d) => d.impozitId);
@@ -305,14 +347,16 @@ export async function POST(request: NextRequest) {
           });
 
           const expectedTotal = validatedSelection.totalAmount;
-          if (Math.abs(paidAmount - expectedTotal) > 0.01) {
-            throw new Error(`Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedTotal}`);
+          if (!amountsMatch(expectedTotal, persistedAmount)) {
+            throw new Error(
+              `Selected debt total mismatch for ref ${gatewayRef}: persisted=${persistedAmount}, validated=${expectedTotal}`
+            );
           }
-        } else {
-            const expectedAmount = Number(onlinePayment.suma);
-            if (Math.abs(paidAmount - expectedAmount) > 0.01) {
-              throw new Error(`Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedAmount}`);
-            }
+          if (!amountsMatch(paidAmount, expectedTotal)) {
+            throw new Error(
+              `Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedTotal}`
+            );
+          }
         }
 
         const year = new Date().getFullYear();
@@ -352,7 +396,10 @@ export async function POST(request: NextRequest) {
             stripeEventId: event.id,
             gatewayResponse: {
               confirmed: true,
-              transactionId: session.payment_intent as string,
+              transactionId:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : null,
               stripeSessionId: session.id,
             },
           },

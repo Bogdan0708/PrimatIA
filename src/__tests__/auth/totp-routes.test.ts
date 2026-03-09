@@ -11,6 +11,8 @@ const {
   verifyTotpCodeMock,
   generateTotpSecretMock,
   buildOtpAuthUrlMock,
+  encryptStringMock,
+  decryptStringMock,
 } = vi.hoisted(() => ({
   requireAuthenticatedStaffMock: vi.fn(),
   getStaffTotpStatusMock: vi.fn(),
@@ -25,6 +27,8 @@ const {
   verifyTotpCodeMock: vi.fn(),
   generateTotpSecretMock: vi.fn(),
   buildOtpAuthUrlMock: vi.fn(),
+  encryptStringMock: vi.fn(),
+  decryptStringMock: vi.fn(),
 }));
 
 vi.mock("@/app/api/auth/totp/_lib", () => ({
@@ -47,6 +51,11 @@ vi.mock("@/lib/totp", () => ({
   formatTotpSecret: (value: string) => value,
 }));
 
+vi.mock("@/lib/crypto", () => ({
+  encryptString: encryptStringMock,
+  decryptString: decryptStringMock,
+}));
+
 import { POST as setupTotp } from "@/app/api/auth/totp/setup/route";
 import { POST as enableTotp } from "@/app/api/auth/totp/enable/route";
 import { POST as disableTotp } from "@/app/api/auth/totp/disable/route";
@@ -54,6 +63,7 @@ import { POST as disableTotp } from "@/app/api/auth/totp/disable/route";
 describe("staff TOTP routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    decryptStringMock.mockReturnValue("SECRET123");
     requireAuthenticatedStaffMock.mockResolvedValue({
       user: {
         id: "user-1",
@@ -73,14 +83,17 @@ describe("staff TOTP routes", () => {
     buildOtpAuthUrlMock.mockReturnValue("otpauth://totp/test");
     createPendingTotpSetupTokenMock.mockResolvedValue("pending-token");
 
-    const response = await setupTotp();
+    const response = await setupTotp(
+      new NextRequest("http://localhost/api/auth/totp/setup", {
+        method: "POST",
+      })
+    );
     const payload = await response.json();
 
     expect(response.status).toBe(200);
     expect(payload).toEqual(
       expect.objectContaining({
         success: true,
-        secret: "SECRET123",
         otpauthUrl: "otpauth://totp/test",
       })
     );
@@ -99,6 +112,7 @@ describe("staff TOTP routes", () => {
       totpSecret: null,
     });
     verifyTotpCodeMock.mockReturnValue(true);
+    encryptStringMock.mockReturnValue("encrypted-secret");
     prismaMock.tenantUser.update.mockResolvedValue({});
 
     const response = await enableTotp(
@@ -115,7 +129,7 @@ describe("staff TOTP routes", () => {
     expect(response.status).toBe(200);
     expect(prismaMock.tenantUser.update).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      data: { totpSecret: "SECRET123" },
+      data: { totpSecret: "encrypted-secret" },
     });
     expect(auditStaffTotpChangeMock).toHaveBeenCalledWith({
       tenantId: "tenant-1",

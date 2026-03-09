@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { detectAnomalies } from "@/lib/ai/anomaly-detection";
 import { setTenantContext } from "@/lib/db";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+import {
+  checkSharedRateLimit,
+  createRateLimitExceededResponse,
+  withRateLimitHeaders,
+} from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const logContext = getRequestLogContext(request);
@@ -16,6 +21,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const rateLimit = await checkSharedRateLimit({
+      request,
+      bucket: "staff-anomalies",
+      limit: 10,
+      windowMs: 60_000,
+      keySuffix: session.user.id,
+    });
+    if (!rateLimit.allowed) {
+      return createRateLimitExceededResponse(rateLimit);
+    }
+
     const role = session.user.role;
     if (role !== "super_admin" && role !== "primaria_admin") {
       logWarn({
@@ -25,13 +41,19 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         role,
       });
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return withRateLimitHeaders(
+        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        rateLimit
+      );
     }
 
     await setTenantContext(session.user.tenantId);
     const anomalies = await detectAnomalies(session.user.tenantId);
 
-    return NextResponse.json({ success: true, data: anomalies });
+    return withRateLimitHeaders(
+      NextResponse.json({ success: true, data: anomalies }),
+      rateLimit
+    );
   } catch (error) {
     logError(
       {
@@ -40,9 +62,6 @@ export async function GET(request: NextRequest) {
       },
       error
     );
-    return NextResponse.json(
-      { error: "Failed to detect anomalies" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to detect anomalies" }, { status: 500 });
   }
 }

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { calculateComplianceScore } from "@/lib/scoring/compliance-score";
 import { logger, getRequestLogContext } from "@/lib/logger";
+import {
+  checkSharedRateLimit,
+  createRateLimitExceededResponse,
+  withRateLimitHeaders,
+} from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
@@ -18,12 +23,26 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const rateLimit = await checkSharedRateLimit({
+      request,
+      bucket: "staff-compliance-score",
+      limit: 20,
+      windowMs: 60_000,
+      keySuffix: session.user.id,
+    });
+    if (!rateLimit.allowed) {
+      return createRateLimitExceededResponse(rateLimit);
+    }
+
     const result = await calculateComplianceScore(
       session.user.tenantId,
       params.id
     );
 
-    return NextResponse.json({ success: true, data: result });
+    return withRateLimitHeaders(
+      NextResponse.json({ success: true, data: result }),
+      rateLimit
+    );
   } catch (error) {
     logger.error(
       {
@@ -33,12 +52,6 @@ export async function GET(
       },
       "Compliance score calculation failed unexpectedly"
     );
-    return NextResponse.json(
-      { error: "Failed to calculate compliance score" },
-      { status: 500 }
-    );
-  }
-}
     return NextResponse.json(
       { error: "Failed to calculate compliance score" },
       { status: 500 }

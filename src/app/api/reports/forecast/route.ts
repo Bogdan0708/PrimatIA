@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { generateRevenueForecast } from "@/lib/ai/revenue-forecast";
 import { setTenantContext } from "@/lib/db";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+import {
+  checkSharedRateLimit,
+  createRateLimitExceededResponse,
+  withRateLimitHeaders,
+} from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   const logContext = getRequestLogContext(request);
@@ -16,6 +21,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const rateLimit = await checkSharedRateLimit({
+      request,
+      bucket: "staff-revenue-forecast",
+      limit: 10,
+      windowMs: 60_000,
+      keySuffix: session.user.id,
+    });
+    if (!rateLimit.allowed) {
+      return createRateLimitExceededResponse(rateLimit);
+    }
+
     const role = session.user.role;
     if (role !== "super_admin" && role !== "primaria_admin") {
       logWarn({
@@ -25,7 +41,10 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
         role,
       });
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return withRateLimitHeaders(
+        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+        rateLimit
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -33,13 +52,19 @@ export async function GET(request: NextRequest) {
     const year = yearParam ? parseInt(yearParam) : undefined;
 
     if (yearParam && (isNaN(year!) || year! < 2000 || year! > 2100)) {
-      return NextResponse.json({ error: "Invalid year parameter" }, { status: 400 });
+      return withRateLimitHeaders(
+        NextResponse.json({ error: "Invalid year parameter" }, { status: 400 }),
+        rateLimit
+      );
     }
 
     await setTenantContext(session.user.tenantId);
     const forecast = await generateRevenueForecast(session.user.tenantId, year);
 
-    return NextResponse.json({ success: true, data: forecast });
+    return withRateLimitHeaders(
+      NextResponse.json({ success: true, data: forecast }),
+      rateLimit
+    );
   } catch (error) {
     logError(
       {
@@ -48,9 +73,6 @@ export async function GET(request: NextRequest) {
       },
       error
     );
-    return NextResponse.json(
-      { error: "Failed to generate forecast" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate forecast" }, { status: 500 });
   }
 }

@@ -44,6 +44,8 @@ public/sw.js.map
 
 # Test coverage
 coverage/
+playwright-report/
+test-results/
 
 # Vercel
 .vercel

@@ -2,6 +2,7 @@ import { compare } from "bcryptjs";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/lib/constants";
 import { verifyTotpCode } from "@/lib/totp";
+import { decryptString } from "@/lib/crypto";
 
 export interface StaffAuthResult {
   id: string;
@@ -29,10 +30,12 @@ export async function authorizeStaffCredentials(params: {
   email: string;
   password: string;
   totpCode?: string | null;
+  tenantId: string;
 }): Promise<StaffAuthResult | null> {
   const user = await prisma.tenantUser.findFirst({
     where: {
       email: params.email,
+      tenantId: params.tenantId,
       isActive: true,
       deletedAt: null,
     },
@@ -56,8 +59,9 @@ export async function authorizeStaffCredentials(params: {
   }
 
   if (user.totpSecret) {
+    const decryptedTotpSecret = decryptString(user.totpSecret);
     const totpValid = params.totpCode
-      ? verifyTotpCode(user.totpSecret, params.totpCode)
+      ? verifyTotpCode(decryptedTotpSecret, params.totpCode)
       : false;
 
     if (!totpValid) {

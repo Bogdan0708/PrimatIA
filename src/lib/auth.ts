@@ -1,7 +1,9 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { headers } from "next/headers";
 import type { Role } from "@/lib/constants";
 import { authorizeStaffCredentials } from "@/lib/staff-auth";
+import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 
 declare module "next-auth" {
   interface User {
@@ -38,10 +40,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
+        const tenantId = await resolveTenantIdFromHeaders(await headers());
+        if (!tenantId) {
+          return null;
+        }
+
         return authorizeStaffCredentials({
           email: credentials.email as string,
           password: credentials.password as string,
           totpCode: (credentials.totpCode as string | undefined) ?? null,
+          tenantId,
         });
       },
     }),

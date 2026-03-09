@@ -58,7 +58,7 @@ export async function checkSharedRateLimit(params: {
       remaining,
       retryAfterSeconds: Math.max(1, Math.ceil(ttlMs / 1000)),
     };
-  } catch (error) {
+  } catch {
     // Fail open if Redis is unavailable
     return {
       allowed: true,

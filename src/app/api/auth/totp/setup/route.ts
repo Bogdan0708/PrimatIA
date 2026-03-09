@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
-      secret,
       formattedSecret: formatTotpSecret(secret),
       issuer,
       accountName: user.email,

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       ), rateLimit);
     }
 
-    const { firstName, lastName, email, password, tip, cnp, cui, phone, limbaPreferata } = parsed.data;
+    const { firstName, lastName, email, password, cnp, cui, phone, limbaPreferata } = parsed.data;
 
     const tenantId = await resolvePortalTenant(request);
     if (!tenantId) {

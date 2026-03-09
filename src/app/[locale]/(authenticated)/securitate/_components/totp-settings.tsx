@@ -12,7 +12,6 @@ interface TotpSettingsProps {
 }
 
 interface SetupState {
-  secret: string;
   formattedSecret: string;
 }
 
@@ -42,7 +41,6 @@ export function TotpSettings({ enabled }: TotpSettingsProps) {
         return;
       }
       setSetup({
-        secret: data.secret,
         formattedSecret: data.formattedSecret,
       });
     } finally {

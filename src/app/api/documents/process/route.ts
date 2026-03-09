@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { processDocument, type DocumentType } from "@/lib/ocr/document-processor";
 import { logger, getRequestLogContext } from "@/lib/logger";
+import {
+  checkSharedRateLimit,
+  createRateLimitExceededResponse,
+  withRateLimitHeaders,
+} from "@/lib/rate-limit";
 
 const VALID_TYPES: DocumentType[] = [
   'carte_identitate',
@@ -71,6 +76,16 @@ export async function POST(request: NextRequest) {
     tenantId: session.user.tenantId,
     userId: session.user.id,
   });
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "staff-document-process",
+    limit: 15,
+    windowMs: 60_000,
+    keySuffix: session.user.id,
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
 
   try {
     const contentType = request.headers.get("content-type") || "";
@@ -152,12 +167,15 @@ export async function POST(request: NextRequest) {
       aiProvider = llmConfig.provider !== "none" ? llmConfig.provider : null;
     }
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-      usedAi: useAi && aiProvider !== null,
-      aiProvider,
-    });
+    return withRateLimitHeaders(
+      NextResponse.json({
+        success: true,
+        data: result,
+        usedAi: useAi && aiProvider !== null,
+        aiProvider,
+      }),
+      rateLimit
+    );
   } catch (error: unknown) {
     logger.error(
       {
@@ -167,6 +185,6 @@ export async function POST(request: NextRequest) {
       "Document processing failed unexpectedly"
     );
     const message = error instanceof Error ? error.message : "Processing failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return withRateLimitHeaders(NextResponse.json({ error: message }, { status: 500 }), rateLimit);
   }
 }
