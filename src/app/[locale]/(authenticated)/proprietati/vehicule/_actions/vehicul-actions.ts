@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -10,6 +11,52 @@ import { Prisma } from "@prisma/client";
 type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string };
+
+function serializeDate(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function getVehicleAuditSnapshot(vehicle: {
+  id: string;
+  contribuabilId: string;
+  numarInmatriculare: string | null;
+  serieSasiu: string | null;
+  nrCarteIdentitate: string | null;
+  tipVehicul: string;
+  marca: string | null;
+  model: string | null;
+  anFabricatie: number;
+  cilindreeCmc: number | null;
+  putereKw: unknown;
+  masaTotalaKg: number | null;
+  nrLocuri: number | null;
+  normaPoluare: string | null;
+  tipCombustibil: string | null;
+  dataDobandire: Date;
+  dataInstrainare: Date | null;
+  status: string;
+}) {
+  return {
+    id: vehicle.id,
+    contribuabilId: vehicle.contribuabilId,
+    numarInmatriculare: vehicle.numarInmatriculare,
+    serieSasiu: vehicle.serieSasiu,
+    nrCarteIdentitate: vehicle.nrCarteIdentitate,
+    tipVehicul: vehicle.tipVehicul,
+    marca: vehicle.marca,
+    model: vehicle.model,
+    anFabricatie: vehicle.anFabricatie,
+    cilindreeCmc: vehicle.cilindreeCmc,
+    putereKw: vehicle.putereKw == null ? null : Number(vehicle.putereKw),
+    masaTotalaKg: vehicle.masaTotalaKg,
+    nrLocuri: vehicle.nrLocuri,
+    normaPoluare: vehicle.normaPoluare,
+    tipCombustibil: vehicle.tipCombustibil,
+    dataDobandire: serializeDate(vehicle.dataDobandire),
+    dataInstrainare: serializeDate(vehicle.dataInstrainare),
+    status: vehicle.status,
+  };
+}
 
 // ============================================================================
 // LIST / SEARCH
@@ -177,6 +224,15 @@ export async function createVehicul(
       },
     });
 
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "create",
+      entityType: "proprietate_vehicul",
+      entityId: vehicul.id,
+      newValues: getVehicleAuditSnapshot(vehicul),
+    });
+
     revalidatePath("/proprietati/vehicule");
     revalidatePath(`/contribuabili/${contribuabilId}`);
     return { success: true, data: { id: vehicul.id } };
@@ -206,7 +262,7 @@ export async function updateVehicul(
     if (!existing)
       return { success: false, error: "Vehiculul nu a fost găsit" };
 
-    await prisma.proprietateVehicul.update({
+    const updated = await prisma.proprietateVehicul.update({
       where: { id },
       data: {
         numarInmatriculare:
@@ -246,6 +302,16 @@ export async function updateVehicul(
       },
     });
 
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "update",
+      entityType: "proprietate_vehicul",
+      entityId: updated.id,
+      oldValues: getVehicleAuditSnapshot(existing),
+      newValues: getVehicleAuditSnapshot(updated),
+    });
+
     revalidatePath("/proprietati/vehicule");
     revalidatePath(`/proprietati/vehicule/${id}`);
     revalidatePath(`/contribuabili/${existing.contribuabilId}`);
@@ -276,6 +342,15 @@ export async function deleteVehicul(id: string): Promise<ActionResult> {
     await prisma.proprietateVehicul.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "delete",
+      entityType: "proprietate_vehicul",
+      entityId: existing.id,
+      oldValues: getVehicleAuditSnapshot(existing),
     });
 
     revalidatePath("/proprietati/vehicule");

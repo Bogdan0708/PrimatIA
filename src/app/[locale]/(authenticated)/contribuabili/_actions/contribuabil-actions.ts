@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { encryptCnp, hashCnp } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { writeAuditLog } from "@/lib/audit";
 
 // Type for the result of actions
 type ActionResult<T = void> = { success: true; data?: T } | { success: false; error: string };
@@ -265,6 +266,24 @@ export async function createContribuabil(formData: FormData): Promise<ActionResu
         },
       });
 
+      await writeAuditLog({
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        action: "create",
+        entityType: "contribuabil",
+        entityId: contribuabil.id,
+        newValues: {
+          id: contribuabil.id,
+          tip: contribuabil.tip,
+          nume: contribuabil.nume,
+          prenume: contribuabil.prenume,
+          cui: contribuabil.cui,
+          email: contribuabil.email,
+          telefon: contribuabil.telefon,
+          status: contribuabil.status,
+        },
+      });
+
       revalidatePath("/contribuabili");
       return { success: true, data: { id: contribuabil.id } } as ActionResult<{ id: string }>;
     });
@@ -331,6 +350,33 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
         data: updateData,
       });
 
+      await writeAuditLog({
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        action: "update",
+        entityType: "contribuabil",
+        entityId: id,
+        oldValues: {
+          tip: existing.tip,
+          nume: existing.nume,
+          prenume: existing.prenume,
+          cui: existing.cui,
+          email: existing.email,
+          telefon: existing.telefon,
+          status: existing.status,
+        },
+        newValues: {
+          tip,
+          nume,
+          prenume: prenume || null,
+          cui: cui || null,
+          email: email || null,
+          telefon: telefon || null,
+          status: statusVal,
+          limbaPreferata,
+        },
+      });
+
       revalidatePath("/contribuabili");
       revalidatePath(`/contribuabili/${id}`);
       return { success: true } as ActionResult;
@@ -351,9 +397,32 @@ export async function deleteContribuabil(id: string): Promise<ActionResult> {
 
   try {
     return await withTenantScope(session.user.tenantId, async () => {
+      const existing = await prisma.contribuabil.findFirst({
+        where: { id, tenantId: session.user.tenantId, deletedAt: null },
+      });
+      if (!existing) return { success: false, error: "Contribuabilul nu a fost găsit" } as ActionResult;
+
       await prisma.contribuabil.update({
         where: { id },
         data: { deletedAt: new Date() },
+      });
+
+      await writeAuditLog({
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        action: "delete",
+        entityType: "contribuabil",
+        entityId: id,
+        oldValues: {
+          tip: existing.tip,
+          nume: existing.nume,
+          prenume: existing.prenume,
+          cui: existing.cui,
+          email: existing.email,
+          telefon: existing.telefon,
+          status: existing.status,
+        },
+        newValues: { deletedAt: new Date().toISOString() },
       });
 
       revalidatePath("/contribuabili");

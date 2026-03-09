@@ -35,7 +35,8 @@
     "viewAll": "Összes megtekintése",
     "logout": "Kijelentkezés",
     "login": "Bejelentkezés",
-    "language": "Nyelv"
+    "language": "Nyelv",
+    "security": "Biztonság"
   },
   "nav": {
     "dashboard": "Irányítópult",
@@ -75,6 +76,7 @@
     "signOut": "Kijelentkezés",
     "email": "E-mail cím",
     "password": "Jelszó",
+    "authenticatorCode": "Hitelesítő kód",
     "forgotPassword": "Elfelejtette a jelszavát?",
     "invalidCredentials": "Érvénytelen hitelesítő adatok",
     "sessionExpired": "A munkamenet lejárt",
@@ -88,6 +90,28 @@
     "eidasCompliant": "eIDAS kompatibilis",
     "totpCode": "Hitelesítési kód",
     "totpDescription": "Adja meg a 6 jegyű kódot a hitelesítő alkalmazásból"
+  },
+  "security": {
+    "pageTitle": "Fiókbiztonság",
+    "pageDescription": "Kezelje a kétlépcsős hitelesítést a munkatársi hozzáféréshez.",
+    "title": "TOTP hitelesítő",
+    "description": "Használjon Google Authenticator, Microsoft Authenticator, Authy vagy más TOTP alkalmazást második faktorként a bejelentkezéshez.",
+    "enabledLabel": "A kétlépcsős hitelesítés aktív",
+    "enabledDescription": "A munkatársi bejelentkezéshez mostantól szükség van a hitelesítő alkalmazás kódjára is.",
+    "disabledLabel": "A kétlépcsős hitelesítés ki van kapcsolva",
+    "disabledDescription": "Ez a fiók még mindig csak jelszóra támaszkodik, amíg a TOTP nincs bekapcsolva.",
+    "startSetup": "TOTP beállítása",
+    "manualSecret": "Titkos kulcs",
+    "manualSecretHelp": "Adja meg ezt a kulcsot kézzel a hitelesítő alkalmazásban, ha nem tud QR-kódot beolvasni.",
+    "verificationCode": "Ellenőrző kód",
+    "enable": "Bekapcsolás",
+    "disable": "Kikapcsolás",
+    "cancel": "Mégse",
+    "setupFailed": "Nem sikerült elindítani a TOTP beállítását.",
+    "enableFailed": "Nem sikerült bekapcsolni a TOTP-t.",
+    "disableFailed": "Nem sikerült kikapcsolni a TOTP-t.",
+    "enabledSuccess": "A TOTP bekapcsolva.",
+    "disabledSuccess": "A TOTP kikapcsolva."
   },
   "dashboard": {
     "title": "Irányítópult",

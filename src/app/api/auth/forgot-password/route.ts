@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestStaffPasswordReset } from "@/lib/password-reset";
-import { logger } from "@/lib/logger";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   try {
     const body = await request.json();
     const email = typeof body?.email === "string" ? body.email : "";
@@ -11,12 +12,24 @@ export async function POST(request: NextRequest) {
       try {
         await requestStaffPasswordReset(email);
       } catch (error) {
-        logger.error({ err: error }, "Staff forgot-password email send failed");
+        logError(
+          {
+            message: "Staff forgot-password request failed while sending reset email",
+            ...logContext,
+          },
+          error
+        );
       }
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    // Silence error to prevent enumeration, but log for monitoring
+    logWarn({
+      message: "Malformed forgot-password request body",
+      ...logContext,
+      err: error,
+    });
     return NextResponse.json({ success: true });
   }
 }

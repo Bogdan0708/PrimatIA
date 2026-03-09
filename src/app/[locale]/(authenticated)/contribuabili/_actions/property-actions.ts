@@ -2,10 +2,144 @@
 
 import { prisma, withTenantScope } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
 
 type ActionResult = { success: true } | { success: false; error: string };
 const STAFF_ROLES = new Set(["super_admin", "primaria_admin", "operator", "contabil"]);
+
+function serializePropertyDate(value: Date | null): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function getBuildingAuditSnapshot(
+  building: {
+    id: string;
+    contribuabilId: string;
+    destinatie: string;
+    tipConstructie: string;
+    anConstructie: number;
+    suprafataConstruita: unknown;
+    suprafataUtila: unknown;
+    suprafataDesfasurata: unknown;
+    nrEtaje: number;
+    valoareImpozabila: unknown;
+    valoareInventar: unknown;
+    suprafataRezidentiala: unknown;
+    suprafataNerezidentiala: unknown;
+    zona: string;
+    cotaParte: unknown;
+    nrProprietari: number;
+    dataDobandire: Date;
+    dataInstrainare: Date | null;
+    numarCadastral: string | null;
+    numarCarteFunciara: string | null;
+    status: string;
+  }
+) {
+  return {
+    id: building.id,
+    contribuabilId: building.contribuabilId,
+    destinatie: building.destinatie,
+    tipConstructie: building.tipConstructie,
+    anConstructie: building.anConstructie,
+    suprafataConstruita: Number(building.suprafataConstruita),
+    suprafataUtila: building.suprafataUtila == null ? null : Number(building.suprafataUtila),
+    suprafataDesfasurata:
+      building.suprafataDesfasurata == null ? null : Number(building.suprafataDesfasurata),
+    nrEtaje: building.nrEtaje,
+    valoareImpozabila: building.valoareImpozabila == null ? null : Number(building.valoareImpozabila),
+    valoareInventar: building.valoareInventar == null ? null : Number(building.valoareInventar),
+    suprafataRezidentiala:
+      building.suprafataRezidentiala == null ? null : Number(building.suprafataRezidentiala),
+    suprafataNerezidentiala:
+      building.suprafataNerezidentiala == null ? null : Number(building.suprafataNerezidentiala),
+    zona: building.zona,
+    cotaParte: Number(building.cotaParte),
+    nrProprietari: building.nrProprietari,
+    dataDobandire: serializePropertyDate(building.dataDobandire),
+    dataInstrainare: serializePropertyDate(building.dataInstrainare),
+    numarCadastral: building.numarCadastral,
+    numarCarteFunciara: building.numarCarteFunciara,
+    status: building.status,
+  };
+}
+
+function getLandAuditSnapshot(
+  land: {
+    id: string;
+    contribuabilId: string;
+    categorie: string;
+    suprafataMp: unknown;
+    suprafataHa: unknown;
+    zona: string;
+    cotaParte: unknown;
+    dataDobandire: Date;
+    dataInstrainare: Date | null;
+    numarCadastral: string | null;
+    numarCarteFunciara: string | null;
+    status: string;
+  }
+) {
+  return {
+    id: land.id,
+    contribuabilId: land.contribuabilId,
+    categorie: land.categorie,
+    suprafataMp: Number(land.suprafataMp),
+    suprafataHa: land.suprafataHa == null ? null : Number(land.suprafataHa),
+    zona: land.zona,
+    cotaParte: Number(land.cotaParte),
+    dataDobandire: serializePropertyDate(land.dataDobandire),
+    dataInstrainare: serializePropertyDate(land.dataInstrainare),
+    numarCadastral: land.numarCadastral,
+    numarCarteFunciara: land.numarCarteFunciara,
+    status: land.status,
+  };
+}
+
+function getVehicleAuditSnapshot(
+  vehicle: {
+    id: string;
+    contribuabilId: string;
+    tipVehicul: string;
+    marca: string | null;
+    model: string | null;
+    anFabricatie: number;
+    cilindreeCmc: number | null;
+    putereKw: unknown;
+    masaTotalaKg: number | null;
+    nrLocuri: number | null;
+    normaPoluare: string | null;
+    tipCombustibil: string | null;
+    numarInmatriculare: string | null;
+    serieSasiu: string | null;
+    nrCarteIdentitate: string | null;
+    dataDobandire: Date;
+    dataInstrainare: Date | null;
+    status: string;
+  }
+) {
+  return {
+    id: vehicle.id,
+    contribuabilId: vehicle.contribuabilId,
+    tipVehicul: vehicle.tipVehicul,
+    marca: vehicle.marca,
+    model: vehicle.model,
+    anFabricatie: vehicle.anFabricatie,
+    cilindreeCmc: vehicle.cilindreeCmc,
+    putereKw: vehicle.putereKw == null ? null : Number(vehicle.putereKw),
+    masaTotalaKg: vehicle.masaTotalaKg,
+    nrLocuri: vehicle.nrLocuri,
+    normaPoluare: vehicle.normaPoluare,
+    tipCombustibil: vehicle.tipCombustibil,
+    numarInmatriculare: vehicle.numarInmatriculare,
+    serieSasiu: vehicle.serieSasiu,
+    nrCarteIdentitate: vehicle.nrCarteIdentitate,
+    dataDobandire: serializePropertyDate(vehicle.dataDobandire),
+    dataInstrainare: serializePropertyDate(vehicle.dataInstrainare),
+    status: vehicle.status,
+  };
+}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -91,7 +225,7 @@ export async function updateBuilding(
       });
       if (!existing) return { success: false, error: "Clădirea nu a fost găsită" };
 
-      await prisma.proprietateCladire.update({
+      const updated = await prisma.proprietateCladire.update({
         where: { id },
         data: {
           destinatie: data.destinatie,
@@ -114,6 +248,16 @@ export async function updateBuilding(
           numarCarteFunciara: data.numarCarteFunciara ?? null,
           status: data.status,
         },
+      });
+
+      await writeAuditLog({
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        action: "update",
+        entityType: "proprietate_cladire",
+        entityId: updated.id,
+        oldValues: getBuildingAuditSnapshot(existing),
+        newValues: getBuildingAuditSnapshot(updated),
       });
 
       revalidatePath(`/contribuabili/${existing.contribuabilId}`);
@@ -173,7 +317,7 @@ export async function updateLand(
       });
       if (!existing) return { success: false, error: "Terenul nu a fost găsit" };
 
-      await prisma.proprietateTeren.update({
+      const updated = await prisma.proprietateTeren.update({
         where: { id },
         data: {
           categorie: data.categorie,
@@ -187,6 +331,16 @@ export async function updateLand(
           numarCarteFunciara: data.numarCarteFunciara ?? null,
           status: data.status,
         },
+      });
+
+      await writeAuditLog({
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        action: "update",
+        entityType: "proprietate_teren",
+        entityId: updated.id,
+        oldValues: getLandAuditSnapshot(existing),
+        newValues: getLandAuditSnapshot(updated),
       });
 
       revalidatePath(`/contribuabili/${existing.contribuabilId}`);
@@ -253,7 +407,7 @@ export async function updateVehicle(
       });
       if (!existing) return { success: false, error: "Vehiculul nu a fost găsit" };
 
-      await prisma.proprietateVehicul.update({
+      const updated = await prisma.proprietateVehicul.update({
         where: { id },
         data: {
           tipVehicul: data.tipVehicul,
@@ -273,6 +427,16 @@ export async function updateVehicle(
           dataInstrainare,
           status: data.status,
         },
+      });
+
+      await writeAuditLog({
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        action: "update",
+        entityType: "proprietate_vehicul",
+        entityId: updated.id,
+        oldValues: getVehicleAuditSnapshot(existing),
+        newValues: getVehicleAuditSnapshot(updated),
       });
 
       revalidatePath(`/contribuabili/${existing.contribuabilId}`);

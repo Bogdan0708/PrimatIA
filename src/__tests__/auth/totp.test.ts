@@ -1,66 +1,69 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
-
-// Mock otplib before importing totp module
-vi.mock("otplib", () => ({
-  generateSecret: () => "JBSWY3DPEHPK3PXP",
-  verifySync: vi.fn(),
-}));
-
-import { generateTOTPSecret, generateTOTPKeyURI, verifyTOTPToken } from "@/lib/totp";
-import { verifySync } from "otplib";
+import { describe, expect, it } from "vitest";
+import {
+  buildOtpAuthUrl,
+  formatTotpSecret,
+  generateTotpCode,
+  generateTotpSecret,
+  verifyTotpCode,
+} from "@/lib/totp";
 
 describe("TOTP helpers", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  describe("generateTotpSecret", () => {
+    it("generates a base32 secret and formats it for manual entry", () => {
+      const secret = generateTotpSecret();
+      expect(secret).toMatch(/^[A-Z2-7]+$/);
+      expect(formatTotpSecret(secret)).toContain(" ");
+    });
 
-  describe("generateTOTPSecret", () => {
     it("returns a non-empty string", () => {
-      const secret = generateTOTPSecret();
+      const secret = generateTotpSecret();
       expect(secret).toBeTruthy();
       expect(typeof secret).toBe("string");
     });
   });
 
-  describe("generateTOTPKeyURI", () => {
-    it("returns a valid otpauth URI", () => {
-      const uri = generateTOTPKeyURI("admin@primaria.ro", "JBSWY3DPEHPK3PXP");
-      expect(uri).toMatch(/^otpauth:\/\/totp\//);
-      expect(uri).toContain("secret=JBSWY3DPEHPK3PXP");
-      expect(uri).toContain("issuer=Primar");
-      expect(uri).toContain("algorithm=SHA1");
-      expect(uri).toContain("digits=6");
-      expect(uri).toContain("period=30");
-    });
+  describe("generateTotpCode and verifyTotpCode", () => {
+    it("generates and verifies time-based codes", () => {
+      const secret = "JBSWY3DPEHPK3PXP";
+      const timestampMs = Date.UTC(2026, 2, 9, 12, 0, 0);
+      const code = generateTotpCode(secret, timestampMs);
 
-    it("encodes email in the label", () => {
-      const uri = generateTOTPKeyURI("user@test.ro", "SECRET123");
-      expect(uri).toContain(encodeURIComponent("PrimarIA:user@test.ro"));
-    });
-  });
-
-  describe("verifyTOTPToken", () => {
-    it("returns true for valid token", () => {
-      vi.mocked(verifySync).mockReturnValue({ valid: true, delta: 0 } as never);
-      expect(verifyTOTPToken("SECRET", "123456")).toBe(true);
-      expect(verifySync).toHaveBeenCalledWith({
-        token: "123456",
-        secret: "SECRET",
-        period: 30,
-        digits: 6,
-      });
+      expect(code).toMatch(/^\d{6}$/);
+      expect(verifyTotpCode(secret, code, { timestampMs })).toBe(true);
+      expect(verifyTotpCode(secret, "000000", { timestampMs, window: 0 })).toBe(false);
     });
 
     it("returns false for invalid token", () => {
-      vi.mocked(verifySync).mockReturnValue({ valid: false, delta: 0 } as never);
-      expect(verifyTOTPToken("SECRET", "000000")).toBe(false);
+      expect(verifyTotpCode("JBSWY3DPEHPK3PXP", "000000")).toBe(false);
     });
 
-    it("returns false when otplib throws", () => {
-      vi.mocked(verifySync).mockImplementation(() => {
-        throw new Error("Invalid input");
+    it("returns false for invalid input format", () => {
+      expect(verifyTotpCode("JBSWY3DPEHPK3PXP", "abc")).toBe(false);
+    });
+  });
+
+  describe("buildOtpAuthUrl", () => {
+    it("returns a valid otpauth URI", () => {
+      const url = buildOtpAuthUrl({
+        secret: "JBSWY3DPEHPK3PXP",
+        issuer: "PrimarIA",
+        accountName: "admin@primaria.ro",
       });
-      expect(verifyTOTPToken("BAD", "000000")).toBe(false);
+      expect(url).toMatch(/^otpauth:\/\/totp\//);
+      expect(url).toContain("secret=JBSWY3DPEHPK3PXP");
+      expect(url).toContain("issuer=PrimarIA");
+      expect(url).toContain("algorithm=SHA1");
+      expect(url).toContain("digits=6");
+      expect(url).toContain("period=30");
+    });
+
+    it("encodes email in the label", () => {
+      const url = buildOtpAuthUrl({
+        secret: "SECRET123",
+        issuer: "PrimarIA",
+        accountName: "user@test.ro",
+      });
+      expect(url).toContain(encodeURIComponent("PrimarIA:user@test.ro"));
     });
   });
 });

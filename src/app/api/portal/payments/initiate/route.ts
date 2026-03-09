@@ -2,12 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { getPaymentGateway } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "portal-payments-initiate",
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
+
   const citizen = await getCitizenFromRequest(request);
   if (!citizen) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    logWarn({
+      message: "Portal payment initiation rejected because citizen was not authenticated",
+      ...logContext,
+    });
+    return withRateLimitHeaders(NextResponse.json({ error: "Not authenticated" }, { status: 401 }), rateLimit);
   }
 
   try {
@@ -15,10 +31,10 @@ export async function POST(request: NextRequest) {
     const { contribuabilId, items } = body;
 
     if (!contribuabilId || !items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { error: "contribuabilId and items are required" },
         { status: 400 }
-      );
+      ), rateLimit);
     }
 
     await setTenantContext(citizen.tenantId);
@@ -33,7 +49,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!link) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      logWarn({
+        message: "Portal payment initiation rejected because citizen lacks contribuabil access",
+        ...logContext,
+        tenantId: citizen.tenantId,
+        citizenUserId: citizen.sub,
+        contribuabilId,
+      });
+      return withRateLimitHeaders(NextResponse.json({ error: "Access denied" }, { status: 403 }), rateLimit);
     }
 
     const gateway = getPaymentGateway();
@@ -64,16 +87,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    return withRateLimitHeaders(NextResponse.json({
       success: true,
       redirectUrl: result.redirectUrl,
       gatewayRef: result.gatewayRef,
-    });
+    }), rateLimit);
   } catch (error) {
-    logger.error({ err: error }, "Payment initiation error:");
-    return NextResponse.json(
+    logError(
+      {
+        message: "Portal payment initiation failed unexpectedly",
+        ...logContext,
+        tenantId: citizen?.tenantId,
+        citizenUserId: citizen?.sub,
+      },
+      error
+    );
+    return withRateLimitHeaders(NextResponse.json(
       { error: "Failed to initiate payment" },
       { status: 500 }
-    );
+    ), rateLimit);
   }
 }

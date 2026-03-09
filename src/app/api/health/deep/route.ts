@@ -1,122 +1,116 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getLLMConfig } from "@/lib/ai/config";
+import { ensureRedisConnection } from "@/lib/redis";
+import { logError, getRequestLogContext } from "@/lib/logger";
 
-interface ComponentHealth {
-  status: "ok" | "error";
-  latencyMs: number;
-  error?: string;
-}
-
-async function checkDatabase(): Promise<ComponentHealth> {
-  const start = performance.now();
+async function checkDatabase() {
+  const start = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return { status: "ok", latencyMs: Math.round(performance.now() - start) };
-  } catch (err) {
+    return { status: "ok", latencyMs: Date.now() - start };
+  } catch (error) {
     return {
       status: "error",
-      latencyMs: Math.round(performance.now() - start),
-      error: err instanceof Error ? err.message : "Unknown error",
+      latencyMs: Date.now() - start,
+      message: error instanceof Error ? error.message : "Database unreachable",
     };
   }
 }
 
-async function checkRedis(): Promise<ComponentHealth> {
-  const start = performance.now();
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) {
-    return { status: "ok", latencyMs: 0, error: "Not configured (optional)" };
+async function checkRedis() {
+  const start = Date.now();
+  try {
+    const redis = await ensureRedisConnection();
+    const pong = await redis.ping();
+    return {
+      status: pong === "PONG" ? "ok" : "error",
+      latencyMs: Date.now() - start,
+      message: pong === "PONG" ? undefined : `Unexpected ping response: ${pong}`,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      latencyMs: Date.now() - start,
+      message: error instanceof Error ? error.message : "Redis unavailable",
+    };
+  }
+}
+
+async function checkAiProvider() {
+  const config = getLLMConfig();
+  if (config.provider === "none") {
+    return { status: "skipped", provider: "none", message: "No AI provider configured" };
   }
 
+  if (config.provider !== "gateway" || !config.baseUrl) {
+    return {
+      status: "configured",
+      provider: config.provider,
+      model: config.model,
+    };
+  }
+
+  const start = Date.now();
   try {
-    const IORedis = (await import("ioredis")).default;
-    const client = new IORedis(redisUrl, {
-      connectTimeout: 3000,
-      maxRetriesPerRequest: 0,
-      lazyConnect: true,
+    const response = await fetch(new URL("/health", config.baseUrl), {
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      cache: "no-store",
     });
-    await client.connect();
-    await client.ping();
-    const latency = Math.round(performance.now() - start);
-    await client.quit();
-    return { status: "ok", latencyMs: latency };
-  } catch (err) {
+
+    return {
+      status: response.ok ? "ok" : "error",
+      provider: config.provider,
+      model: config.model,
+      latencyMs: Date.now() - start,
+      httpStatus: response.status,
+    };
+  } catch (error) {
     return {
       status: "error",
-      latencyMs: Math.round(performance.now() - start),
-      error: err instanceof Error ? err.message : "Unknown error",
+      provider: config.provider,
+      model: config.model,
+      latencyMs: Date.now() - start,
+      message: error instanceof Error ? error.message : "AI gateway unavailable",
     };
   }
 }
 
-async function checkAIGateway(): Promise<ComponentHealth> {
-  const start = performance.now();
-  try {
-    const { getLLMConfig } = await import("@/lib/ai/config");
-    const config = getLLMConfig();
-
-    if (config.provider === "none") {
-      return { status: "ok", latencyMs: 0, error: "No AI provider configured (optional)" };
-    }
-
-    if (config.provider === "gateway" && config.baseUrl) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-      try {
-        const resp = await fetch(`${config.baseUrl}/health`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        return {
-          status: resp.ok ? "ok" : "error",
-          latencyMs: Math.round(performance.now() - start),
-          ...(resp.ok ? {} : { error: `HTTP ${resp.status}` }),
-        };
-      } catch {
-        clearTimeout(timeout);
-        return {
-          status: "error",
-          latencyMs: Math.round(performance.now() - start),
-          error: "Gateway unreachable or timeout",
-        };
-      }
-    }
-
-    // Non-gateway providers (claude, openai, lm_studio) — assume ok if configured
-    return { status: "ok", latencyMs: 0 };
-  } catch (err) {
-    return {
-      status: "error",
-      latencyMs: Math.round(performance.now() - start),
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
-  }
-}
-
-/**
- * GET /api/health/deep
- *
- * Deep health check: DB + Redis + AI Gateway.
- * Returns 503 only if DB is down (critical). Redis/AI are non-critical.
- * NOT used for Cloud Run liveness/readiness probes (too slow).
- */
-export async function GET() {
-  const [db, redis, ai] = await Promise.all([
+export async function GET(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
+  const [database, redis, ai] = await Promise.all([
     checkDatabase(),
     checkRedis(),
-    checkAIGateway(),
+    checkAiProvider(),
   ]);
 
-  const overall = db.status === "ok" ? "ok" : "degraded";
-  const httpStatus = db.status === "ok" ? 200 : 503;
+  const status =
+    database.status === "ok" && redis.status === "ok" && ai.status !== "error"
+      ? "ok"
+      : "error";
+
+  if (status === "error") {
+    logError(
+      {
+        message: "Deep health check reported degraded dependencies",
+        ...logContext,
+        databaseStatus: database.status,
+        redisStatus: redis.status,
+        aiStatus: ai.status,
+      }
+    );
+  }
 
   return NextResponse.json(
     {
-      status: overall,
+      status,
       timestamp: new Date().toISOString(),
-      revision: process.env.K_REVISION || "local",
-      components: { db, redis, ai },
+      database,
+      redis,
+      ai,
     },
-    { status: httpStatus }
+    { status: status === "ok" ? 200 : 503 }
   );
 }

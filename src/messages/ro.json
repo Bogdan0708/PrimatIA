@@ -35,7 +35,8 @@
     "viewAll": "Vezi toate",
     "logout": "Deconectare",
     "login": "Autentificare",
-    "language": "Limbă"
+    "language": "Limbă",
+    "security": "Securitate"
   },
   "nav": {
     "dashboard": "Panou principal",
@@ -75,6 +76,7 @@
     "signOut": "Deconectare",
     "email": "Adresă de email",
     "password": "Parolă",
+    "authenticatorCode": "Cod din aplicația de autentificare",
     "forgotPassword": "Ai uitat parola?",
     "invalidCredentials": "Credențiale invalide",
     "sessionExpired": "Sesiunea a expirat",
@@ -88,6 +90,28 @@
     "eidasCompliant": "Conform eIDAS",
     "totpCode": "Cod de autentificare",
     "totpDescription": "Introduceți codul de 6 cifre din aplicația de autentificare"
+  },
+  "security": {
+    "pageTitle": "Securitate cont",
+    "pageDescription": "Administrează autentificarea cu doi factori pentru contul de personal.",
+    "title": "Autentificator TOTP",
+    "description": "Folosește o aplicație de tip Google Authenticator, Microsoft Authenticator sau Authy pentru un al doilea factor la autentificare.",
+    "enabledLabel": "Autentificarea cu doi factori este activă",
+    "enabledDescription": "La autentificare va fi necesar și codul din aplicația de autentificare.",
+    "disabledLabel": "Autentificarea cu doi factori este dezactivată",
+    "disabledDescription": "Contul se bazează doar pe parolă până când activezi TOTP.",
+    "startSetup": "Configurează TOTP",
+    "manualSecret": "Cheie secretă",
+    "manualSecretHelp": "Introdu manual această cheie în aplicația de autentificare dacă nu poți scana un cod QR.",
+    "verificationCode": "Cod de verificare",
+    "enable": "Activează",
+    "disable": "Dezactivează",
+    "cancel": "Anulează",
+    "setupFailed": "Nu am putut începe configurarea TOTP.",
+    "enableFailed": "Nu am putut activa TOTP.",
+    "disableFailed": "Nu am putut dezactiva TOTP.",
+    "enabledSuccess": "TOTP a fost activat.",
+    "disabledSuccess": "TOTP a fost dezactivat."
   },
   "dashboard": {
     "title": "Panou principal",

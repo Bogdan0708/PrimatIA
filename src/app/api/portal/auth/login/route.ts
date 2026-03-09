@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
-import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
 import { SignJWT } from "jose";
-import { prisma } from "@/lib/db";
-import { checkDistributedRateLimit } from "@/lib/rate-limit";
-import { logger } from "@/lib/logger";
+import { resolvePortalTenant } from "@/lib/portal-auth";
+import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 /** Lazily resolved at request time so the module can be imported during build. */
 function getJwtSecret(): Uint8Array {
@@ -21,52 +20,53 @@ function getJwtSecret(): Uint8Array {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    // Distributed rate limiting (Redis) — second layer after in-memory middleware
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const rl = await checkDistributedRateLimit(`rl:login:${ip}`, 10, 60);
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: "Too many login attempts. Try again later." },
-        { status: 429, headers: { "Retry-After": "60" } }
-      );
-    }
+  const logContext = getRequestLogContext(request);
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "portal-auth-login",
+    limit: 10,
+    windowMs: 60_000,
+  });
 
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
+
+  try {
     const body = await request.json();
     const { email, password } = body;
 
     if (!email || !password) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
-      );
+      ), rateLimit);
     }
 
-    // Tenant identity must be derived server-side from trusted context.
-    // Fall back to the single active tenant for single-tenant deployments and local dev.
-    let tenantId = await resolveTenantIdFromHeaders(request.headers);
+    const tenantId = await resolvePortalTenant(request);
     if (!tenantId) {
-      const tenant = await prisma.tenant.findFirst({
-        where: { status: { in: ["active", "trial"] }, deletedAt: null },
-        select: { id: true },
-        orderBy: { createdAt: "asc" },
+      logWarn({
+        message: "Portal login rejected because tenant resolution failed",
+        ...logContext,
       });
-      if (!tenant) {
-        return NextResponse.json(
-          { error: "Tenant could not be resolved for this domain." },
-          { status: 400 }
-        );
-      }
-      tenantId = tenant.id;
+      return withRateLimitHeaders(NextResponse.json(
+        { error: "Tenant identification required" },
+        { status: 400 }
+      ), rateLimit);
     }
 
     const citizen = await authenticateCitizen(email, password, tenantId);
 
     if (!citizen) {
-      return NextResponse.json(
+      logWarn({
+        message: "Portal login rejected because credentials were invalid",
+        ...logContext,
+        tenantId,
+      });
+      return withRateLimitHeaders(NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
-      );
+      ), rateLimit);
     }
 
     // Create JWT token
@@ -103,12 +103,18 @@ export async function POST(request: NextRequest) {
       maxAge: 4 * 60 * 60, // 4 hours
     });
 
-    return response;
+    return withRateLimitHeaders(response, rateLimit);
   } catch (error) {
-    logger.error({ err: error }, "Citizen login error:");
-    return NextResponse.json(
+    logError(
+      {
+        message: "Portal login failed unexpectedly",
+        ...logContext,
+      },
+      error
+    );
+    return withRateLimitHeaders(NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
-    );
+    ), rateLimit);
   }
 }

@@ -4,7 +4,8 @@
  * and optional LM Studio vision/text extraction.
  */
 
-import { getLLMConfig } from "../ai/config";
+import { getGatewayHeaders, getLLMConfig } from "../ai/config";
+import { redactSensitiveText } from "../ai/pii-scrubber";
 
 // ============================================================================
 // Types
@@ -186,10 +187,7 @@ function getLLMEndpoint(): { url: string; headers: Record<string, string>; model
   if (config.provider === "gateway") {
     return {
       url: `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
+      headers: getGatewayHeaders(config),
       model: config.model,
       useJsonMode: false,
       provider: config.gatewayProvider || 'gemini',
@@ -246,6 +244,7 @@ async function aiExtractText(
   const fieldSpec = fields.map(f => `  "${f.key}": string | null  // ${f.description}`).join('\n');
 
   const systemPrompt = `You are a Romanian document data extraction system. Extract structured data from OCR text of a ${typeLabels[documentType]}. Return ONLY valid JSON matching this schema:\n{\n${fieldSpec}\n}\nUse null for fields you cannot find. Do NOT guess — only extract what is clearly present in the text.`;
+  const sanitizedText = redactSensitiveText(text);
 
   try {
     let response: Response;
@@ -259,7 +258,7 @@ async function aiExtractText(
           model: llm.model,
           max_tokens: 500,
           system: systemPrompt,
-          messages: [{ role: 'user', content: text }],
+          messages: [{ role: 'user', content: sanitizedText }],
         }),
         signal: AbortSignal.timeout(15000),
       });
@@ -274,7 +273,7 @@ async function aiExtractText(
         model: llm.model,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
+          { role: 'user', content: sanitizedText },
         ],
         temperature: 0.1,
         max_tokens: 500,

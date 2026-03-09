@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -10,6 +11,105 @@ import { Prisma } from "@prisma/client";
 type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string };
+
+function serializeDate(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function getAddressAuditSnapshot(
+  address:
+    | {
+        strada?: string | null;
+        numar?: string | null;
+        bloc?: string | null;
+        scara?: string | null;
+        etaj?: string | null;
+        apartament?: string | null;
+        localitate?: string | null;
+        judet?: string | null;
+        codPostal?: string | null;
+        zonaFiscala?: string | null;
+      }
+    | null
+) {
+  if (!address) return null;
+
+  return {
+    strada: address.strada ?? null,
+    numar: address.numar ?? null,
+    bloc: address.bloc ?? null,
+    scara: address.scara ?? null,
+    etaj: address.etaj ?? null,
+    apartament: address.apartament ?? null,
+    localitate: address.localitate ?? null,
+    judet: address.judet ?? null,
+    codPostal: address.codPostal ?? null,
+    zonaFiscala: address.zonaFiscala ?? null,
+  };
+}
+
+function getBuildingAuditSnapshot(
+  building: {
+    id: string;
+    contribuabilId: string;
+    adresaId: string;
+    zona: string;
+    numarCadastral: string | null;
+    numarCarteFunciara: string | null;
+    destinatie: string;
+    tipConstructie: string;
+    anConstructie: number;
+    suprafataConstruita: unknown;
+    suprafataUtila: unknown;
+    suprafataDesfasurata: unknown;
+    nrEtaje: number;
+    valoareImpozabila: unknown;
+    valoareInventar: unknown;
+    suprafataRezidentiala: unknown;
+    suprafataNerezidentiala: unknown;
+    cotaParte: unknown;
+    nrProprietari: number;
+    tipActProprietate: string | null;
+    nrActProprietate: string | null;
+    dataActProprietate: Date | null;
+    dataDobandire: Date;
+    dataInstrainare: Date | null;
+    status?: string | null;
+  },
+  address?: Parameters<typeof getAddressAuditSnapshot>[0]
+) {
+  return {
+    id: building.id,
+    contribuabilId: building.contribuabilId,
+    adresaId: building.adresaId,
+    zona: building.zona,
+    numarCadastral: building.numarCadastral,
+    numarCarteFunciara: building.numarCarteFunciara,
+    destinatie: building.destinatie,
+    tipConstructie: building.tipConstructie,
+    anConstructie: building.anConstructie,
+    suprafataConstruita: Number(building.suprafataConstruita),
+    suprafataUtila: building.suprafataUtila == null ? null : Number(building.suprafataUtila),
+    suprafataDesfasurata:
+      building.suprafataDesfasurata == null ? null : Number(building.suprafataDesfasurata),
+    nrEtaje: building.nrEtaje,
+    valoareImpozabila: building.valoareImpozabila == null ? null : Number(building.valoareImpozabila),
+    valoareInventar: building.valoareInventar == null ? null : Number(building.valoareInventar),
+    suprafataRezidentiala:
+      building.suprafataRezidentiala == null ? null : Number(building.suprafataRezidentiala),
+    suprafataNerezidentiala:
+      building.suprafataNerezidentiala == null ? null : Number(building.suprafataNerezidentiala),
+    cotaParte: Number(building.cotaParte),
+    nrProprietari: building.nrProprietari,
+    tipActProprietate: building.tipActProprietate ?? null,
+    nrActProprietate: building.nrActProprietate ?? null,
+    dataActProprietate: serializeDate(building.dataActProprietate),
+    dataDobandire: serializeDate(building.dataDobandire),
+    dataInstrainare: serializeDate(building.dataInstrainare),
+    status: building.status ?? null,
+    adresa: getAddressAuditSnapshot(address ?? null),
+  };
+}
 
 // ============================================================================
 // LIST / SEARCH
@@ -210,6 +310,16 @@ export async function createCladire(
           ? new Date(formData.get("dataInstrainare") as string)
           : undefined,
       },
+      include: { adresa: true },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "create",
+      entityType: "proprietate_cladire",
+      entityId: cladire.id,
+      newValues: getBuildingAuditSnapshot(cladire, cladire.adresa),
     });
 
     revalidatePath("/proprietati/cladiri");
@@ -237,6 +347,7 @@ export async function updateCladire(
   try {
     const existing = await prisma.proprietateCladire.findFirst({
       where: { id, tenantId: session.user.tenantId, deletedAt: null },
+      include: { adresa: true },
     });
     if (!existing)
       return { success: false, error: "Clădirea nu a fost găsită" };
@@ -260,7 +371,7 @@ export async function updateCladire(
       });
     }
 
-    await prisma.proprietateCladire.update({
+    const updated = await prisma.proprietateCladire.update({
       where: { id },
       data: {
         zona: (formData.get("zona") as string) || existing.zona,
@@ -319,6 +430,17 @@ export async function updateCladire(
           : null,
         status: (formData.get("status") as string) || existing.status,
       },
+      include: { adresa: true },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "update",
+      entityType: "proprietate_cladire",
+      entityId: updated.id,
+      oldValues: getBuildingAuditSnapshot(existing, existing.adresa),
+      newValues: getBuildingAuditSnapshot(updated, updated.adresa),
     });
 
     revalidatePath("/proprietati/cladiri");
@@ -344,6 +466,7 @@ export async function deleteCladire(id: string): Promise<ActionResult> {
   try {
     const existing = await prisma.proprietateCladire.findFirst({
       where: { id, tenantId: session.user.tenantId, deletedAt: null },
+      include: { adresa: true },
     });
     if (!existing)
       return { success: false, error: "Clădirea nu a fost găsită" };
@@ -351,6 +474,15 @@ export async function deleteCladire(id: string): Promise<ActionResult> {
     await prisma.proprietateCladire.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "delete",
+      entityType: "proprietate_cladire",
+      entityId: existing.id,
+      oldValues: getBuildingAuditSnapshot(existing, existing.adresa),
     });
 
     revalidatePath("/proprietati/cladiri");

@@ -22,8 +22,7 @@ export default function LoginPage() {
   const roeidEnabled = process.env.NEXT_PUBLIC_ROEID_ENABLED === "true";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [totp, setTotp] = useState("");
-  const [totpRequired, setTotpRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -40,18 +39,13 @@ export default function LoginPage() {
     const result = await signIn("credentials", {
       email,
       password,
-      totp,
+      totpCode,
       redirect: false,
     });
 
     setLoading(false);
 
     if (result?.error) {
-      if (result.error.includes("totp_required")) {
-        setTotpRequired(true);
-        setError("");
-        return;
-      }
       setError(t("invalidCredentials"));
     } else {
       router.push(`${localePrefix}/dashboard`);
@@ -100,27 +94,18 @@ export default function LoginPage() {
                 autoComplete="current-password"
               />
             </div>
-            {totpRequired && (
-              <div className="space-y-2">
-                <Label htmlFor="totp">{t("totpCode")}</Label>
-                <Input
-                  id="totp"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={totp}
-                  onChange={(e) => setTotp(e.target.value.replace(/\D/g, ""))}
-                  required
-                  autoComplete="one-time-code"
-                  autoFocus
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("totpDescription")}
-                </p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="totpCode">{t("authenticatorCode")}</Label>
+              <Input
+                id="totpCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                placeholder="123456"
+              />
+            </div>
             {error && (
               <div className="text-sm text-destructive">{error}</div>
             )}

@@ -3,7 +3,7 @@ import { getStripeClient } from "@/lib/stripe";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
-import { getOutstanding, getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
+import { getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
 import {
   fetchSubscriptionFromInvoice,
   markTenantInvoiceOutcome,
@@ -14,7 +14,8 @@ import {
   canTransitionOnlinePaymentStatus,
   isOnlinePaymentStatus,
 } from "@/lib/payments/online-payment-state-machine";
-import { createRequestLogger } from "@/lib/logger";
+import { validateSelectedDebtsForContribuabil } from "@/lib/payments/selected-debts";
+import { logger, getRequestLogContext } from "@/lib/logger";
 
 function getInvoiceSubscriptionId(invoice: unknown): string | undefined {
   const obj = invoice as { subscription?: string | null };
@@ -38,10 +39,7 @@ type CheckoutSessionProcessResult =
   | "not_found";
 
 export async function POST(request: NextRequest) {
-  const log = createRequestLogger(
-    "POST /api/payments/webhook",
-    request.headers.get("x-request-id") || undefined
-  );
+  const logContext = getRequestLogContext(request);
   const body = await request.text();
   const sig = request.headers.get("stripe-signature");
 
@@ -51,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    log.error("STRIPE_WEBHOOK_SECRET not configured");
+    logger.error({ ...logContext }, "Stripe webhook secret is not configured");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
@@ -59,16 +57,16 @@ export async function POST(request: NextRequest) {
   try {
     event = getStripeClient().webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
-    log.error({ err }, "Webhook signature verification failed");
+    logger.error({ err, ...logContext }, "Stripe webhook signature verification failed");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   // Handle expired checkout sessions
   if (event.type === "checkout.session.expired") {
-    const session = event.data.object;
+    const session = event.data.object as any;
     const tenantId = getMetadataValue(session.metadata, "tenantId");
     if (!tenantId) {
-      log.error({ sessionId: session.id }, "Missing tenantId metadata in checkout.session.expired");
+      logger.error({ sessionId: session.id, ...logContext }, "Missing tenantId metadata in checkout.session.expired");
       return NextResponse.json({ received: true });
     }
     try {
@@ -81,7 +79,7 @@ export async function POST(request: NextRequest) {
         data: { status: "expired" },
       });
     } catch (error) {
-      log.error({ err: error }, "Error handling expired session");
+      logger.error({ err: error, ...logContext }, "Stripe webhook failed while expiring a checkout session");
     }
     return NextResponse.json({ received: true });
   }
@@ -91,21 +89,21 @@ export async function POST(request: NextRequest) {
     event.type === "customer.subscription.updated" ||
     event.type === "customer.subscription.deleted"
   ) {
-    const subscription = event.data.object;
+    const subscription = event.data.object as any;
     try {
       await syncTenantFromStripeSubscription(
         subscription,
         typeof subscription.customer === "string" ? subscription.customer : undefined
       );
     } catch (error) {
-      log.error({ err: error }, "Error syncing tenant subscription status");
+      logger.error({ err: error, ...logContext }, "Stripe webhook failed while syncing tenant subscription");
       return NextResponse.json({ error: "Subscription sync failed" }, { status: 500 });
     }
     return NextResponse.json({ received: true });
   }
 
   if (event.type === "invoice.payment_failed") {
-    const invoice = event.data.object;
+    const invoice = event.data.object as any;
     try {
       await markTenantInvoiceOutcome({
         customerId: typeof invoice.customer === "string" ? invoice.customer : undefined,
@@ -114,13 +112,13 @@ export async function POST(request: NextRequest) {
         paid: false,
       });
     } catch (error) {
-      log.error({ err: error }, "Error handling tenant invoice failure");
+      logger.error({ err: error, ...logContext }, "Stripe webhook failed while handling invoice.payment_failed");
     }
     return NextResponse.json({ received: true });
   }
 
   if (event.type === "invoice.payment_succeeded") {
-    const invoice = event.data.object;
+    const invoice = event.data.object as any;
     try {
       await markTenantInvoiceOutcome({
         customerId: typeof invoice.customer === "string" ? invoice.customer : undefined,
@@ -137,17 +135,17 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (error) {
-      log.error({ err: error }, "Error handling tenant invoice success");
+      logger.error({ err: error, ...logContext }, "Stripe webhook failed while handling invoice.payment_succeeded");
     }
     return NextResponse.json({ received: true });
   }
 
   // Handle failed payment intents
   if (event.type === "payment_intent.payment_failed") {
-    const paymentIntent = event.data.object;
+    const paymentIntent = event.data.object as any;
     const tenantId = getMetadataValue(paymentIntent.metadata, "tenantId");
     if (!tenantId) {
-      log.error({ paymentIntentId: paymentIntent.id }, "Missing tenantId metadata in payment_intent.payment_failed");
+      logger.error({ paymentIntentId: paymentIntent.id, ...logContext }, "Missing tenantId metadata in payment_intent.payment_failed");
       return NextResponse.json({ received: true });
     }
     try {
@@ -155,7 +153,6 @@ export async function POST(request: NextRequest) {
         const tx = prisma; // prisma proxy routes to the withTenantScope transaction
         const failureEligibleStatuses = allowedFromStatusesFor("failed");
 
-        // Direct JSONB lookup avoids O(N) in-memory scans and is compatible with an expression index.
         const [paymentByIntentId] = await tx.$queryRaw<Array<{ id: string }>>(
           Prisma.sql`SELECT id
                      FROM "online_payments"
@@ -178,7 +175,6 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        // Also try matching via Stripe session lookup.
         if (paymentIntent.latest_charge) {
           const [paymentByGatewayRef] = await tx.$queryRaw<Array<{ id: string }>>(
             Prisma.sql`SELECT id
@@ -203,24 +199,23 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (error) {
-      log.error({ err: error }, "Error handling failed payment intent");
+      logger.error({ err: error, ...logContext }, "Stripe webhook failed while handling payment_intent.payment_failed");
     }
     return NextResponse.json({ received: true });
   }
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
+    const session = event.data.object as any;
 
     if (session.payment_status !== "paid") {
       return NextResponse.json({ received: true });
     }
 
-    // Quick pre-check (non-transactional) to avoid unnecessary work
     const existingEvent = await prisma.onlinePayment.findFirst({
       where: { stripeEventId: event.id },
     });
     if (existingEvent) {
-      return NextResponse.json({ received: true }); // Already processed
+      return NextResponse.json({ received: true }); 
     }
 
     const gatewayRef = session.id;
@@ -229,16 +224,17 @@ export async function POST(request: NextRequest) {
     const contribuabilId = getMetadataValue(metadata, "contribuabilId");
 
     if (!tenantId || !contribuabilId) {
-      log.error({ gatewayRef }, "Missing metadata in Stripe session");
+      logger.error({ 
+        ...logContext,
+        gatewayRef,
+      }, "Stripe checkout session completed without required metadata");
       return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
     }
 
     try {
-      // Use withTenantScope to ensure SET LOCAL + all queries share one transaction.
       const processResult = await withTenantScope(tenantId, async (): Promise<CheckoutSessionProcessResult> => {
-        const tx = prisma; // prisma proxy routes to the withTenantScope transaction
+        const tx = prisma; 
 
-        // Lock payment row to prevent concurrent state transitions
         const [onlinePayment] = await tx.$queryRaw<Array<{
           id: string;
           status: string;
@@ -260,30 +256,27 @@ export async function POST(request: NextRequest) {
         );
 
         if (!onlinePayment) {
-          log.error({ tenantId, gatewayRef }, "OnlinePayment not found for tenant/ref");
+          logger.error({ tenantId, gatewayRef, ...logContext }, "Stripe webhook could not find OnlinePayment for checkout session");
           return "not_found";
         }
 
-        // Metadata and DB row must agree on owner
         if (onlinePayment.contribuabilId !== contribuabilId) {
-          log.error({ gatewayRef }, "Metadata contribuabilId mismatch for ref");
+          logger.error({ gatewayRef, ...logContext }, "Stripe webhook metadata mismatched the persisted payment record");
           return "metadata_mismatch";
         }
 
-        // Payment state machine: only initiated -> confirmed is allowed
         if (onlinePayment.status === "confirmed") {
           return "already_processed";
         }
         if (!isOnlinePaymentStatus(onlinePayment.status)) {
-          log.error({ gatewayRef, status: onlinePayment.status }, "Invalid payment status value");
+          logger.error({ gatewayRef, status: onlinePayment.status, ...logContext }, "Invalid payment status value");
           return "invalid_state";
         }
         if (!canTransitionOnlinePaymentStatus(onlinePayment.status, "confirmed")) {
-          log.error({ gatewayRef, from: onlinePayment.status, to: "confirmed" }, "Invalid payment transition");
+          logger.error({ gatewayRef, from: onlinePayment.status, to: "confirmed", ...logContext }, "Invalid payment transition");
           return "invalid_state";
         }
 
-        // Atomic Stripe event deduplication in-transaction
         const dedupInsert = await tx.$queryRaw<Array<{ stripeEventId: string }>>(
           Prisma.sql`INSERT INTO "stripe_webhook_events" ("tenant_id", "stripe_event_id", "gateway_ref")
                      VALUES (${tenantId}::uuid, ${event.id}, ${gatewayRef})
@@ -294,41 +287,34 @@ export async function POST(request: NextRequest) {
           return "duplicate_event";
         }
 
-        // Validate Stripe amount before any status-changing writes
         if (typeof session.amount_total !== "number") {
           throw new Error(`Missing Stripe amount_total for ref ${gatewayRef}`);
         }
-        const expectedAmount = Number(onlinePayment.suma);
         const paidAmount = session.amount_total / 100;
-        if (Math.abs(paidAmount - expectedAmount) > 0.01) {
-          throw new Error(`Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedAmount}`);
-        }
-
+        
         const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
 
-        // Lock and validate debts inside transaction to prevent concurrent modifications
         if (selectedDebts && selectedDebts.length > 0) {
           const ids = selectedDebts.map((d) => d.impozitId);
           await tx.$queryRaw`SELECT id FROM "Impozit" WHERE id::text = ANY(${ids}) FOR UPDATE`;
 
-          const selectedDebtTotal = selectedDebts.reduce((sum, d) => sum + d.amount, 0);
-          if (Math.abs(expectedAmount - selectedDebtTotal) > 0.01) {
-            throw new Error(
-              `Debt total mismatch for ref ${gatewayRef}: debts=${selectedDebtTotal}, expected=${expectedAmount}`
-            );
-          }
+          const validatedSelection = await validateSelectedDebtsForContribuabil({
+            tenantId,
+            contribuabilId,
+            items: selectedDebts,
+          });
 
-          for (const debt of selectedDebts) {
-            const impozit = await tx.impozit.findUnique({ where: { id: debt.impozitId } });
-            if (!impozit) throw new Error(`Impozit ${debt.impozitId} not found`);
-            const remaining = getOutstanding(impozit);
-            if (debt.amount > remaining + 0.01) {
-              throw new Error(`Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`);
-            }
+          const expectedTotal = validatedSelection.totalAmount;
+          if (Math.abs(paidAmount - expectedTotal) > 0.01) {
+            throw new Error(`Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedTotal}`);
           }
+        } else {
+            const expectedAmount = Number(onlinePayment.suma);
+            if (Math.abs(paidAmount - expectedAmount) > 0.01) {
+              throw new Error(`Amount mismatch for ref ${gatewayRef}: paid=${paidAmount}, expected=${expectedAmount}`);
+            }
         }
 
-        // Generate chitanță number atomically using row lock
         const year = new Date().getFullYear();
         const seqResult = await tx.$queryRaw<Array<{ next_val: bigint }>>(
           Prisma.sql`INSERT INTO "ChitantaSequence" ("tenantId", "year", "currentVal")
@@ -340,7 +326,6 @@ export async function POST(request: NextRequest) {
         const seqNum = Number(seqResult[0].next_val);
         const nrChitanta = generateDocumentNumber("CHT", year, seqNum);
 
-        // Create the actual Plata record
         const plata = await tx.plata.create({
           data: {
             tenantId,
@@ -354,7 +339,6 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Update OnlinePayment status after all validations pass
         const updatedPayment = await tx.onlinePayment.updateMany({
           where: {
             id: onlinePayment.id,
@@ -377,7 +361,6 @@ export async function POST(request: NextRequest) {
           throw new Error(`Failed to update payment state for ref ${gatewayRef}`);
         }
 
-        // Auto-distribute payment to debts
         if (selectedDebts && selectedDebts.length > 0) {
           for (const debt of selectedDebts) {
             await tx.plataDistributie.create({
@@ -390,7 +373,6 @@ export async function POST(request: NextRequest) {
               },
             });
 
-            // Update the impozit's paid amount
             const impozit = await tx.impozit.findUnique({
               where: { id: debt.impozitId },
             });
@@ -409,14 +391,12 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Mark the payment as distributed
           await tx.plata.update({
             where: { id: plata.id },
             data: { distribuit: true },
           });
         }
 
-        // Generate chitanță document
         await tx.document.create({
           data: {
             tenantId,
@@ -450,7 +430,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
     } catch (error) {
-      log.error({ err: error }, "Error processing Stripe webhook");
+      logger.error(
+        {
+          err: error,
+          ...logContext,
+          eventType: event.type,
+        },
+        "Stripe webhook processing failed unexpectedly"
+      );
       return NextResponse.json({ error: "Processing failed" }, { status: 500 });
     }
   }

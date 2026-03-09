@@ -1,12 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { getPaymentGateway } from "@/lib/payments/payment-gateway";
 import { prisma, setTenantContext } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import {
+  SelectedDebtValidationError,
+  validateSelectedDebtsForContribuabil,
+} from "@/lib/payments/selected-debts";
+import { logger, getRequestLogContext } from "@/lib/logger";
+import { checkSharedRateLimit, createRateLimitExceededResponse } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
+  
+  // Add rate limiting
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "payments-create-checkout",
+    limit: 10,
+    windowMs: 60 * 1000, // 10 requests per minute
+  });
+
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
+
   const citizen = await getCitizenFromRequest(request);
   if (!citizen) {
+    logger.warn({
+      ...logContext,
+    }, "Checkout creation rejected because citizen was not authenticated");
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -33,8 +56,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (!link) {
+      logger.warn({
+        ...logContext,
+        tenantId: citizen.tenantId,
+        citizenUserId: citizen.sub,
+        contribuabilId,
+      }, "Checkout creation rejected because citizen lacks contribuabil access");
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
+
+    const validatedSelection = await validateSelectedDebtsForContribuabil({
+      tenantId: citizen.tenantId,
+      contribuabilId,
+      items,
+    });
 
     const gateway = getPaymentGateway();
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
@@ -44,24 +79,22 @@ export async function POST(request: NextRequest) {
       tenantId: citizen.tenantId,
       contribuabilId,
       citizenUserId: citizen.sub,
-      items,
+      items: validatedSelection.items,
       returnUrl: `${baseUrl}/${locale}/portal/plati/confirmare`,
       cancelUrl: `${baseUrl}/${locale}/portal/plati`,
     });
 
     // Store payment in DB
-    const totalAmount = items.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
-
     await prisma.onlinePayment.create({
       data: {
         tenantId: citizen.tenantId,
         citizenUserId: citizen.sub,
         contribuabilId,
-        suma: totalAmount,
+        suma: validatedSelection.totalAmount,
         status: "initiated",
         modalitate: "card",
         gatewayRef: result.gatewayRef,
-        selectedDebts: items,
+        selectedDebts: validatedSelection.items as unknown as Prisma.InputJsonValue,
         expiresAt: result.expiresAt,
       },
     });
@@ -72,7 +105,15 @@ export async function POST(request: NextRequest) {
       gatewayRef: result.gatewayRef,
     });
   } catch (error) {
-    logger.error({ err: error }, "Stripe checkout creation error:");
+    if (error instanceof SelectedDebtValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    logger.error({
+      err: error,
+      ...logContext,
+      tenantId: citizen.tenantId,
+      citizenUserId: citizen.sub,
+    }, "Stripe checkout creation failed unexpectedly");
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 }

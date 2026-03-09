@@ -16,6 +16,7 @@ import {
   calculateBonificatie,
   toMicroLei,
   toSafeNumber,
+  applyInflationIndex,
 } from "./utils";
 
 /**
@@ -61,6 +62,11 @@ export async function calculateLandTax(
   } else {
     // lei/mp
     sumaCalculataMicroLei = bazaImpozabila * toMicroLei(rataAplicata);
+  }
+
+  // 4b. Apply HCL inflation coefficient when configured
+  if (hclDecision.inflationIndex && hclDecision.inflationIndex > 0) {
+    sumaCalculataMicroLei = Math.round(sumaCalculataMicroLei * hclDecision.inflationIndex);
   }
 
   // 5. Apply co-ownership

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
 import { getPresignedUrl } from "@/lib/storage";
-import { logger } from "@/lib/logger";
+import { logger, getRequestLogContext } from "@/lib/logger";
 
 /**
  * GET /api/documents/[id]/download
@@ -16,6 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: documentId } = await params;
+  const logContext = getRequestLogContext(request);
 
   // Try staff auth first, then citizen auth
   const staffSession = await auth();
@@ -24,6 +25,10 @@ export async function GET(
     : null;
 
   if (!staffSession?.user && !citizenSession) {
+    logger.warn(
+      { ...logContext, entityId: documentId },
+      "Document download rejected because no authenticated session was present"
+    );
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,6 +54,15 @@ export async function GET(
     });
 
     if (!link || doc.contribuabilId !== link.contribuabilId) {
+      logger.warn(
+        {
+          ...logContext,
+          tenantId,
+          citizenUserId: citizenSession.sub,
+          entityId: documentId,
+        },
+        "Citizen document download rejected because ownership check failed"
+      );
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
   }
@@ -57,7 +71,23 @@ export async function GET(
     const url = await getPresignedUrl(doc.fileUrl);
     return NextResponse.redirect(url);
   } catch (error) {
-    logger.error({ err: error }, "Error generating presigned URL");
+    logger.error(
+      {
+        ...logContext,
+        tenantId,
+        userId: staffSession?.user?.id,
+        citizenUserId: citizenSession?.sub,
+        entityId: documentId,
+        err: error,
+      },
+      "Document download failed while generating presigned URL"
+    );
+    return NextResponse.json(
+      { error: "Failed to generate download URL" },
+      { status: 500 }
+    );
+  }
+}
     return NextResponse.json(
       { error: "Failed to generate download URL" },
       { status: 500 }

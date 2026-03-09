@@ -17,6 +17,7 @@ import {
   calculateBonificatie,
   toMicroLei,
   toSafeNumber,
+  applyInflationIndex,
 } from "./utils";
 
 /**
@@ -430,6 +431,11 @@ export async function calculateVehicleTax(
   if (!isWeightTable) {
     const normAdjustment = EURO_NORM_ADJUSTMENTS[input.normaPoluare ?? "euro_4"] ?? 1.0;
     sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, normAdjustment);
+  }
+
+  // 4b. Apply HCL inflation coefficient when configured
+  if (hclDecision.inflationIndex && hclDecision.inflationIndex > 0) {
+    sumaCalculataMicroLei = Math.round(sumaCalculataMicroLei * hclDecision.inflationIndex);
   }
 
   // Partial year proration

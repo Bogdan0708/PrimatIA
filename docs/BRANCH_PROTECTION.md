@@ -11,15 +11,13 @@ This document defines required GitHub branch protection settings for `main` (and
 
 ## 2. Required Status Checks
 Enable "Require status checks to pass before merging" and require:
-- `type-check`
-- `test`
-- `lint` (set as required only after baseline lint issues are resolved)
+- `CI / ci`
 - `staging-gate` workflow (manual/conditional for release candidates)
 
 If check names differ in CI, update this list to exact names shown in GitHub.
 
 Current CI workflow file:
-- `.github/workflows/ci.yml` (jobs: `type-check`, `test`, `lint`)
+- `.github/workflows/ci.yml` (job: `ci`)
 
 ## 3. Merge Strategy
 - Disallow force pushes.

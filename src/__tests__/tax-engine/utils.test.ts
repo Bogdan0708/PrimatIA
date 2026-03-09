@@ -4,6 +4,7 @@ import {
   roundToLei,
   splitInstallments,
   calculateBonificatie,
+  applyInflationIndex,
 } from "@/lib/tax-engine/utils";
 
 describe("tax-engine utils", () => {
@@ -45,6 +46,12 @@ describe("tax-engine utils", () => {
 
     it("calculates bonificatie as 10% rounded", () => {
       expect(calculateBonificatie(131)).toBe(13);
+    });
+
+    it("applies inflation coefficient only when configured", () => {
+      expect(applyInflationIndex(100, 1.05)).toBe(105);
+      expect(applyInflationIndex(100, undefined)).toBe(100);
+      expect(applyInflationIndex(100, 0)).toBe(100);
     });
   });
 });

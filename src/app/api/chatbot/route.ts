@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRAGResponse, streamLLMResponse, getSuggestedQuestions, type ChatMessage } from "@/lib/ai/knowledge-base";
-import { checkChatbotRateLimit } from "@/lib/rate-limit/chatbot-rate-limit";
-import { logger } from "@/lib/logger";
+import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
+import { logError, logWarn, getRequestLogContext } from "@/lib/logger";
 
-// Rate limiting is handled by middleware (15 req/min for /api/chatbot)
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 5;
 const MAX_HISTORY_MESSAGE_LENGTH = 500;
@@ -73,18 +72,15 @@ function parseHistory(raw: unknown): ChatMessage[] {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rateLimit = await checkChatbotRateLimit(ip);
-  if (rateLimit.limited) {
-    return NextResponse.json(
-      { answer: "Prea multe cereri. Te rog asteapta un minut." },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(rateLimit.retryAfterSeconds),
-        },
-      }
-    );
+  const logContext = getRequestLogContext(req);
+  const rateLimit = await checkSharedRateLimit({
+    request: req,
+    bucket: "chatbot",
+    limit: 15,
+    windowMs: 60_000,
+  });
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
   }
 
   try {
@@ -93,17 +89,17 @@ export async function POST(req: NextRequest) {
     const message = sanitizeUntrustedText(rawMessage);
 
     if (!message) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { answer: "Mesajul nu poate fi gol." },
         { status: 400 }
-      );
+      ), rateLimit);
     }
 
     if (message.length > MAX_MESSAGE_LENGTH) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { answer: `Mesajul este prea lung. Limita este de ${MAX_MESSAGE_LENGTH} caractere.` },
         { status: 400 }
-      );
+      ), rateLimit);
     }
 
     const history = parseHistory(body?.history);
@@ -114,14 +110,14 @@ export async function POST(req: NextRequest) {
       isPromptInjectionAttempt(message) ||
       history.some((entry) => isPromptInjectionAttempt(entry.content))
     ) {
-      logger.warn({ ip }, "Blocked prompt injection attempt in chatbot route");
-      return NextResponse.json({
+      logWarn({ message: "Blocked prompt injection attempt in chatbot route", ...logContext });
+      return withRateLimitHeaders(NextResponse.json({
         answer:
           "Nu pot procesa cereri care incearca sa schimbe regulile asistentului, sa obtina date sensibile sau sa execute actiuni." +
           "\n\n" +
           OUTPUT_DISCLAIMER,
         sources: ["Portal PrimarIA"],
-      });
+      }), rateLimit);
     }
 
     // Streaming response via SSE
@@ -135,7 +131,8 @@ export async function POST(req: NextRequest) {
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: sanitized })}\n\n`));
             }
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          } catch {
+          } catch (error) {
+            logError({ message: "Streaming error in chatbot", ...logContext }, error);
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ content: "A apărut o eroare." })}\n\n`)
             );
@@ -151,6 +148,9 @@ export async function POST(req: NextRequest) {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
           Connection: "keep-alive",
+          "X-RateLimit-Limit": String(rateLimit.limit),
+          "X-RateLimit-Remaining": String(rateLimit.remaining),
+          "Retry-After": String(rateLimit.retryAfterSeconds),
         },
       });
     }
@@ -169,16 +169,17 @@ export async function POST(req: NextRequest) {
         OUTPUT_DISCLAIMER;
     }
 
-    return NextResponse.json({
+    return withRateLimitHeaders(NextResponse.json({
       answer,
       sources: result.sources,
       citations: result.citations,
       suggestedQuestions: getSuggestedQuestions(),
-    });
-  } catch {
-    return NextResponse.json(
+    }), rateLimit);
+  } catch (error) {
+    logError({ message: "Chatbot error", ...logContext }, error);
+    return withRateLimitHeaders(NextResponse.json(
       { answer: "A apărut o eroare. Te rog încearcă din nou." },
       { status: 500 }
-    );
+    ), rateLimit);
   }
 }

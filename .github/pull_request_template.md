@@ -3,13 +3,24 @@
 - Why:
 
 ## Validation
-- [ ] `npm run type-check`
-- [ ] `npm test`
-- [ ] `npm run lint` (or documented exception)
+- [ ] `npm run type-check` passes
+- [ ] `npm test` passes
+- [ ] `npm run lint` passes (or documented exception)
+
+## Migration Checklist (if `prisma/` changed)
+- [ ] `npm run db:preflight:strict` passes
+- [ ] `npx prisma migrate diff` shows expected changes only
+- [ ] Migration is backward-compatible or rollback steps are documented
+
+## AI / External Service Checklist (if relevant)
+- [ ] AI/payment/storage env assumptions documented
+- [ ] Failure path tested or described
+- [ ] No new production fallback silently downgrades to unsafe defaults
 
 ## Risk & Rollback
 - Risk level: `low` / `medium` / `high`
 - Rollback plan:
+- Estimated blast radius:
 
 ## Release Evidence (Required for RC/Prod-impacting PRs)
 - [ ] Staging gate workflow run completed (`.github/workflows/staging-release-gate.yml`)
@@ -33,4 +44,3 @@
 ## Notes for Reviewers
 - Areas to focus on:
 - Known limitations:
-

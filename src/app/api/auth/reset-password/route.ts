@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { resetPasswordWithToken } from "@/lib/password-reset";
 import { strongPasswordSchema } from "@/lib/validations";
-import { logger } from "@/lib/logger";
+import { getRequestLogContext, logError } from "@/lib/logger";
 
 const resetPasswordSchema = z.object({
   token: z.string().trim().min(1, "Token and password are required"),
@@ -10,6 +10,7 @@ const resetPasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   try {
     const body = await request.json();
     const parsed = resetPasswordSchema.safeParse(body);
@@ -36,7 +37,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error({ err: error }, "Staff reset-password failed");
+    logError(
+      {
+        message: "Staff reset-password failed unexpectedly",
+        ...logContext,
+      },
+      error
+    );
     return NextResponse.json(
       { error: "Failed to reset password" },
       { status: 500 }

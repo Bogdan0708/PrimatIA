@@ -113,6 +113,79 @@ describe("calculateBuildingTax", () => {
     expect(result.sumaDatorata).toBe(2500);
   });
 
+  it("uses the configured HCL rate for revalued PJ buildings instead of a hardcoded fallback", async () => {
+    mockRateEntry(1.3, {
+      taxType: "impozit_cladiri_nerezidentiale",
+      maxRate: 1.5,
+    });
+
+    const result = await calculateBuildingTax(
+      makeInput({
+        destinatie: "nerezidentiala",
+        tipContribuabil: "PJ",
+        valoareInventar: 200000,
+        dataUltimeiReevaluari: new Date(2023, 5, 1),
+      }),
+      makeHcl(),
+      []
+    );
+
+    expect(result.rataAplicata).toBe(1.3);
+    expect(result.sumaCalculata).toBe(2600);
+  });
+
+  it("splits mixed-use buildings proportionally between residential and non-residential areas", async () => {
+    mockedFindFirst
+      .mockResolvedValueOnce({
+        id: "rate-res",
+        tenantId: "tenant-1",
+        hclDecisionId: "hcl-2024",
+        taxType: "impozit_cladiri_rezidentiale",
+        rateType: "percentage",
+        rateValue: 0.1,
+        unit: null,
+        minRate: null,
+        maxRate: null,
+        category: "cadre_beton",
+        zona: "A",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      } as unknown as TaxRateTable)
+      .mockResolvedValueOnce({
+        id: "rate-nonres",
+        tenantId: "tenant-1",
+        hclDecisionId: "hcl-2024",
+        taxType: "impozit_cladiri_nerezidentiale",
+        rateType: "percentage",
+        rateValue: 1.0,
+        unit: null,
+        minRate: null,
+        maxRate: 1.5,
+        category: "cadre_beton",
+        zona: "A",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      } as unknown as TaxRateTable);
+
+    const result = await calculateBuildingTax(
+      makeInput({
+        destinatie: "mixta",
+        valoareImpozabila: 100000,
+        suprafataRezidentiala: 60,
+        suprafataNerezidentiala: 40,
+      }),
+      makeHcl(),
+      []
+    );
+
+    expect(result.bazaImpozabila).toBe(100000);
+    expect(result.rataAplicata).toBeCloseTo(0.46, 5);
+    expect(result.sumaCalculata).toBe(460);
+    expect(result.rateTableId).toBe("rate-res");
+  });
+
   describe("building age coefficient", () => {
     it("applies coefficient 0.85 for buildings older than 100 years (1920)", async () => {
       mockRateEntry(0.1);
@@ -210,6 +283,20 @@ describe("calculateBuildingTax", () => {
 
     // sumaDatorata = 120, bonificatie = round(120 * 0.1) = 12
     expect(result.bonificatie).toBe(12);
+  });
+
+  it("applies the HCL inflation coefficient when configured", async () => {
+    mockRateEntry(0.1);
+
+    const result = await calculateBuildingTax(
+      makeInput(),
+      makeHcl({ inflationIndex: 1.05 }),
+      []
+    );
+
+    expect(result.sumaCalculata).toBe(126);
+    expect(result.sumaDatorata).toBe(126);
+    expect(result.bonificatie).toBe(13);
   });
 
   it("splits installments: odd amount -> first installment gets remainder", async () => {

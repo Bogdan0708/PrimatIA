@@ -2,6 +2,57 @@ import { prisma } from "@/lib/db";
 import { PENALTY_DAILY_RATE, INTEREST_DAILY_RATE } from "./types";
 import { roundToLei, toSafeNumber } from "./utils";
 
+function getOverduePrincipalForDate(impozit: {
+  rata1: unknown;
+  rata2: unknown;
+  rata1Scadenta: Date;
+  rata2Scadenta: Date;
+  sumaPlatita: unknown;
+}, date: Date): number {
+  const rata1 = Number(impozit.rata1);
+  const rata2 = Number(impozit.rata2);
+  const paid = Number(impozit.sumaPlatita);
+
+  let overdue = 0;
+
+  if (date > new Date(impozit.rata1Scadenta)) {
+    overdue += Math.max(0, rata1 - paid);
+  }
+
+  if (date > new Date(impozit.rata2Scadenta)) {
+    const paidTowardSecondInstallment = Math.max(0, paid - rata1);
+    overdue += Math.max(0, rata2 - paidTowardSecondInstallment);
+  }
+
+  return overdue;
+}
+
+function getInitialPenaltyStartDate(impozit: {
+  rata1: unknown;
+  rata2: unknown;
+  rata1Scadenta: Date;
+  rata2Scadenta: Date;
+  sumaPlatita: unknown;
+}): Date | null {
+  const paid = Number(impozit.sumaPlatita);
+  const rata1 = Number(impozit.rata1);
+  const rata2 = Number(impozit.rata2);
+
+  if (paid < rata1) {
+    const start = new Date(impozit.rata1Scadenta);
+    start.setDate(start.getDate() + 1);
+    return start;
+  }
+
+  if (paid < rata1 + rata2) {
+    const start = new Date(impozit.rata2Scadenta);
+    start.setDate(start.getDate() + 1);
+    return start;
+  }
+
+  return null;
+}
+
 /**
  * Calculate penalties for overdue taxes per Cod Procedura Fiscala.
  * Daily accrual: 0.01%/day delay interest + 0.01%/day penalties.
@@ -29,18 +80,16 @@ export async function calculatePenalties(
     orderBy: { dataCalcul: "desc" },
   });
 
-  // Determine start date for penalty calculation
-  // Penalties start after the installment due date
-  const rata1Scadenta = impozit.rata1Scadenta;
-
   let startDate: Date;
   if (lastPenalty) {
     startDate = new Date(lastPenalty.dataCalcul);
     startDate.setDate(startDate.getDate() + 1);
   } else {
-    // Start from the day after first missed deadline
-    startDate = new Date(rata1Scadenta);
-    startDate.setDate(startDate.getDate() + 1);
+    const initialStart = getInitialPenaltyStartDate(impozit);
+    if (!initialStart) {
+      return { totalPenalties: 0, totalInterest: 0, newRecords: 0 };
+    }
+    startDate = initialStart;
   }
 
   if (startDate > calculationDate) {
@@ -61,15 +110,21 @@ export async function calculatePenalties(
 
   const currentDate = new Date(startDate);
   while (currentDate <= calculationDate) {
-    const dailyPenalty = roundToLei(outstanding * PENALTY_DAILY_RATE * 100) / 100;
-    const dailyInterest = roundToLei(outstanding * INTEREST_DAILY_RATE * 100) / 100;
+    const overduePrincipal = getOverduePrincipalForDate(impozit, currentDate);
+    if (overduePrincipal <= 0) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      continue;
+    }
+
+    const dailyPenalty = roundToLei(overduePrincipal * PENALTY_DAILY_RATE * 100) / 100;
+    const dailyInterest = roundToLei(overduePrincipal * INTEREST_DAILY_RATE * 100) / 100;
     const dailyTotal = dailyPenalty + dailyInterest;
 
     penaltyRecords.push({
       tenantId,
       impozitId,
       dataCalcul: new Date(currentDate),
-      sumaRestanta: outstanding,
+      sumaRestanta: overduePrincipal,
       rataPenalizare: PENALTY_DAILY_RATE + INTEREST_DAILY_RATE,
       sumaPenalizare: dailyTotal,
     });

@@ -14,20 +14,21 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
+          POSTGRES_USER: primaria_test
+          POSTGRES_PASSWORD: primaria_test
           POSTGRES_DB: primaria_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U test -d primaria_test"
+          --health-cmd="pg_isready -U primaria_test -d primaria_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://test:test@localhost:5432/primaria_test
-      DIRECT_DATABASE_URL: postgresql://test:test@localhost:5432/primaria_test
+      DATABASE_URL: postgresql://primaria_test:primaria_test@localhost:5432/primaria_test
+      DIRECT_DATABASE_URL: postgresql://primaria_test:primaria_test@localhost:5432/primaria_test
+      SHADOW_DATABASE_URL: postgresql://primaria_test:primaria_test@localhost:5432/primaria_shadow
       NEXTAUTH_SECRET: ci-test-secret-not-real
       NEXTAUTH_URL: http://localhost:3000
       AUTH_SECRET: ci-test-secret-not-real
@@ -35,6 +36,14 @@ jobs:
       JWT_SECRET: ci-test-jwt-secret-not-real
       CNP_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       CNP_TENANT_SALT_SECRET: ci-test-salt-not-real
+      TENANT_ID: 00000000-0000-0000-0000-000000000001
+      REDIS_URL: redis://localhost:6379
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: "9000"
+      MINIO_ACCESS_KEY: ci-minio
+      MINIO_SECRET_KEY: ci-minio-secret
+      MINIO_BUCKET: primaria-documents
+      NODE_ENV: test
 
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +61,26 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Create shadow database
+        env:
+          PGPASSWORD: primaria_test
+        run: |
+          psql -h localhost -U primaria_test -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'primaria_shadow'" | grep -q 1 \
+            || psql -h localhost -U primaria_test -d postgres -c 'CREATE DATABASE primaria_shadow'
+
+      - name: Detect schema changes
+        id: schema-check
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^prisma/"; then
+            echo "schema_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "schema_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: DB preflight
+        run: npm run db:preflight:strict
+
       - name: Lint
         run: npm run lint
 
@@ -61,24 +90,18 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Validate Prisma schema
-        run: npx prisma validate
-
       - name: Run database migrations
         run: npx prisma migrate deploy
 
       - name: Check migration drift
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.schema-check.outputs.schema_changed == 'true'
         run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^prisma/"; then
-            echo "Prisma files changed — checking for migration drift..."
-            npx prisma migrate diff \
-              --from-migrations ./prisma/migrations \
-              --to-schema-datamodel ./prisma/schema.prisma \
-              --exit-code
-          else
-            echo "No prisma/ changes — skipping drift check"
-          fi
+          echo "Prisma files changed — checking for migration drift..."
+          npx prisma migrate diff \
+            --from-migrations ./prisma/migrations \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --exit-code
 
       - name: Run tests
         run: npm test

@@ -3,16 +3,25 @@ import { auth } from "@/lib/auth";
 import { prisma, withTenantScope } from "@/lib/db";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
-import { getOutstanding, getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
+import { getStatusAfterPayment } from "@/lib/tax-engine/liability-utils";
+import { validateSelectedDebtsForContribuabil } from "@/lib/payments/selected-debts";
 import {
   assertOnlinePaymentTransition,
   isOnlinePaymentStatus,
 } from "@/lib/payments/online-payment-state-machine";
-import { logger } from "@/lib/logger";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   const session = await auth();
-  if (!session?.user || !["admin", "operator"].includes(session.user.role)) {
+  if (
+    !session?.user ||
+    !["super_admin", "primaria_admin", "operator", "contabil"].includes(session.user.role)
+  ) {
+    logWarn({
+      message: "Bank transfer confirmation rejected because staff session was missing or unauthorized",
+      ...logContext,
+    });
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
@@ -66,7 +75,6 @@ export async function POST(request: NextRequest) {
     const selectedDebts = onlinePayment.selectedDebts as Array<{ impozitId: string; amount: number }> | null;
 
     // Use withTenantScope to ensure SET LOCAL + all queries share one transaction.
-    // This replaces the old setTenantContext() + $transaction() pattern.
     await withTenantScope(tenantId, async () => {
       const tx = prisma; // prisma proxy routes to the withTenantScope transaction
       // Lock the OnlinePayment row to prevent double-confirm (idempotency)
@@ -83,14 +91,11 @@ export async function POST(request: NextRequest) {
         const ids = selectedDebts.map((d) => d.impozitId);
         await tx.$queryRaw`SELECT id FROM "Impozit" WHERE id::text = ANY(${ids}) FOR UPDATE`;
 
-        for (const debt of selectedDebts) {
-          const impozit = await tx.impozit.findUnique({ where: { id: debt.impozitId } });
-          if (!impozit) throw new Error(`Impozit ${debt.impozitId} not found`);
-          const remaining = getOutstanding(impozit);
-          if (debt.amount > remaining + 0.01) {
-            throw new Error(`Overpayment on impozit ${debt.impozitId}: paying ${debt.amount}, remaining ${remaining}`);
-          }
-        }
+        await validateSelectedDebtsForContribuabil({
+          tenantId,
+          contribuabilId: onlinePayment.contribuabilId,
+          items: selectedDebts,
+        });
       }
 
       // Generate chitanță number atomically
@@ -193,7 +198,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error({ err: error }, "Bank transfer confirmation error:");
+    logError(
+      {
+        message: "Bank transfer confirmation failed unexpectedly",
+        ...logContext,
+        tenantId: session?.user?.tenantId,
+        userId: session?.user?.id,
+      },
+      error
+    );
     return NextResponse.json({ error: "Confirmation failed" }, { status: 500 });
   }
 }

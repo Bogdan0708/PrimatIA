@@ -1,3 +1,5 @@
+import { BONIFICATIE_PERCENT } from "./types";
+
 /**
  * Calculate the number of taxable months for partial year (Art. 461).
  * Rule: tax starts from the first day of the month following acquisition.
@@ -220,7 +222,16 @@ export function splitInstallments(
  * 10% discount if full annual tax is paid by March 31.
  */
 export function calculateBonificatie(totalAmount: number): number {
-  return roundToLei(totalAmount * 0.1);
+  return roundToLei(totalAmount * (BONIFICATIE_PERCENT / 100));
+}
+
+/**
+ * Apply an HCL inflation coefficient when configured.
+ * Values <= 0 are ignored as invalid configuration.
+ */
+export function applyInflationIndex(amount: number, inflationIndex?: number): number {
+  if (!inflationIndex || inflationIndex <= 0) return amount;
+  return amount * inflationIndex;
 }
 
 /**

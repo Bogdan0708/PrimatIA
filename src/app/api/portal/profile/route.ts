@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   const citizen = await getCitizenFromRequest(request);
   if (!citizen) {
+    logWarn({
+      message: "Portal profile fetch rejected because citizen was not authenticated",
+      ...logContext,
+    });
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -53,8 +58,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   const citizen = await getCitizenFromRequest(request);
   if (!citizen) {
+    logWarn({
+      message: "Portal profile update rejected because citizen was not authenticated",
+      ...logContext,
+    });
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -108,7 +118,15 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error({ err: error }, "Profile update error:");
+    logError(
+      {
+        message: "Portal profile update failed unexpectedly",
+        ...logContext,
+        tenantId: citizen.tenantId,
+        citizenUserId: citizen.sub,
+      },
+      error
+    );
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 }

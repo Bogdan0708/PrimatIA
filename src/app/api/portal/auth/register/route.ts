@@ -4,10 +4,10 @@ import { registerCitizen } from "@/lib/citizen-auth";
 import { hashCnp } from "@/lib/crypto";
 import { sendNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/db";
-import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
-import { checkDistributedRateLimit } from "@/lib/rate-limit";
+import { resolvePortalTenant } from "@/lib/portal-auth";
+import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
+import { getRequestLogContext, logError } from "@/lib/logger";
 import { strongPasswordSchema } from "@/lib/validations";
-import { logger } from "@/lib/logger";
 
 const registerCitizenSchema = z
   .object({
@@ -39,34 +39,36 @@ const registerCitizenSchema = z
   });
 
 export async function POST(request: NextRequest) {
-  try {
-    // Distributed rate limiting (Redis) — second layer after in-memory middleware
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const rl = await checkDistributedRateLimit(`rl:register:${ip}`, 5, 60);
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: "Too many requests. Try again later." },
-        { status: 429, headers: { "Retry-After": "60" } }
-      );
-    }
+  const logContext = getRequestLogContext(request);
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "portal-auth-register",
+    limit: 5,
+    windowMs: 60_000,
+  });
 
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
+
+  try {
     const body = await request.json();
     const parsed = registerCitizenSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { error: parsed.error.issues[0]?.message || "Invalid registration data" },
         { status: 400 }
-      );
+      ), rateLimit);
     }
-    const { firstName, lastName, email, password, cnp, cui, phone, limbaPreferata } = parsed.data;
 
-    // Tenant identity must be derived server-side from trusted context.
-    const tenantId = await resolveTenantIdFromHeaders(request.headers);
+    const { firstName, lastName, email, password, tip, cnp, cui, phone, limbaPreferata } = parsed.data;
+
+    const tenantId = await resolvePortalTenant(request);
     if (!tenantId) {
-      return NextResponse.json(
-        { error: "Tenant could not be resolved for this domain." },
+      return withRateLimitHeaders(NextResponse.json(
+        { error: "Tenant identification required" },
         { status: 400 }
-      );
+      ), rateLimit);
     }
 
     const cnpHash = cnp ? hashCnp(cnp, tenantId) : undefined;
@@ -86,12 +88,12 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       if (result.error === "email_exists" || result.error === "no_match") {
         // Return same response as success to prevent email enumeration
-        return NextResponse.json({ success: true });
+        return withRateLimitHeaders(NextResponse.json({ success: true }), rateLimit);
       }
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         { error: "Registration failed" },
         { status: 500 }
-      );
+      ), rateLimit);
     }
 
     // Send verification email
@@ -116,16 +118,30 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (emailError) {
-      logger.error({ err: emailError }, "Failed to send verification email:");
+      logError(
+        {
+          message: "Citizen registration succeeded but verification email failed",
+          ...logContext,
+          tenantId,
+          citizenUserId: result.citizenId,
+        },
+        emailError
+      );
       // Registration still succeeds even if email fails
     }
 
-    return NextResponse.json({ success: true });
+    return withRateLimitHeaders(NextResponse.json({ success: true }), rateLimit);
   } catch (error) {
-    logger.error({ err: error }, "Citizen registration error:");
-    return NextResponse.json(
+    logError(
+      {
+        message: "Citizen registration failed unexpectedly",
+        ...logContext,
+      },
+      error
+    );
+    return withRateLimitHeaders(NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
-    );
+    ), rateLimit);
   }
 }

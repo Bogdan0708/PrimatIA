@@ -86,19 +86,15 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
 
 /**
  * Resolve tenant ID for a portal API request.
- * Checks x-tenant-id header first; falls back to the single active tenant
- * for single-tenant deployments where TENANT_ID env var is not set.
+ * Checks x-tenant-id header first, then the deployment-scoped TENANT_ID env var.
+ * Fails closed when neither is available.
  */
 export async function resolvePortalTenant(request: NextRequest): Promise<string | null> {
   const fromHeader = request.headers.get("x-tenant-id");
   if (fromHeader) return fromHeader;
 
-  const tenant = await prisma.tenant.findFirst({
-    where: { status: { in: ["active", "trial"] }, deletedAt: null },
-    select: { id: true },
-    orderBy: { createdAt: "asc" },
-  });
-  return tenant?.id ?? null;
+  const fromEnv = process.env.TENANT_ID?.trim();
+  return fromEnv || null;
 }
 
 /**

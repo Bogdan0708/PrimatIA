@@ -35,7 +35,8 @@
     "viewAll": "View all",
     "logout": "Logout",
     "login": "Login",
-    "language": "Language"
+    "language": "Language",
+    "security": "Security"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -75,6 +76,7 @@
     "signOut": "Sign Out",
     "email": "Email Address",
     "password": "Password",
+    "authenticatorCode": "Authenticator code",
     "forgotPassword": "Forgot password?",
     "invalidCredentials": "Invalid credentials",
     "sessionExpired": "Session expired",
@@ -88,6 +90,28 @@
     "eidasCompliant": "eIDAS compliant",
     "totpCode": "Authentication Code",
     "totpDescription": "Enter the 6-digit code from your authenticator app"
+  },
+  "security": {
+    "pageTitle": "Account security",
+    "pageDescription": "Manage two-factor authentication for staff access.",
+    "title": "TOTP authenticator",
+    "description": "Use Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app as a second factor during sign-in.",
+    "enabledLabel": "Two-factor authentication is enabled",
+    "enabledDescription": "Staff sign-in now requires the code from your authenticator app.",
+    "disabledLabel": "Two-factor authentication is disabled",
+    "disabledDescription": "This account still depends on password-only access until TOTP is enabled.",
+    "startSetup": "Set up TOTP",
+    "manualSecret": "Secret key",
+    "manualSecretHelp": "Enter this key manually in your authenticator app if you cannot scan a QR code.",
+    "verificationCode": "Verification code",
+    "enable": "Enable",
+    "disable": "Disable",
+    "cancel": "Cancel",
+    "setupFailed": "Failed to start TOTP setup.",
+    "enableFailed": "Failed to enable TOTP.",
+    "disableFailed": "Failed to disable TOTP.",
+    "enabledSuccess": "TOTP has been enabled.",
+    "disabledSuccess": "TOTP has been disabled."
   },
   "dashboard": {
     "title": "Dashboard",

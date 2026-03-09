@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Menu, Globe, LogOut, User } from "lucide-react";
+import { Menu, Globe, LogOut, Shield, User } from "lucide-react";
 import { LOCALES, type Locale } from "@/lib/constants";
 
 interface HeaderProps {
@@ -121,6 +121,10 @@ export function Header({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push(`${localePrefix}/securitate`)}>
+              <Shield className="mr-2 h-4 w-4" />
+              {t("security")}
+            </DropdownMenuItem>
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
               {t("details")}

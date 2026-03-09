@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import {
+  SelectedDebtValidationError,
+  validateSelectedDebtsForContribuabil,
+} from "@/lib/payments/selected-debts";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   const citizen = await getCitizenFromRequest(request);
   if (!citizen) {
+    logWarn({
+      message: "Bank transfer initiation rejected because citizen was not authenticated",
+      ...logContext,
+    });
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -33,18 +43,26 @@ export async function POST(request: NextRequest) {
     });
 
     if (!link) {
+      logWarn({
+        message: "Bank transfer initiation rejected because citizen lacks contribuabil access",
+        ...logContext,
+        tenantId: citizen.tenantId,
+        citizenUserId: citizen.sub,
+        contribuabilId,
+      });
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
+
+    const validatedSelection = await validateSelectedDebtsForContribuabil({
+      tenantId: citizen.tenantId,
+      contribuabilId,
+      items,
+    });
 
     // Generate unique bank transfer reference
     const year = new Date().getFullYear();
     const random = randomBytes(4).toString("hex").toUpperCase();
     const referenceCode = `PRM-${contribuabilId.slice(0, 8)}-${year}-${random}`;
-
-    const totalAmount = items.reduce(
-      (sum: number, item: { amount: number }) => sum + item.amount,
-      0
-    );
 
     // Store in DB as initiated bank transfer
     await prisma.onlinePayment.create({
@@ -52,11 +70,11 @@ export async function POST(request: NextRequest) {
         tenantId: citizen.tenantId,
         citizenUserId: citizen.sub,
         contribuabilId,
-        suma: totalAmount,
+        suma: validatedSelection.totalAmount,
         status: "pending",
         modalitate: "virament",
         gatewayRef: referenceCode,
-        selectedDebts: items,
+        selectedDebts: validatedSelection.items as unknown as Prisma.InputJsonValue,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
     });
@@ -76,7 +94,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       referenceCode,
-      totalAmount,
+      totalAmount: validatedSelection.totalAmount,
       bankDetails: {
         iban,
         bankName,
@@ -85,7 +103,18 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error({ err: error }, "Bank transfer initiation error:");
+    if (error instanceof SelectedDebtValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    logError(
+      {
+        message: "Bank transfer initiation failed unexpectedly",
+        ...logContext,
+        tenantId: citizen.tenantId,
+        citizenUserId: citizen.sub,
+      },
+      error
+    );
     return NextResponse.json(
       { error: "Failed to generate bank transfer reference" },
       { status: 500 }

@@ -10,9 +10,10 @@ import {
   assertOnlinePaymentTransition,
   isOnlinePaymentStatus,
 } from "@/lib/payments/online-payment-state-machine";
-import { logger } from "@/lib/logger";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   const paymentMode =
     process.env.PAYMENT_MODE ??
     (process.env.NODE_ENV === "production" ? "stripe" : "mock");
@@ -25,6 +26,10 @@ export async function POST(request: NextRequest) {
 
   const citizen = await getCitizenFromRequest(request);
   if (!citizen) {
+    logWarn({
+      message: "Portal payment confirmation rejected because citizen was not authenticated",
+      ...logContext,
+    });
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -51,6 +56,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (onlinePayment.citizenUserId !== citizen.sub) {
+        logWarn({
+          message: "Portal payment confirmation rejected because payment ownership did not match citizen",
+          ...logContext,
+          tenantId: citizen.tenantId,
+          citizenUserId: citizen.sub,
+        });
         return { kind: "forbidden" as const };
       }
 
@@ -208,7 +219,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, plataId: processResult.plataId });
   } catch (error) {
-    logger.error({ err: error }, "Payment confirmation error:");
+    logError(
+      {
+        message: "Portal payment confirmation failed unexpectedly",
+        ...logContext,
+        tenantId: citizen?.tenantId,
+        citizenUserId: citizen?.sub,
+      },
+      error
+    );
     return NextResponse.json(
       { error: "Failed to confirm payment" },
       { status: 500 }

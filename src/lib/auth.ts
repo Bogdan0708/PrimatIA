@@ -1,16 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
-import { prisma } from "@/lib/db";
 import type { Role } from "@/lib/constants";
-import { verifyTOTPToken } from "@/lib/totp";
-import { decryptString } from "@/lib/crypto";
-import { resolveTenantIdFromHeaders } from "@/lib/tenant-resolution";
-
-const nextAuthSecret = process.env.NEXTAUTH_SECRET;
-if (!nextAuthSecret) {
-  throw new Error("NEXTAUTH_SECRET must be configured");
-}
+import { authorizeStaffCredentials } from "@/lib/staff-auth";
 
 declare module "next-auth" {
   interface User {
@@ -33,107 +24,25 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
-  secret: nextAuthSecret,
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        totp: { label: "TOTP Code", type: "text" },
+        totpCode: { label: "Authenticator Code", type: "text" },
       },
-      async authorize(credentials, request) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        const tenantId = request?.headers
-          ? await resolveTenantIdFromHeaders(request.headers)
-          : null;
-        if (!tenantId) {
-          return null;
-        }
-
-        const email = credentials.email as string;
-        const password = credentials.password as string;
-        const totpCode = (credentials.totp as string) || "";
-
-        const user = await prisma.tenantUser.findFirst({
-          where: {
-            tenantId,
-            email,
-            isActive: true,
-            deletedAt: null,
-            tenant: {
-              status: { in: ["active", "trial"] },
-              deletedAt: null,
-            },
-          },
+        return authorizeStaffCredentials({
+          email: credentials.email as string,
+          password: credentials.password as string,
+          totpCode: (credentials.totpCode as string | undefined) ?? null,
         });
-
-        if (!user) return null;
-
-        if (user.lockedUntil && user.lockedUntil > new Date()) {
-          return null;
-        }
-
-        const passwordValid = await compare(password, user.passwordHash);
-
-        if (!passwordValid) {
-          const attempts = user.loginAttempts + 1;
-          await prisma.tenantUser.update({
-            where: { id: user.id },
-            data: {
-              loginAttempts: attempts,
-              lockedUntil:
-                attempts >= 5
-                  ? new Date(Date.now() + 15 * 60 * 1000)
-                  : undefined,
-            },
-          });
-          return null;
-        }
-
-        // TOTP verification: if user has TOTP enabled, require valid code
-        if (user.totpSecret) {
-          if (!totpCode) {
-            // Password correct but TOTP required — signal client to show TOTP input
-            throw new Error("totp_required");
-          }
-          if (!verifyTOTPToken(decryptString(user.totpSecret), totpCode)) {
-            // Invalid TOTP code — count as failed attempt
-            const attempts = user.loginAttempts + 1;
-            await prisma.tenantUser.update({
-              where: { id: user.id },
-              data: {
-                loginAttempts: attempts,
-                lockedUntil:
-                  attempts >= 5
-                    ? new Date(Date.now() + 15 * 60 * 1000)
-                    : undefined,
-              },
-            });
-            return null;
-          }
-        }
-
-        await prisma.tenantUser.update({
-          where: { id: user.id },
-          data: {
-            loginAttempts: 0,
-            lockedUntil: null,
-            lastLoginAt: new Date(),
-          },
-        });
-
-        return {
-          id: user.id,
-          email: user.email,
-          role: user.role as Role,
-          tenantId: user.tenantId,
-          firstName: user.firstName,
-          lastName: user.lastName,
-        };
       },
     }),
   ],

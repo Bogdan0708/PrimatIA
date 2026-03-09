@@ -5,7 +5,8 @@ import { plataSchema } from "@/lib/validations";
 import { generateDocumentNumber } from "@/lib/formatting";
 import { Prisma } from "@prisma/client";
 import type { Role } from "@/lib/constants";
-import { logger } from "@/lib/logger";
+import { logger, getRequestLogContext } from "@/lib/logger";
+import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 
 // Roles allowed to record payments
 const PAYMENT_ROLES: Role[] = ["super_admin", "primaria_admin", "operator", "contabil"];
@@ -16,24 +17,44 @@ const PAYMENT_ROLES: Role[] = ["super_admin", "primaria_admin", "operator", "con
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   try {
+    const rateLimit = await checkSharedRateLimit({
+      request,
+      bucket: "payments-record",
+      limit: 60,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return createRateLimitExceededResponse(rateLimit);
+    }
+
     const session = await auth();
 
     // Require staff authentication
     if (!session?.user?.tenantId || !session?.user?.id) {
-      return NextResponse.json(
+      logger.warn({
+        ...logContext,
+      }, "Payment recording rejected because staff session was missing");
+      return withRateLimitHeaders(NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
-      );
+      ), rateLimit);
     }
 
     // Role check: only staff roles can record payments
     const userRole = session.user.role as Role;
     if (!PAYMENT_ROLES.includes(userRole)) {
-      return NextResponse.json(
+      logger.warn({
+        ...logContext,
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        role: userRole,
+      }, "Payment recording rejected because role lacked permission");
+      return withRateLimitHeaders(NextResponse.json(
         { success: false, error: "Insufficient permissions" },
         { status: 403 }
-      );
+      ), rateLimit);
     }
 
     const tenantId = session.user.tenantId;
@@ -43,13 +64,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = plataSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         {
           success: false,
           error: parsed.error.issues.map((e: { message: string }) => e.message).join("; "),
         },
         { status: 400 }
-      );
+      ), rateLimit);
     }
 
     const { contribuabilId, suma, modalitate, dataPlata, nrDocument, nota } = parsed.data;
@@ -66,10 +87,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (!contribuabil) {
-        return NextResponse.json(
+        return withRateLimitHeaders(NextResponse.json(
           { success: false, error: "Taxpayer not found" },
           { status: 404 }
-        );
+        ), rateLimit);
       }
 
       // Auto-generate receipt number for cash payments if not provided
@@ -125,17 +146,23 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json(
+      return withRateLimitHeaders(NextResponse.json(
         {
           success: true,
           id: plata.id,
           nrChitanta: nrChitanta || null,
         },
         { status: 201 }
-      );
+      ), rateLimit);
     });
   } catch (error) {
-    logger.error({ err: error }, "Error recording payment:");
+    logger.error(
+      {
+        err: error,
+        ...logContext,
+      },
+      "Payment recording failed unexpectedly"
+    );
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateMonthlyReport } from "@/lib/reports/monthly-report";
-import { logger } from "@/lib/logger";
+import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
+  const logContext = getRequestLogContext(request);
   try {
     const session = await auth();
     if (!session?.user?.tenantId) {
+      logWarn({
+        message: "Monthly report generation rejected because staff session was missing",
+        ...logContext,
+      });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -30,7 +35,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: report });
   } catch (error) {
-    logger.error({ err: error }, "Error generating monthly report:");
+    logError(
+      {
+        message: "Monthly report generation failed unexpectedly",
+        ...logContext,
+      },
+      error
+    );
     return NextResponse.json(
       { error: "Failed to generate monthly report" },
       { status: 500 }

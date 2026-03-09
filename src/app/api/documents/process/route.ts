@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-utils";
 import { processDocument, type DocumentType } from "@/lib/ocr/document-processor";
-import { logger } from "@/lib/logger";
+import { logger, getRequestLogContext } from "@/lib/logger";
 
 const VALID_TYPES: DocumentType[] = [
   'carte_identitate',
@@ -66,7 +66,11 @@ function allowedFileTypesMessage(): string {
 }
 
 export async function POST(request: NextRequest) {
-  await requireAdmin();
+  const session = await requireAdmin();
+  const logContext = getRequestLogContext(request, {
+    tenantId: session.user.tenantId,
+    userId: session.user.id,
+  });
 
   try {
     const contentType = request.headers.get("content-type") || "";
@@ -155,7 +159,13 @@ export async function POST(request: NextRequest) {
       aiProvider,
     });
   } catch (error: unknown) {
-    logger.error({ err: error }, "Document processing error:");
+    logger.error(
+      {
+        ...logContext,
+        err: error,
+      },
+      "Document processing failed unexpectedly"
+    );
     const message = error instanceof Error ? error.message : "Processing failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

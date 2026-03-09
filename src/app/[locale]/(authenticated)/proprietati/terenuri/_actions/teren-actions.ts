@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
@@ -10,6 +11,84 @@ import { Prisma } from "@prisma/client";
 type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string };
+
+function serializeDate(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function getAddressAuditSnapshot(
+  address:
+    | {
+        strada?: string | null;
+        numar?: string | null;
+        bloc?: string | null;
+        scara?: string | null;
+        etaj?: string | null;
+        apartament?: string | null;
+        localitate?: string | null;
+        judet?: string | null;
+        codPostal?: string | null;
+        zonaFiscala?: string | null;
+      }
+    | null
+) {
+  if (!address) return null;
+
+  return {
+    strada: address.strada ?? null,
+    numar: address.numar ?? null,
+    bloc: address.bloc ?? null,
+    scara: address.scara ?? null,
+    etaj: address.etaj ?? null,
+    apartament: address.apartament ?? null,
+    localitate: address.localitate ?? null,
+    judet: address.judet ?? null,
+    codPostal: address.codPostal ?? null,
+    zonaFiscala: address.zonaFiscala ?? null,
+  };
+}
+
+function getLandAuditSnapshot(
+  land: {
+    id: string;
+    contribuabilId: string;
+    adresaId?: string | null;
+    zona: string;
+    numarCadastral: string | null;
+    numarCarteFunciara: string | null;
+    categorie: string;
+    suprafataMp: unknown;
+    suprafataHa: unknown;
+    cotaParte: unknown;
+    tipActProprietate: string | null;
+    nrActProprietate: string | null;
+    dataActProprietate: Date | null;
+    dataDobandire: Date;
+    dataInstrainare: Date | null;
+    status?: string | null;
+  },
+  address?: Parameters<typeof getAddressAuditSnapshot>[0]
+) {
+  return {
+    id: land.id,
+    contribuabilId: land.contribuabilId,
+    adresaId: land.adresaId ?? null,
+    zona: land.zona,
+    numarCadastral: land.numarCadastral,
+    numarCarteFunciara: land.numarCarteFunciara,
+    categorie: land.categorie,
+    suprafataMp: Number(land.suprafataMp),
+    suprafataHa: land.suprafataHa == null ? null : Number(land.suprafataHa),
+    cotaParte: Number(land.cotaParte),
+    tipActProprietate: land.tipActProprietate ?? null,
+    nrActProprietate: land.nrActProprietate ?? null,
+    dataActProprietate: serializeDate(land.dataActProprietate),
+    dataDobandire: serializeDate(land.dataDobandire),
+    dataInstrainare: serializeDate(land.dataInstrainare),
+    status: land.status ?? null,
+    adresa: getAddressAuditSnapshot(address ?? null),
+  };
+}
 
 // ============================================================================
 // LIST / SEARCH
@@ -191,6 +270,16 @@ export async function createTeren(
           ? new Date(formData.get("dataInstrainare") as string)
           : undefined,
       },
+      include: { adresa: true },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "create",
+      entityType: "proprietate_teren",
+      entityId: teren.id,
+      newValues: getLandAuditSnapshot(teren, teren.adresa),
     });
 
     revalidatePath("/proprietati/terenuri");
@@ -218,6 +307,7 @@ export async function updateTeren(
   try {
     const existing = await prisma.proprietateTeren.findFirst({
       where: { id, tenantId: session.user.tenantId, deletedAt: null },
+      include: { adresa: true },
     });
     if (!existing)
       return { success: false, error: "Terenul nu a fost găsit" };
@@ -245,7 +335,7 @@ export async function updateTeren(
       ? parseFloat(formData.get("suprafataMp") as string)
       : Number(existing.suprafataMp);
 
-    await prisma.proprietateTeren.update({
+    const updated = await prisma.proprietateTeren.update({
       where: { id },
       data: {
         zona: (formData.get("zona") as string) || existing.zona,
@@ -276,6 +366,17 @@ export async function updateTeren(
           : null,
         status: (formData.get("status") as string) || existing.status,
       },
+      include: { adresa: true },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "update",
+      entityType: "proprietate_teren",
+      entityId: updated.id,
+      oldValues: getLandAuditSnapshot(existing, existing.adresa),
+      newValues: getLandAuditSnapshot(updated, updated.adresa),
     });
 
     revalidatePath("/proprietati/terenuri");
@@ -301,6 +402,7 @@ export async function deleteTeren(id: string): Promise<ActionResult> {
   try {
     const existing = await prisma.proprietateTeren.findFirst({
       where: { id, tenantId: session.user.tenantId, deletedAt: null },
+      include: { adresa: true },
     });
     if (!existing)
       return { success: false, error: "Terenul nu a fost găsit" };
@@ -308,6 +410,15 @@ export async function deleteTeren(id: string): Promise<ActionResult> {
     await prisma.proprietateTeren.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+
+    await writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      action: "delete",
+      entityType: "proprietate_teren",
+      entityId: existing.id,
+      oldValues: getLandAuditSnapshot(existing, existing.adresa),
     });
 
     revalidatePath("/proprietati/terenuri");

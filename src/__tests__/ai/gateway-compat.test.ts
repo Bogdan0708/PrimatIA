@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // We need a fresh module for each test since getLLMConfig reads process.env at call time.
-// Import type only here; actual function is imported dynamically or directly.
 import type { LLMProvider } from "@/lib/ai/config";
-import { getLLMConfig } from "@/lib/ai/config";
+import { getLLMConfig, getGatewayHeaders } from "@/lib/ai/config";
 
 // All AI-related env vars that getLLMConfig inspects
 const AI_ENV_VARS = [
@@ -18,6 +17,7 @@ const AI_ENV_VARS = [
   "OPENAI_MODEL",
   "LM_STUDIO_URL",
   "LM_STUDIO_MODEL",
+  "TENANT_ID",
 ];
 
 /**
@@ -30,7 +30,7 @@ function clearAIEnvVars() {
   }
 }
 
-describe("getLLMConfig", () => {
+describe("getLLMConfig and getGatewayHeaders", () => {
   beforeEach(() => {
     clearAIEnvVars();
   });
@@ -89,13 +89,14 @@ describe("getLLMConfig", () => {
       expect(config.apiKey).toBe("gw-key-123");
     });
 
-    it('defaults model and gatewayProvider to "gemini"', () => {
+    it('defaults model and gatewayProvider to "gemini-2.0-flash"', () => {
       vi.stubEnv("AI_GATEWAY_URL", "https://gateway.example.com");
       vi.stubEnv("AI_GATEWAY_KEY", "gw-key-123");
 
       const config = getLLMConfig();
-      expect(config.model).toBe("gemini");
+      // Local version uses gemini-2.0-flash as default model for gemini provider
       expect(config.gatewayProvider).toBe("gemini");
+      expect(config.model).toBe("gemini-2.0-flash");
     });
 
     it("respects AI_GATEWAY_MODEL override", () => {
@@ -117,6 +118,37 @@ describe("getLLMConfig", () => {
       const config = getLLMConfig();
       expect(config.model).toBe("my-model");
       expect(config.gatewayProvider).toBe("anthropic");
+    });
+
+    it("includes gatewayTenantId when TENANT_ID is set", () => {
+      vi.stubEnv("AI_GATEWAY_URL", "https://gateway.example.com");
+      vi.stubEnv("AI_GATEWAY_KEY", "gw-key-123");
+      vi.stubEnv("TENANT_ID", "tenant-123");
+
+      const config = getLLMConfig();
+      expect(config.gatewayTenantId).toBe("tenant-123");
+    });
+  });
+
+  describe("getGatewayHeaders", () => {
+    it("returns correct headers including Authorization and x-tenant-id", () => {
+      const config = {
+        provider: "gateway" as const,
+        baseUrl: "https://gateway.example.com",
+        apiKey: "master-key",
+        gatewayProvider: "gemini",
+        model: "gemini-2.0-flash",
+        gatewayTenantId: "tenant-1",
+      };
+
+      const headers = getGatewayHeaders(config);
+      expect(headers).toEqual(
+        expect.objectContaining({
+          Authorization: "Bearer master-key",
+          "Content-Type": "application/json",
+          "x-tenant-id": "tenant-1",
+        })
+      );
     });
   });
 
@@ -290,9 +322,6 @@ describe("getLLMConfig", () => {
   });
 
   // ── 6. Provider override via AI_PROVIDER env var ───────────────────
-  // Note: The current implementation does not support AI_PROVIDER override.
-  // These tests document the current behavior (env var is ignored) and
-  // serve as a specification for when this feature is added.
   describe("AI_PROVIDER env var override", () => {
     it("currently does not override automatic detection (documenting behavior)", () => {
       vi.stubEnv("AI_PROVIDER", "openai");

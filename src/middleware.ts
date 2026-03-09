@@ -1,66 +1,13 @@
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { LOCALES, DEFAULT_LOCALE } from "@/lib/constants";
+import { attachRequestId, ensureRequestId } from "@/lib/logger";
 
 const intlMiddleware = createMiddleware({
   locales: LOCALES,
   defaultLocale: DEFAULT_LOCALE,
   localePrefix: "always",
 });
-
-// ---------------------------------------------------------------------------
-// Rate limiting (in-memory, per IP — fine for single-instance deployment)
-// ---------------------------------------------------------------------------
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-const RATE_LIMIT_CONFIGS: Record<string, { maxRequests: number; windowMs: number }> = {
-  "/api/portal/auth/login": { maxRequests: 10, windowMs: 60_000 },
-  "/api/portal/auth/register": { maxRequests: 5, windowMs: 60_000 },
-  "/api/portal/payments/initiate": { maxRequests: 20, windowMs: 60_000 },
-  "/api/portal/contact": { maxRequests: 5, windowMs: 60_000 },
-  "/api/plati/record": { maxRequests: 60, windowMs: 60_000 },
-  "/api/chatbot": { maxRequests: 15, windowMs: 60_000 },
-  // Default for all other API routes
-  default: { maxRequests: 120, windowMs: 60_000 },
-};
-
-function getRateLimitConfig(pathname: string) {
-  for (const [route, config] of Object.entries(RATE_LIMIT_CONFIGS)) {
-    if (route !== "default" && pathname.startsWith(route)) return config;
-  }
-  return RATE_LIMIT_CONFIGS.default;
-}
-
-function checkRateLimit(ip: string, pathname: string): boolean {
-  const config = getRateLimitConfig(pathname);
-  const key = `${ip}:${pathname}`;
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + config.windowMs });
-    return true;
-  }
-
-  entry.count++;
-  return entry.count <= config.maxRequests;
-}
-
-// Periodically clean up stale entries (every 5 min)
-if (typeof globalThis !== "undefined") {
-  const cleanup = () => {
-    const now = Date.now();
-    rateLimitMap.forEach((entry, key) => {
-      if (now > entry.resetAt) rateLimitMap.delete(key);
-    });
-  };
-  // Only set interval in non-edge environments (middleware runs on edge)
-  // The map will naturally stay small since stale entries are skipped on access
-  if (rateLimitMap.size > 10_000) {
-    cleanup();
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Security headers
@@ -167,39 +114,33 @@ function checkRequestSize(request: NextRequest): boolean {
 
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestId = ensureRequestId(request);
 
   // Handle CORS preflight for API routes
   if (request.method === "OPTIONS" && pathname.startsWith("/api/")) {
     const response = new NextResponse(null, { status: 204 });
     addCorsHeaders(response, request);
-    return response;
+    return attachRequestId(response, requestId);
   }
 
   // Skip middleware for Stripe webhook (needs raw body, no rate limiting)
   if (pathname === "/api/payments/webhook") {
-    return NextResponse.next();
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-request-id", requestId);
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    return attachRequestId(response, requestId);
   }
 
-  // Rate limiting for API routes
+  // Request size checks are kept in middleware because they are cheap and do
+  // not depend on shared state. Route-level rate limiting now uses Redis.
   if (pathname.startsWith("/api/")) {
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
-    if (!checkRateLimit(ip, pathname)) {
-      return new NextResponse(
-        JSON.stringify({ error: "Too many requests" }),
-        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } }
-      );
-    }
-
-    // Request size check
     if (!checkRequestSize(request)) {
-      return new NextResponse(
+      return attachRequestId(new NextResponse(
         JSON.stringify({ error: "Request body too large" }),
         { status: 413, headers: { "Content-Type": "application/json" } }
-      );
+      ), requestId);
     }
   }
 
@@ -230,25 +171,23 @@ export default function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = loginUrl;
       const redirectResponse = NextResponse.redirect(url);
-      return addSecurityHeaders(redirectResponse);
+      return attachRequestId(addSecurityHeaders(redirectResponse), requestId);
     }
   }
 
   // Skip i18n middleware for API routes
   if (pathname.startsWith("/api/")) {
-    const requestId = crypto.randomUUID();
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-request-id", requestId);
 
     const response = NextResponse.next({
       request: { headers: requestHeaders },
     });
-    response.headers.set("x-request-id", requestId);
     addSecurityHeaders(response);
     if (pathname.startsWith("/api/portal")) {
       addCorsHeaders(response, request);
     }
-    return response;
+    return attachRequestId(response, requestId);
   }
 
   // Run the i18n middleware for page routes
@@ -262,7 +201,7 @@ export default function middleware(request: NextRequest) {
     addCorsHeaders(response, request);
   }
 
-  return response;
+  return attachRequestId(response, requestId);
 }
 
 export const config = {

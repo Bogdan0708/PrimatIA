@@ -10,7 +10,17 @@ gcloud services enable \
   sqladmin.googleapis.com \
   artifactregistry.googleapis.com \
   secretmanager.googleapis.com \
-  redis.googleapis.com
+  redis.googleapis.com \
+  cloudresourcemanager.googleapis.com
+
+# Get project number for IAM bindings
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+echo "🔐 Granting Secret Manager Access to Service Account: $SERVICE_ACCOUNT"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$SERVICE_ACCOUNT" \
+  --role="roles/secretmanager.secretAccessor"
 
 echo "🗄️ Creating Artifact Registry..."
 gcloud artifacts repositories create primaria \

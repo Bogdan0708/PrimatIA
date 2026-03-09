@@ -23,6 +23,9 @@ describe("Document Processor - Gateway Integration", () => {
   it("should use AI Gateway for structured extraction when enabled", async () => {
     process.env.AI_GATEWAY_URL = "https://gateway.example.com";
     process.env.AI_GATEWAY_KEY = "master-key-123";
+    process.env.AI_GATEWAY_PROVIDER = "gemini";
+    process.env.AI_GATEWAY_MODEL = "gemini-2.0-flash";
+    process.env.TENANT_ID = "tenant-1";
 
     // Mock OCR text that regex might partially miss
     const ocrText = "NUME: POPESCU PRENUME: ION CNP: 1900101123456";
@@ -51,6 +54,7 @@ describe("Document Processor - Gateway Integration", () => {
         method: "POST",
         headers: expect.objectContaining({
           "Authorization": "Bearer master-key-123",
+          "x-tenant-id": "tenant-1",
         }),
         body: expect.stringContaining('"provider":"gemini"'),
       })

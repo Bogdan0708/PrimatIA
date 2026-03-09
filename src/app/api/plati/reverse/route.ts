@@ -1,14 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth-utils";
+import { auth } from "@/lib/auth";
 import { setTenantContext } from "@/lib/db";
 import { reversePayment } from "@/lib/payments/reversal";
-import { logger } from "@/lib/logger";
+import { logger, getRequestLogContext } from "@/lib/logger";
+import { checkSharedRateLimit, createRateLimitExceededResponse } from "@/lib/rate-limit";
+import type { Role } from "@/lib/constants";
+
+const PAYMENT_ROLES: Role[] = ["super_admin", "primaria_admin", "operator", "contabil"];
 
 export async function POST(request: NextRequest) {
-  const session = await requireAdmin();
+  const logContext = getRequestLogContext(request);
+  
+  const rateLimit = await checkSharedRateLimit({
+    request,
+    bucket: "payments-reverse",
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+
+  if (!rateLimit.allowed) {
+    return createRateLimitExceededResponse(rateLimit);
+  }
+
+  const session = await auth();
+
+  if (!session?.user?.tenantId || !session?.user?.id) {
+    logger.warn({ ...logContext }, "Payment reversal rejected: unauthorized");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!PAYMENT_ROLES.includes(session.user.role as Role)) {
+    logger.warn({ 
+        ...logContext,
+        tenantId: session.user.tenantId,
+        userId: session.user.id,
+        role: session.user.role
+    }, "Payment reversal rejected: insufficient permissions");
+    return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  }
 
   try {
-    const { plataId, reason } = await request.json();
+    const body = await request.json();
+    const { plataId, reason } = body;
 
     if (!plataId || !reason) {
       return NextResponse.json(
@@ -38,7 +71,7 @@ export async function POST(request: NextRequest) {
       stornoPlataId: result.stornoPlataId,
     });
   } catch (error) {
-    logger.error({ err: error }, "Payment reversal error:");
+    logger.error({ err: error, ...logContext }, "Payment reversal failed unexpectedly");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

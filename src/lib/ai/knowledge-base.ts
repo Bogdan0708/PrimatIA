@@ -12,8 +12,8 @@
 
 import { searchRegulations } from "@/lib/search/regulation-search";
 import { CHATBOT_ENTRIES, type ChatbotEntry } from "@/lib/chatbot/knowledge";
-import { getLLMConfig } from "./config";
-import { redactPII } from "./pii-redact";
+import { getGatewayHeaders, getLLMConfig } from "./config";
+import { redactSensitiveText } from "./pii-scrubber";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,6 +116,11 @@ async function callLLM(
   config: ReturnType<typeof getLLMConfig>,
 ): Promise<string | null> {
   try {
+    const sanitizedMessages = messages.map((message) => ({
+      ...message,
+      content: redactSensitiveText(message.content),
+    }));
+
     if (config.provider === "gateway" || config.provider === "openai" || config.provider === "lm_studio") {
       const isGateway = config.provider === "gateway";
       const isLM = config.provider === "lm_studio";
@@ -125,7 +130,7 @@ async function callLLM(
 
       if (isGateway) {
         url = `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`;
-        headers["Authorization"] = `Bearer ${config.apiKey}`;
+        Object.assign(headers, getGatewayHeaders(config));
       } else if (isLM) {
         const baseUrl = config.baseUrl!.replace(/\/+$/, "");
         url = baseUrl.endsWith("/v1") ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
@@ -141,7 +146,7 @@ async function callLLM(
           model: config.model,
           temperature: 0.2,
           max_tokens: 600,
-          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...sanitizedMessages],
           // Pass provider to gateway for internal routing if needed
           ...(isGateway && config.gatewayProvider && { provider: config.gatewayProvider }),
         }),
@@ -165,7 +170,7 @@ async function callLLM(
           model: config.model,
           max_tokens: 600,
           system: SYSTEM_PROMPT,
-          messages: messages.map((m) => ({
+          messages: sanitizedMessages.map((m) => ({
             role: m.role === "system" ? "user" : m.role,
             content: m.content,
           })),
@@ -200,8 +205,8 @@ export async function* streamLLMResponse(
     .join("\n\n");
 
   // Redact PII before sending to external LLM
-  const sanitizedQuery = redactPII(query);
-  const sanitizedHistory = history.map((m) => ({ ...m, content: redactPII(m.content) }));
+  const sanitizedQuery = redactSensitiveText(query);
+  const sanitizedHistory = history.map((m) => ({ ...m, content: redactSensitiveText(m.content) }));
 
   const userPrompt = contextText
     ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${sanitizedQuery}\n</user_query>`
@@ -214,7 +219,7 @@ export async function* streamLLMResponse(
 
     if (config.provider === "gateway") {
       baseUrl = `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`;
-      headers["Authorization"] = `Bearer ${config.apiKey}`;
+      Object.assign(headers, getGatewayHeaders(config));
     } else if (config.provider === "lm_studio") {
       const trimmed = config.baseUrl!.replace(/\/+$/, "");
       baseUrl = trimmed.endsWith("/v1") ? `${trimmed}/chat/completions` : `${trimmed}/v1/chat/completions`;
@@ -235,7 +240,7 @@ export async function* streamLLMResponse(
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             ...sanitizedHistory.map((m) => ({ role: m.role, content: m.content })),
-            { role: "user", content: userPrompt },
+            { role: "user", content: redactSensitiveText(userPrompt) },
           ],
           ...(config.provider === "gateway" && config.gatewayProvider && { provider: config.gatewayProvider }),
         }),
@@ -336,18 +341,20 @@ export async function generateRAGResponse(
     .join("\n\n");
 
   // Redact PII before sending to external LLM
-  const sanitizedQuery = redactPII(query);
+  const sanitizedQuery = redactSensitiveText(query);
+  const sanitizedHistory = history.map((m) => ({ ...m, content: redactSensitiveText(m.content) }));
 
   const userPrompt = contextText
     ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${sanitizedQuery}\n</user_query>`
     : `<user_query>\n${sanitizedQuery}\n</user_query>`;
 
   const messages = [
-    ...history.map((m) => ({ role: m.role, content: redactPII(m.content) })),
-    { role: "user", content: userPrompt },
+    { role: "system", content: SYSTEM_PROMPT },
+    ...sanitizedHistory.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user", content: redactSensitiveText(userPrompt) },
   ];
 
-  const llmAnswer = await callLLM(messages, config);
+  const llmAnswer = await callLLM(messages.slice(1), config); // slice(1) because callLLM adds system prompt
 
   if (llmAnswer) {
     // Sanitize HTML

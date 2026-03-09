@@ -24,8 +24,17 @@ npm run test:watch         # Watch mode
 npm run test:coverage      # Coverage report (v8)
 npx vitest src/__tests__/tax-engine/building-tax.test.ts  # Single file
 
-# Infrastructure (dev)
-docker compose up -d       # PostgreSQL 16, Redis 7, MinIO, PgBouncer
+# E2E Testing (Playwright)
+npm run test:e2e           # Run all E2E tests (headless)
+npm run test:e2e:headed    # Run with visible browser
+npm run test:e2e:ui        # Interactive UI mode
+
+# Infrastructure (dev) — non-default ports to avoid conflicts
+docker compose up -d       # PostgreSQL :5435, PgBouncer :6432, Redis :6381, MinIO :9000/:9001
+
+# Operational scripts
+npm run db:preflight       # Pre-release DB validation
+npm run db:migrate:status  # Check migration status
 ```
 
 ## Architecture
@@ -56,6 +65,8 @@ await setTenantContext(tenantId);
 ```
 
 Never use the raw `prisma` client for tenant data without setting context first.
+
+Both modes use `AsyncLocalStorage` in `src/lib/db.ts`. `withTenantScope` runs one `SET LOCAL` per transaction (preferred). `setTenantContext` wraps each individual query in a mini-transaction (backward-compatible). Use `getCurrentTenantId()` to check the active tenant.
 
 ### Server Actions Pattern
 
@@ -99,12 +110,36 @@ Located in `src/lib/tax-engine/`. Separate modules for building, land, vehicle t
 
 All enums and type literals are in `src/lib/constants.ts`: roles, tax categories, fiscal zones, building construction types, land categories, vehicle types, Euro norms, property/tax/import statuses.
 
+### Middleware (`src/middleware.ts`)
+
+The middleware chains several concerns before next-intl locale routing:
+- **Rate limiting**: Per-route configurable (e.g., login: 10 req/min, payments: 20 req/min); Stripe webhooks exempt
+- **Security headers**: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- **Request size limits**: Route-specific (auth: 10KB, payments: 100KB, default: 1MB)
+- **CORS**: For `/api/portal` routes (configurable via `CORS_ALLOWED_ORIGINS`)
+- **Tenant injection**: Auto-injects `x-tenant-id` header for portal API routes from `TENANT_ID` env var
+- **Portal auth guard**: Unauthenticated users on `/portal/*` redirect to login (except login/register/verify/forgot-password/reset-password)
+
+### E2E Test Architecture
+
+Playwright config (`playwright.config.ts`) defines three projects with separate auth states:
+- **setup**: Runs `e2e/auth.setup.ts` to create storage state files
+- **chromium-admin**: Uses `e2e/.auth/admin.json`, matches `*admin*.spec.ts`
+- **chromium-citizen**: Uses `e2e/.auth/citizen.json`, matches `*citizen*.spec.ts`
+- **chromium**: No storage state, matches `auth.spec.ts` (unauthenticated flows)
+
 ## Database
 
 - **36 Prisma models** in `prisma/schema.prisma`
 - Prisma 6 with `url` (PgBouncer, transaction mode) and `directUrl` (direct PostgreSQL, for migrations)
 - RLS policies defined in raw SQL migrations + `docker/postgres/init.sql`
 - Seed data: 50 taxpayers, 100+ properties for demo tenant (Bogdan Vodă, Maramureș)
+
+## CI/CD
+
+- **PR pipeline** (`.github/workflows/ci.yml`): lint → type-check → build → migrate deploy → tests
+- **Migration drift detection**: On PRs touching `prisma/`, runs `prisma migrate diff` to catch unmigrated schema changes
+- **Staging release gate** (`.github/workflows/staging-release-gate.yml`): Manual trigger, generates release evidence docs
 
 ## Deployment
 

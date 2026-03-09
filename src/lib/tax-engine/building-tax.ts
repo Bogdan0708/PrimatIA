@@ -19,6 +19,7 @@ import {
   toSafeNumber,
   calculateBonificatie,
   getBuildingAgeCoefficient,
+  applyInflationIndex,
 } from "./utils";
 
 /**
@@ -49,25 +50,54 @@ export function getCommuneRankMultiplier(rank?: CommuneRank): number {
  * - If revalued 3-5 years ago: 1.5%
  */
 export function getPjBuildingRate(
+  defaultRate: number,
   fiscalYear: number,
+  maxConfiguredRate: number | undefined,
   dataUltimeiReevaluari?: Date
 ): number {
   if (!dataUltimeiReevaluari) {
-    // No revaluation recorded => penalty rate
-    return 5.0;
+    return Math.max(maxConfiguredRate ?? defaultRate, 5.0);
   }
 
   const revalYear = dataUltimeiReevaluari.getFullYear();
   const yearsSinceReval = fiscalYear - revalYear;
 
   if (yearsSinceReval > 5) {
-    return 5.0; // Penalty: not revalued in 5+ years
+    return Math.max(maxConfiguredRate ?? defaultRate, 5.0);
   }
-  if (yearsSinceReval <= 3) {
-    return 1.0; // Standard lower bound: revalued recently
+
+  return defaultRate;
+}
+
+function resolveMixedUseShares(input: BuildingTaxInput): {
+  residentialShare: number;
+  nonResidentialShare: number;
+} {
+  const totalSurface = input.suprafataDesfasurata ?? input.suprafataConstruita;
+  let residentialSurface = input.suprafataRezidentiala ?? 0;
+  let nonResidentialSurface = input.suprafataNerezidentiala ?? 0;
+
+  if (residentialSurface <= 0 && nonResidentialSurface <= 0) {
+    throw new Error("Mixed-use buildings require residential or non-residential area data");
   }
-  // 3 < years <= 5
-  return 1.5; // Standard upper bound
+
+  if (residentialSurface <= 0 && nonResidentialSurface > 0 && totalSurface > nonResidentialSurface) {
+    residentialSurface = totalSurface - nonResidentialSurface;
+  }
+
+  if (nonResidentialSurface <= 0 && residentialSurface > 0 && totalSurface > residentialSurface) {
+    nonResidentialSurface = totalSurface - residentialSurface;
+  }
+
+  const totalDeclaredSurface = residentialSurface + nonResidentialSurface;
+  if (totalDeclaredSurface <= 0) {
+    throw new Error("Mixed-use building surface split is invalid");
+  }
+
+  return {
+    residentialShare: residentialSurface / totalDeclaredSurface,
+    nonResidentialShare: nonResidentialSurface / totalDeclaredSurface,
+  };
 }
 
 /**
@@ -87,40 +117,90 @@ export async function calculateBuildingTax(
   hclDecision: HclDecisionContext,
   exemptions: ExemptionContext[]
 ): Promise<TaxCalculationResult> {
-  // 1. Look up rate table
-  const taxType = getTaxTypeForBuilding(input.destinatie);
-  const rateEntry = await findRateTableEntry(
-    input.tenantId,
-    hclDecision.id,
-    taxType,
-    input.tipConstructie,
-    input.zona
-  );
-
-  if (!rateEntry) {
-    throw new Error(
-      `No rate table entry found for building tax: type=${taxType}, construction=${input.tipConstructie}, zone=${input.zona}`
-    );
-  }
-
   // 2. Calculate base
   let bazaImpozabila: number;
   let rataAplicata: number;
+  let rateTableId: string;
 
-  if (input.tipContribuabil === "PJ" && input.destinatie === "nerezidentiala") {
-    // PJ path: use valoareInventar with date-bounded rate (Art. 460)
-    bazaImpozabila = input.valoareInventar ?? input.valoareImpozabila ?? 0;
-    rataAplicata = getPjBuildingRate(input.fiscalYear, input.dataUltimeiReevaluari);
-  } else if (input.destinatie === "nerezidentiala") {
-    bazaImpozabila = input.valoareInventar ?? input.valoareImpozabila ?? 0;
-    rataAplicata = rateEntry.rateValue;
-  } else if (input.destinatie === "rezidentiala") {
-    bazaImpozabila = input.valoareImpozabila ?? 0;
-    rataAplicata = rateEntry.rateValue;
+  if (input.destinatie === "mixta") {
+    const [residentialRateEntry, nonResidentialRateEntry] = await Promise.all([
+      findRateTableEntry(
+        input.tenantId,
+        hclDecision.id,
+        "impozit_cladiri_rezidentiale",
+        input.tipConstructie,
+        input.zona
+      ),
+      findRateTableEntry(
+        input.tenantId,
+        hclDecision.id,
+        "impozit_cladiri_nerezidentiale",
+        input.tipConstructie,
+        input.zona
+      ),
+    ]);
+
+    if (!residentialRateEntry || !nonResidentialRateEntry) {
+      throw new Error(
+        `No rate table entry found for mixed building tax: construction=${input.tipConstructie}, zone=${input.zona}`
+      );
+    }
+
+    const { residentialShare, nonResidentialShare } = resolveMixedUseShares(input);
+    bazaImpozabila = input.valoareImpozabila ?? input.valoareInventar ?? 0;
+
+    const residentialRate = residentialRateEntry.rateValue;
+    const nonResidentialRate =
+      input.tipContribuabil === "PJ"
+        ? getPjBuildingRate(
+            nonResidentialRateEntry.rateValue,
+            input.fiscalYear,
+            nonResidentialRateEntry.maxRate,
+            input.dataUltimeiReevaluari
+          )
+        : nonResidentialRateEntry.rateValue;
+
+    rataAplicata =
+      residentialRate * residentialShare +
+      nonResidentialRate * nonResidentialShare;
+    rateTableId =
+      residentialShare >= nonResidentialShare
+        ? residentialRateEntry.id
+        : nonResidentialRateEntry.id;
   } else {
-    // Mixed: proportional
-    bazaImpozabila = input.valoareImpozabila ?? 0;
-    rataAplicata = rateEntry.rateValue;
+    // 1. Look up rate table
+    const taxType = getTaxTypeForBuilding(input.destinatie);
+    const rateEntry = await findRateTableEntry(
+      input.tenantId,
+      hclDecision.id,
+      taxType,
+      input.tipConstructie,
+      input.zona
+    );
+
+    if (!rateEntry) {
+      throw new Error(
+        `No rate table entry found for building tax: type=${taxType}, construction=${input.tipConstructie}, zone=${input.zona}`
+      );
+    }
+
+    if (input.tipContribuabil === "PJ" && input.destinatie === "nerezidentiala") {
+      bazaImpozabila = input.valoareInventar ?? input.valoareImpozabila ?? 0;
+      rataAplicata = getPjBuildingRate(
+        rateEntry.rateValue,
+        input.fiscalYear,
+        rateEntry.maxRate,
+        input.dataUltimeiReevaluari
+      );
+    } else if (input.destinatie === "nerezidentiala") {
+      bazaImpozabila = input.valoareInventar ?? input.valoareImpozabila ?? 0;
+      rataAplicata = rateEntry.rateValue;
+    } else {
+      bazaImpozabila = input.valoareImpozabila ?? 0;
+      rataAplicata = rateEntry.rateValue;
+    }
+
+    rateTableId = rateEntry.id;
   }
 
   // 3. Apply rate in micro-lei to preserve Decimal(12,6) precision.
@@ -135,6 +215,9 @@ export async function calculateBuildingTax(
   // 4b. Apply commune rank zone multiplier (Art. 457)
   const zoneMultiplier = getCommuneRankMultiplier(input.communeRank);
   sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, zoneMultiplier);
+
+  // 4c. Apply HCL inflation coefficient when configured
+  sumaCalculata = applyInflationIndex(sumaCalculata, hclDecision.inflationIndex);
 
   // 5. Apply co-ownership
   sumaCalculataMicroLei = applyPercentToMicroLei(sumaCalculataMicroLei, input.cotaParte);
@@ -184,7 +267,7 @@ export async function calculateBuildingTax(
     dataStartCalcul: startDate,
     dataStopCalcul: endDate,
     hclDecisionId: hclDecision.id,
-    rateTableId: rateEntry.id,
+    rateTableId,
   };
 }
 

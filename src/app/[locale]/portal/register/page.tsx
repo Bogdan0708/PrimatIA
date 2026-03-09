@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
-import { Building2, CheckCircle, AlertCircle } from "lucide-react";
+import { Building2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type RegistrationState = "form" | "success" | "no_match";
+type RegistrationState = "form" | "success";
 
 export default function PortalRegisterPage() {
   const [state, setState] = useState<RegistrationState>("form");
@@ -69,9 +69,7 @@ export default function PortalRegisterPage() {
 
       const data = await res.json();
 
-      if (data.error === "no_match") {
-        setState("no_match");
-      } else if (!res.ok) {
+      if (!res.ok) {
         setError(data.error || t("registrationError"));
       } else {
         setState("success");
@@ -98,32 +96,6 @@ export default function PortalRegisterPage() {
             <Button asChild variant="outline">
               <Link href={`${localePrefix}/portal/login`}>
                 {t("backToLogin")}
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
-  if (state === "no_match") {
-    return (
-      <div className="flex min-h-[80vh] items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <AlertCircle className="h-16 w-16 text-amber-500" />
-            </div>
-            <CardTitle>{t("noMatchTitle")}</CardTitle>
-            <CardDescription>{t("noMatchDescription")}</CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center gap-2">
-            <Button variant="outline" onClick={() => setState("form")}>
-              {t("tryAgain")}
-            </Button>
-            <Button asChild variant="outline">
-              <Link href={`${localePrefix}/portal/contact`}>
-                {t("contactPrimaria")}
               </Link>
             </Button>
           </CardFooter>
