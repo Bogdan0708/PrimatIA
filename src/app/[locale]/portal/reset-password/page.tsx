@@ -57,8 +57,12 @@ export default function PortalResetPasswordPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || t("resetPasswordError"));
+        if (response.status === 429) {
+          setError(tCommon("rateLimitExceeded"));
+        } else {
+          const data = await response.json();
+          setError(data.error || t("resetPasswordError"));
+        }
         return;
       }
 
@@ -105,6 +109,9 @@ export default function PortalResetPasswordPage() {
                   required
                 />
               </div>
+              {confirmPassword && password !== confirmPassword && (
+                <p className="text-sm text-destructive">{t("resetPasswordMismatch")}</p>
+              )}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <Button type="submit" className="w-full bg-portal-primary hover:bg-portal-primary-hover" disabled={loading}>
                 {loading ? tCommon("loading") : t("resetPasswordSubmit")}

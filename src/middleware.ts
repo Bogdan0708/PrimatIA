@@ -109,6 +109,67 @@ function checkRequestSize(request: NextRequest): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// CSRF / Origin validation for state-changing API requests
+// ---------------------------------------------------------------------------
+
+function rejectCrossOriginMutation(request: NextRequest): NextResponse | null {
+  // Only check state-changing methods
+  if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
+    return null;
+  }
+
+  const { pathname } = request.nextUrl;
+
+  // Only enforce on API routes (skip Stripe webhook — it has its own signature verification)
+  if (!pathname.startsWith("/api/") || pathname === "/api/payments/webhook") {
+    return null;
+  }
+
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+
+  // If no Origin header (same-origin form posts, curl, server-to-server), allow
+  if (!origin && !referer) return null;
+
+  const host = request.headers.get("host") || request.nextUrl.host;
+  const expectedOrigin = `${request.nextUrl.protocol}//${host}`;
+
+  // Check Origin header first, then Referer
+  if (origin) {
+    if (origin === expectedOrigin || origin === `https://${host}` || origin === `http://${host}`) {
+      return null;
+    }
+    // Check CORS_ALLOWED_ORIGINS for legitimate cross-origin clients
+    const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(",") ?? [];
+    if (process.env.NODE_ENV === "development") {
+      allowedOrigins.push("http://localhost:3000", "http://localhost:3001");
+    }
+    if (allowedOrigins.includes(origin)) return null;
+
+    return new NextResponse(
+      JSON.stringify({ error: "Cross-origin request blocked" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Fallback: check Referer
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.host === host) return null;
+    } catch {
+      // Malformed referer — block
+    }
+    return new NextResponse(
+      JSON.stringify({ error: "Cross-origin request blocked" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Main middleware
 // ---------------------------------------------------------------------------
 
@@ -121,6 +182,12 @@ export default function middleware(request: NextRequest) {
     const response = new NextResponse(null, { status: 204 });
     addCorsHeaders(response, request);
     return attachRequestId(response, requestId);
+  }
+
+  // CSRF: Block cross-origin state-changing requests
+  const csrfBlock = rejectCrossOriginMutation(request);
+  if (csrfBlock) {
+    return attachRequestId(csrfBlock, requestId);
   }
 
   // Skip middleware for Stripe webhook (needs raw body, no rate limiting)

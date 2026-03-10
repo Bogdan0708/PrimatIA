@@ -14,21 +14,31 @@ import {
 } from "@/components/ui/card";
 
 export default async function PublicLandingPage() {
-  const session = await auth();
   const locale = await getLocale();
   const localePrefix = `/${locale}`;
 
   // If staff is logged in, redirect to admin dashboard
-  if (session?.user && session.user.role !== "cetatean") {
-    redirect(`${localePrefix}/dashboard`);
+  // Wrapped in try-catch to prevent landing page crash if auth config is incomplete
+  try {
+    const session = await auth();
+    if (session?.user && session.user.role !== "cetatean") {
+      redirect(`${localePrefix}/dashboard`);
+    }
+  } catch {
+    // Auth not configured or failed — continue as unauthenticated
   }
 
   const t = await getTranslations("landing");
 
   // Get the first active tenant for display
-  const tenant = await prisma.tenant.findFirst({
-    where: { status: "active", deletedAt: null },
-  });
+  let tenant = null;
+  try {
+    tenant = await prisma.tenant.findFirst({
+      where: { status: "active", deletedAt: null },
+    });
+  } catch {
+    // DB not reachable — render without tenant info
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-white overflow-hidden relative">

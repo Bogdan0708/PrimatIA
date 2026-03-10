@@ -65,6 +65,7 @@ interface CitizenUser {
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [citizenUser, setCitizenUser] = useState<CitizenUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const locale = useLocale();
@@ -77,7 +78,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       .then((data) => {
         if (data?.id) setCitizenUser(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setAuthChecked(true));
   }, []);
 
   const isLoggedIn = !!citizenUser;
@@ -171,7 +173,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {isLoggedIn ? (
+              {!authChecked ? (
+                <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+              ) : isLoggedIn ? (
                 <>
                   {/* Notification bell */}
                   <NotificationBell

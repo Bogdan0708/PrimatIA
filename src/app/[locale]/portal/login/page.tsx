@@ -44,7 +44,14 @@ export default function PortalLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || t("loginError"));
+        // Map API error codes to translated messages instead of showing raw English strings
+        if (res.status === 401) {
+          setError(tAuth("invalidCredentials"));
+        } else if (res.status === 429) {
+          setError(tCommon("rateLimitExceeded"));
+        } else {
+          setError(data.error || t("loginError"));
+        }
       } else {
         router.push(`${localePrefix}/portal/dashboard`);
         router.refresh();

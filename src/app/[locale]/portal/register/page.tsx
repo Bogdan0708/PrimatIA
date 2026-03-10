@@ -30,6 +30,8 @@ export default function PortalRegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [tipContribuabil, setTipContribuabil] = useState("PF");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const t = useTranslations("portal");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -70,7 +72,11 @@ export default function PortalRegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || t("registrationError"));
+        if (res.status === 429) {
+          setError(tCommon("rateLimitExceeded"));
+        } else {
+          setError(data.error || t("registrationError"));
+        }
       } else {
         setState("success");
       }
@@ -175,13 +181,32 @@ export default function PortalRegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password">{t("password")}</Label>
-                <Input id="password" name="password" type="password" minLength={8} required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  minLength={8}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
-                <Input id="confirmPassword" name="confirmPassword" type="password" minLength={8} required />
+                <Input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  minLength={8}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
               </div>
             </div>
+            {confirmPassword && password !== confirmPassword && (
+              <p className="text-sm text-destructive">{t("passwordMismatch")}</p>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="limbaPreferata">{t("preferredLanguage")}</Label>

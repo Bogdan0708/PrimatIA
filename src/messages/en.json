@@ -36,7 +36,8 @@
     "logout": "Logout",
     "login": "Login",
     "language": "Language",
-    "security": "Security"
+    "security": "Security",
+    "rateLimitExceeded": "Too many attempts. Please wait a minute."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -859,7 +860,11 @@
     "resetPasswordInvalidToken": "Invalid link or missing token.",
     "resetPasswordMinLength": "Password must be at least 12 characters.",
     "resetPasswordMismatch": "Passwords do not match.",
-    "resetPasswordSubmit": "Reset password"
+    "resetPasswordSubmit": "Reset password",
+    "forgotPasswordTitle": "Reset password",
+    "forgotPasswordDesc": "Citizen Portal",
+    "forgotPasswordSent": "If the address exists in our system, we have sent a reset link.",
+    "forgotPasswordSend": "Send link"
   },
   "notification": {
     "title": "Notifications",

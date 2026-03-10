@@ -26,7 +26,7 @@ DIRECT_DB_URL=$(gcloud secrets versions access latest \
   --project="$PROJECT_ID" 2>/dev/null || true)
 
 if [ -n "$DIRECT_DB_URL" ]; then
-  docker run --rm \
+  docker run --rm -e DIRECT_DATABASE_URL="$DIRECT_DB_URL" \
     -e DATABASE_URL="$DIRECT_DB_URL" \
     "$IMAGE:$GIT_SHA" \
     npx prisma migrate deploy

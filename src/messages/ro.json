@@ -36,7 +36,8 @@
     "logout": "Deconectare",
     "login": "Autentificare",
     "language": "Limbă",
-    "security": "Securitate"
+    "security": "Securitate",
+    "rateLimitExceeded": "Prea multe încercări. Vă rugăm așteptați un minut."
   },
   "nav": {
     "dashboard": "Panou principal",
@@ -859,7 +860,11 @@
     "resetPasswordInvalidToken": "Link invalid sau lipsă token.",
     "resetPasswordMinLength": "Parola trebuie să aibă minim 12 caractere.",
     "resetPasswordMismatch": "Parolele nu se potrivesc.",
-    "resetPasswordSubmit": "Resetează parola"
+    "resetPasswordSubmit": "Resetează parola",
+    "forgotPasswordTitle": "Resetare parolă",
+    "forgotPasswordDesc": "Portal Cetățean",
+    "forgotPasswordSent": "Dacă adresa există în sistem, am trimis un link de resetare.",
+    "forgotPasswordSend": "Trimite link"
   },
   "notification": {
     "title": "Notificări",

@@ -50,13 +50,13 @@ export default function PortalForgotPasswordPage() {
               <span className="text-2xl font-bold">PrimărIA</span>
             </div>
           </div>
-          <CardTitle className="text-2xl">Resetare parolă</CardTitle>
-          <CardDescription>Portal Cetățean</CardDescription>
+          <CardTitle className="text-2xl">{t("forgotPasswordTitle")}</CardTitle>
+          <CardDescription>{t("forgotPasswordDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {done ? (
             <div className="space-y-4 text-sm">
-              <p>Dacă adresa există în sistem, am trimis un link de resetare.</p>
+              <p>{t("forgotPasswordSent")}</p>
               <Button asChild className="w-full bg-portal-primary hover:bg-portal-primary-hover">
                 <Link href={`${localePrefix}/portal/login`}>{tCommon("login")}</Link>
               </Button>
@@ -78,7 +78,7 @@ export default function PortalForgotPasswordPage() {
                 className="w-full bg-portal-primary hover:bg-portal-primary-hover"
                 disabled={loading}
               >
-                {loading ? tCommon("loading") : "Trimite link"}
+                {loading ? tCommon("loading") : t("forgotPasswordSend")}
               </Button>
             </form>
           )}

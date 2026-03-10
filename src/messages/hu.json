@@ -36,7 +36,8 @@
     "logout": "Kijelentkezés",
     "login": "Bejelentkezés",
     "language": "Nyelv",
-    "security": "Biztonság"
+    "security": "Biztonság",
+    "rateLimitExceeded": "Túl sok próbálkozás. Kérjük, várjon egy percet."
   },
   "nav": {
     "dashboard": "Irányítópult",
@@ -859,7 +860,11 @@
     "resetPasswordInvalidToken": "Érvénytelen link vagy hiányzó token.",
     "resetPasswordMinLength": "A jelszónak legalább 12 karakter hosszúnak kell lennie.",
     "resetPasswordMismatch": "A jelszavak nem egyeznek.",
-    "resetPasswordSubmit": "Jelszó visszaállítása"
+    "resetPasswordSubmit": "Jelszó visszaállítása",
+    "forgotPasswordTitle": "Jelszó visszaállítása",
+    "forgotPasswordDesc": "Állampolgári portál",
+    "forgotPasswordSent": "Ha a cím létezik a rendszerünkben, küldtünk egy visszaállítási linket.",
+    "forgotPasswordSend": "Link küldése"
   },
   "notification": {
     "title": "Értesítések",
