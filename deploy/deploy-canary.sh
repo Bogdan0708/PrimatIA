@@ -22,6 +22,24 @@ echo "==> Pushing to Artifact Registry..."
 docker push "$IMAGE:$TAG"
 docker push "$IMAGE:latest"
 
+# ---------------------------------------------------------------------------
+# Run database migrations before deploying the new revision
+# ---------------------------------------------------------------------------
+echo "==> Running database migrations..."
+DIRECT_DB_URL=$(gcloud secrets versions access latest \
+  --secret="primaria-direct-database-url" \
+  --project="$PROJECT_ID" 2>/dev/null || true)
+
+if [ -n "$DIRECT_DB_URL" ]; then
+  docker run --rm \
+    -e DATABASE_URL="$DIRECT_DB_URL" \
+    "$IMAGE:$TAG" \
+    npx prisma migrate deploy
+  echo "    Migrations applied."
+else
+  echo "    WARNING: Could not fetch DIRECT_DATABASE_URL secret. Skipping migrations."
+fi
+
 echo "==> Deploying new revision with --no-traffic..."
 gcloud run deploy "$SERVICE" \
   --project "$PROJECT_ID" \
@@ -33,11 +51,22 @@ gcloud run deploy "$SERVICE" \
   --memory 1Gi \
   --cpu 1 \
   --min-instances 0 \
-  --max-instances 3 \
-  --cpu-throttling \
+  --max-instances 10 \
+  --no-cpu-throttling \
   --cpu-boost \
   --set-env-vars "NODE_ENV=production,TENANT_ID=${TENANT_ID:?Set TENANT_ID},NEXTAUTH_URL=${NEXTAUTH_URL:?Set NEXTAUTH_URL},AUTH_TRUST_HOST=true" \
-  --set-secrets "DATABASE_URL=primaria-database-url:latest,DIRECT_DATABASE_URL=primaria-direct-database-url:latest,NEXTAUTH_SECRET=primaria-nextauth-secret:latest,STRIPE_SECRET_KEY=primaria-stripe-key:latest,STRIPE_WEBHOOK_SECRET=primaria-stripe-webhook:latest,AI_GATEWAY_URL=primaria-ai-gateway-url:latest,AI_GATEWAY_KEY=primaria-ai-gateway-key:latest"
+  --set-secrets "\
+DATABASE_URL=primaria-database-url:latest,\
+DIRECT_DATABASE_URL=primaria-direct-database-url:latest,\
+NEXTAUTH_SECRET=primaria-nextauth-secret:latest,\
+JWT_SECRET=primaria-jwt-secret:latest,\
+CNP_ENCRYPTION_KEY=primaria-cnp-encryption-key:latest,\
+CNP_TENANT_SALT_SECRET=primaria-cnp-tenant-salt:latest,\
+REDIS_URL=primaria-redis-url:latest,\
+STRIPE_SECRET_KEY=primaria-stripe-key:latest,\
+STRIPE_WEBHOOK_SECRET=primaria-stripe-webhook:latest,\
+AI_GATEWAY_URL=primaria-ai-gateway-url:latest,\
+AI_GATEWAY_KEY=primaria-ai-gateway-key:latest"
 
 # Get the canary revision URL
 CANARY_REV=$(gcloud run revisions list \

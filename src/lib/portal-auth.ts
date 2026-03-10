@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 
 /** Lazily resolved at request time so the module can be imported during build. */
 function getJwtSecret(): Uint8Array {
@@ -30,20 +30,22 @@ export interface CitizenSession {
 }
 
 async function isCitizenSessionValid(session: CitizenSession): Promise<boolean> {
-  const user = await prisma.citizenUser.findFirst({
-    where: {
-      id: session.sub,
-      tenantId: session.tenantId,
-      isActive: true,
-      emailVerified: true,
-      deletedAt: null,
-      tenant: {
-        status: { in: ["active", "trial"] },
+  const user = await withTenantScope(session.tenantId, () =>
+    prisma.citizenUser.findFirst({
+      where: {
+        id: session.sub,
+        tenantId: session.tenantId,
+        isActive: true,
+        emailVerified: true,
         deletedAt: null,
+        tenant: {
+          status: { in: ["active", "trial"] },
+          deletedAt: null,
+        },
       },
-    },
-    select: { id: true },
-  });
+      select: { id: true },
+    })
+  );
   return Boolean(user);
 }
 

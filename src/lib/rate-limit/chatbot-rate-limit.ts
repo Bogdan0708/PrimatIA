@@ -134,9 +134,7 @@ export async function checkChatbotRateLimit(ip: string): Promise<ChatbotRateLimi
   const now = Date.now();
   const redis = getRedisClient();
   if (!redis) {
-    if (process.env.NODE_ENV === "production") {
-      return { limited: true, retryAfterSeconds: 60 };
-    }
+    // Fail open: use in-memory fallback when Redis is unavailable
     return checkInMemoryFallback(ip, now);
   }
 
@@ -163,13 +161,8 @@ export async function checkChatbotRateLimit(ip: string): Promise<ChatbotRateLimi
       return parsed;
     }
   } catch {
-    if (process.env.NODE_ENV === "production") {
-      return { limited: true, retryAfterSeconds: 60 };
-    }
+    // Redis error — fall through to in-memory fallback
   }
 
-  if (process.env.NODE_ENV === "production") {
-    return { limited: true, retryAfterSeconds: 60 };
-  }
   return checkInMemoryFallback(ip, now);
 }

@@ -19,6 +19,10 @@ async function checkDatabase() {
 }
 
 async function checkRedis() {
+  if (!process.env.REDIS_URL) {
+    return { status: "skipped", message: "REDIS_URL not configured" };
+  }
+
   const start = Date.now();
   try {
     const redis = await ensureRedisConnection();
@@ -87,7 +91,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   const status =
-    database.status === "ok" && redis.status === "ok" && ai.status !== "error"
+    database.status === "ok" && redis.status !== "error" && ai.status !== "error"
       ? "ok"
       : "error";
 

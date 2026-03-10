@@ -161,56 +161,66 @@ export async function registerCitizen(params: {
 
 /**
  * Verify a citizen's email address.
+ * Uses a two-step approach: first find the citizen without tenant scope
+ * (verification tokens are globally unique), then wrap mutations in tenant scope.
  */
 export async function verifyCitizenEmail(token: string): Promise<boolean> {
   const verificationTokenHash = hashVerificationToken(token);
+
+  // Step 1: Find the citizen by token (unscoped — token is globally unique)
   const citizen = await prisma.citizenUser.findFirst({
     where: {
       verificationToken: verificationTokenHash,
       verificationExpires: { gte: new Date() },
       emailVerified: false,
     },
+    select: { id: true, tenantId: true },
   });
 
   if (!citizen) return false;
 
-  await prisma.citizenUser.update({
-    where: { id: citizen.id },
-    data: {
-      emailVerified: true,
-      isActive: true,
-      verificationToken: null,
-      verificationExpires: null,
-    },
-  });
+  // Step 2: Wrap all mutations in tenant scope for RLS compliance
+  return withTenantScope(citizen.tenantId, async () => {
+    await prisma.citizenUser.update({
+      where: { id: citizen.id },
+      data: {
+        emailVerified: true,
+        isActive: true,
+        verificationToken: null,
+        verificationExpires: null,
+      },
+    });
 
-  // Mark the link as verified
-  await prisma.citizenContribuabilLink.updateMany({
-    where: { citizenUserId: citizen.id },
-    data: { verifiedAt: new Date() },
-  });
+    // Mark the link as verified
+    await prisma.citizenContribuabilLink.updateMany({
+      where: { citizenUserId: citizen.id },
+      data: { verifiedAt: new Date() },
+    });
 
-  return true;
+    return true;
+  });
 }
 
 /**
  * Get citizen's linked contribuabili with their data.
  */
-export async function getCitizenContribuabili(citizenUserId: string) {
-  const links = await prisma.citizenContribuabilLink.findMany({
-    where: { citizenUserId, isActive: true },
-    include: {
-      contribuabil: {
-        include: {
-          adresaDomiciliu: true,
+export async function getCitizenContribuabili(citizenUserId: string, tenantId: string) {
+  return withTenantScope(tenantId, async () => {
+    const links = await prisma.citizenContribuabilLink.findMany({
+      where: { citizenUserId, isActive: true },
+      include: {
+        contribuabil: {
+          include: {
+            adresaDomiciliu: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return links.map((link) => ({
-    linkId: link.id,
-    linkType: link.linkType,
-    contribuabil: link.contribuabil,
-  }));
+    return links.map((link) => ({
+      linkId: link.id,
+      linkType: link.linkType,
+      contribuabil: link.contribuabil,
+    }));
+  });
 }
