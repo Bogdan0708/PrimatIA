@@ -18,29 +18,14 @@ services:
     container_name: primaria-app
     restart: always
     ports:
-      - "3000:3000"
+      - "3000:8080"
     env_file:
       - .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      AUTH_SECRET: ${AUTH_SECRET}
-      JWT_SECRET: ${JWT_SECRET}
-      REDIS_URL: ${REDIS_URL}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
-      MINIO_PORT: ${MINIO_PORT}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      MINIO_USE_SSL: ${MINIO_USE_SSL}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      TENANT_ID: ${TENANT_ID}
     depends_on:
       migrate:
-        condition: service_completed_successfully
+        condition: service_started
       pgbouncer:
         condition: service_healthy
       redis:
@@ -52,7 +37,7 @@ services:
         limits:
           memory: 512m
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -122,7 +107,7 @@ services:
       - ./docker/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./docker/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U primaria_admin"]
       interval: 5s
       timeout: 5s
       retries: 10
