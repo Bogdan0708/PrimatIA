@@ -26,6 +26,7 @@ vi.mock("@/lib/crypto", () => ({
 
 vi.mock("@/lib/db", () => ({
   prisma: prismaMock,
+  withTenantScope: (_tenantId: string, fn: () => unknown) => fn(),
 }));
 
 import { authorizeStaffCredentials } from "@/lib/staff-auth";

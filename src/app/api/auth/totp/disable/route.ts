@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma, setTenantContext } from "@/lib/db";
 import { verifyTotpCode } from "@/lib/totp";
 import { decryptString } from "@/lib/crypto";
 import { logError, logWarn, logInfo, getRequestLogContext } from "@/lib/logger";
@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
       logWarn({ message: "TOTP disable rejected: unauthorized", ...logContext });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await setTenantContext(session.user.tenantId);
 
     const body = await request.json();
     const code = typeof body?.code === "string" ? body.code : (typeof body?.token === "string" ? body.token : "");

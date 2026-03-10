@@ -1,5 +1,5 @@
 import { compare } from "bcryptjs";
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { hash } from "bcryptjs";
 import { createHash, randomBytes } from "crypto";
 
@@ -24,51 +24,53 @@ export async function authenticateCitizen(
     return null;
   }
 
-  const citizen = await prisma.citizenUser.findUnique({
-    where: { tenantId_email: { tenantId, email } },
-  });
+  return withTenantScope(tenantId, async () => {
+    const citizen = await prisma.citizenUser.findUnique({
+      where: { tenantId_email: { tenantId, email } },
+    });
 
-  if (!citizen || !citizen.isActive || !citizen.emailVerified || citizen.deletedAt) {
-    return null;
-  }
+    if (!citizen || !citizen.isActive || !citizen.emailVerified || citizen.deletedAt) {
+      return null;
+    }
 
-  if (citizen.lockedUntil && citizen.lockedUntil > new Date()) {
-    return null;
-  }
+    if (citizen.lockedUntil && citizen.lockedUntil > new Date()) {
+      return null;
+    }
 
-  const passwordValid = await compare(password, citizen.passwordHash);
+    const passwordValid = await compare(password, citizen.passwordHash);
 
-  if (!passwordValid) {
-    const attempts = citizen.loginAttempts + 1;
+    if (!passwordValid) {
+      const attempts = citizen.loginAttempts + 1;
+      await prisma.citizenUser.update({
+        where: { id: citizen.id },
+        data: {
+          loginAttempts: attempts,
+          lockedUntil:
+            attempts >= 5
+              ? new Date(Date.now() + 15 * 60 * 1000)
+              : undefined,
+        },
+      });
+      return null;
+    }
+
     await prisma.citizenUser.update({
       where: { id: citizen.id },
       data: {
-        loginAttempts: attempts,
-        lockedUntil:
-          attempts >= 5
-            ? new Date(Date.now() + 15 * 60 * 1000)
-            : undefined,
+        loginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
       },
     });
-    return null;
-  }
 
-  await prisma.citizenUser.update({
-    where: { id: citizen.id },
-    data: {
-      loginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-    },
+    return {
+      id: citizen.id,
+      email: citizen.email,
+      tenantId: citizen.tenantId,
+      firstName: citizen.firstName,
+      lastName: citizen.lastName,
+    };
   });
-
-  return {
-    id: citizen.id,
-    email: citizen.email,
-    tenantId: citizen.tenantId,
-    firstName: citizen.firstName,
-    lastName: citizen.lastName,
-  };
 }
 
 /**
@@ -96,63 +98,65 @@ export async function registerCitizen(params: {
     select: { status: true },
   });
   if (!tenant || !["active", "trial"].includes(tenant.status)) {
-    return { success: false, error: "internal_error" };
+    return { success: false, error: "internal_error" as const };
   }
 
-  // Check if email already registered
-  const existing = await prisma.citizenUser.findUnique({
-    where: { tenantId_email: { tenantId, email } },
-  });
-  if (existing) {
-    return { success: false, error: "email_exists" };
-  }
-
-  // Try to match with existing contribuabil
-  let contribuabil = null;
-  if (cnpHash) {
-    contribuabil = await prisma.contribuabil.findFirst({
-      where: { tenantId, cnpHash, deletedAt: null },
+  return withTenantScope(tenantId, async () => {
+    // Check if email already registered
+    const existing = await prisma.citizenUser.findUnique({
+      where: { tenantId_email: { tenantId, email } },
     });
-  } else if (cui) {
-    contribuabil = await prisma.contribuabil.findFirst({
-      where: { tenantId, cui, deletedAt: null },
+    if (existing) {
+      return { success: false as const, error: "email_exists" as const };
+    }
+
+    // Try to match with existing contribuabil
+    let contribuabil = null;
+    if (cnpHash) {
+      contribuabil = await prisma.contribuabil.findFirst({
+        where: { tenantId, cnpHash, deletedAt: null },
+      });
+    } else if (cui) {
+      contribuabil = await prisma.contribuabil.findFirst({
+        where: { tenantId, cui, deletedAt: null },
+      });
+    }
+
+    if (!contribuabil) {
+      return { success: false as const, error: "no_match" as const };
+    }
+
+    const passwordHash = await hash(password, 12);
+    const verificationToken = randomBytes(32).toString("hex");
+    const verificationTokenHash = hashVerificationToken(verificationToken);
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const citizen = await prisma.citizenUser.create({
+      data: {
+        tenantId,
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        phone,
+        verificationToken: verificationTokenHash,
+        verificationExpires,
+        limbaPreferata: limbaPreferata || "ro",
+      },
     });
-  }
 
-  if (!contribuabil) {
-    return { success: false, error: "no_match" };
-  }
+    // Create the link between citizen user and contribuabil
+    await prisma.citizenContribuabilLink.create({
+      data: {
+        tenantId,
+        citizenUserId: citizen.id,
+        contribuabilId: contribuabil.id,
+        linkType: "owner",
+      },
+    });
 
-  const passwordHash = await hash(password, 12);
-  const verificationToken = randomBytes(32).toString("hex");
-  const verificationTokenHash = hashVerificationToken(verificationToken);
-  const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-  const citizen = await prisma.citizenUser.create({
-    data: {
-      tenantId,
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      phone,
-      verificationToken: verificationTokenHash,
-      verificationExpires,
-      limbaPreferata: limbaPreferata || "ro",
-    },
+    return { success: true as const, citizenId: citizen.id, verificationToken };
   });
-
-  // Create the link between citizen user and contribuabil
-  await prisma.citizenContribuabilLink.create({
-    data: {
-      tenantId,
-      citizenUserId: citizen.id,
-      contribuabilId: contribuabil.id,
-      linkType: "owner",
-    },
-  });
-
-  return { success: true, citizenId: citizen.id, verificationToken };
 }
 
 /**

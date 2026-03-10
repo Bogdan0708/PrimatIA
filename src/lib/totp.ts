@@ -130,12 +130,3 @@ export function buildOtpAuthUrl(params: {
   const secret = encodeURIComponent(normalizeBase32(params.secret));
   return `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=${DEFAULT_DIGITS}&period=${DEFAULT_STEP_SECONDS}`;
 }
-
-// Aliases for backward compatibility
-export const generateTOTPSecret = generateTotpSecret;
-export const verifyTOTPToken = (secret: string, token: string) => verifyTotpCode(secret, token);
-export const generateTOTPKeyURI = (email: string, secret: string) => buildOtpAuthUrl({
-  secret,
-  accountName: email,
-  issuer: "PrimarIA"
-});

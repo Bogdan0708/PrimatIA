@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { writeAuditLog } from "@/lib/audit";
 import type { Role } from "@/lib/constants";
 
@@ -72,10 +72,12 @@ export async function verifyPendingTotpSetupToken(token: string) {
 }
 
 export async function getStaffTotpStatus(userId: string, tenantId: string) {
-  return prisma.tenantUser.findFirst({
-    where: { id: userId, tenantId, deletedAt: null, isActive: true },
-    select: { id: true, email: true, totpSecret: true },
-  });
+  return withTenantScope(tenantId, () =>
+    prisma.tenantUser.findFirst({
+      where: { id: userId, tenantId, deletedAt: null, isActive: true },
+      select: { id: true, email: true, totpSecret: true },
+    })
+  );
 }
 
 export async function auditStaffTotpChange(params: {

@@ -42,6 +42,8 @@ vi.mock("@/app/api/auth/totp/_lib", () => ({
 
 vi.mock("@/lib/db", () => ({
   prisma: prismaMock,
+  setTenantContext: vi.fn(),
+  withTenantScope: (_tenantId: string, fn: () => unknown) => fn(),
 }));
 
 vi.mock("@/lib/totp", () => ({

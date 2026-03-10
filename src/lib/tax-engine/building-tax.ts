@@ -19,7 +19,6 @@ import {
   toSafeNumber,
   calculateBonificatie,
   getBuildingAgeCoefficient,
-  applyInflationIndex,
 } from "./utils";
 
 /**
@@ -217,9 +216,9 @@ export async function calculateBuildingTax(
   sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, zoneMultiplier);
 
   // 4c. Apply HCL inflation coefficient when configured
-  sumaCalculataMicroLei = toMicroLei(
-    applyInflationIndex(roundMicroLeiToLei(sumaCalculataMicroLei), hclDecision.inflationIndex)
-  );
+  if (hclDecision.inflationIndex && hclDecision.inflationIndex > 0) {
+    sumaCalculataMicroLei = Math.round(sumaCalculataMicroLei * hclDecision.inflationIndex);
+  }
 
   // 5. Apply co-ownership
   sumaCalculataMicroLei = applyPercentToMicroLei(sumaCalculataMicroLei, input.cotaParte);

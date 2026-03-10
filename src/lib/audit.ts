@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 
 interface WriteAuditLogParams {
   tenantId: string;
@@ -11,15 +11,17 @@ interface WriteAuditLogParams {
 }
 
 export async function writeAuditLog(params: WriteAuditLogParams): Promise<void> {
-  await prisma.auditLog.create({
-    data: {
-      tenantId: params.tenantId,
-      userId: params.userId ?? null,
-      action: params.action,
-      entityType: params.entityType,
-      entityId: params.entityId ?? null,
-      oldValues: params.oldValues ?? undefined,
-      newValues: params.newValues ?? undefined,
-    },
+  await withTenantScope(params.tenantId, async () => {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: params.tenantId,
+        userId: params.userId ?? null,
+        action: params.action,
+        entityType: params.entityType,
+        entityId: params.entityId ?? null,
+        oldValues: params.oldValues ?? undefined,
+        newValues: params.newValues ?? undefined,
+      },
+    });
   });
 }
