@@ -50,6 +50,8 @@ gcloud run deploy "$SERVICE" \
   --max-instances 10 \
   --no-cpu-throttling \
   --cpu-boost \
+  --vpc-connector primaria-vpc \
+  --add-cloudsql-instances mitch-ai-services:europe-central2:primaria-db \
   --set-env-vars "NODE_ENV=production,TENANT_ID=${TENANT_ID:?Set TENANT_ID},NEXTAUTH_URL=${NEXTAUTH_URL:?Set NEXTAUTH_URL},AUTH_TRUST_HOST=true" \
   --set-secrets "\
 DATABASE_URL=primaria-database-url:latest,\
