@@ -7,12 +7,31 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '--all-tags', 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app']
 
-  # Step 3: Run database migrations (via public IP)
-  - name: 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA'
-    entrypoint: 'sh'
+  # Step 3: Open Cloud SQL to Cloud Build worker, run migrations, close access
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
     args:
       - '-c'
-      - 'DATABASE_URL="$$MIGRATION_DATABASE_URL" DIRECT_DATABASE_URL="$$MIGRATION_DATABASE_URL" npx prisma migrate deploy'
+      - |
+        set -e
+        WORKER_IP=$(curl -s ifconfig.me)
+        echo "Authorizing Cloud Build worker IP: $$WORKER_IP"
+        gcloud sql instances patch primaria-db \
+          --project=$PROJECT_ID \
+          --authorized-networks="$$WORKER_IP/32" \
+          --quiet
+        echo "Running migrations..."
+        # Pull the app image and run prisma migrate
+        docker run --rm \
+          -e DATABASE_URL="$$MIGRATION_DATABASE_URL" \
+          -e DIRECT_DATABASE_URL="$$MIGRATION_DATABASE_URL" \
+          europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA \
+          npx prisma migrate deploy
+        echo "Closing Cloud SQL public access..."
+        gcloud sql instances patch primaria-db \
+          --project=$PROJECT_ID \
+          --clear-authorized-networks \
+          --quiet
     secretEnv: ['MIGRATION_DATABASE_URL']
 
   # Step 4: Deploy to Cloud Run
