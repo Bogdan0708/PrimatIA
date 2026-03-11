@@ -104,7 +104,7 @@
    ├─ streamLLMResponse():
    │  ├─ retrieveContext() → keyword search regulations + FAQ
    │  ├─ Build prompt with <context>/<user_query> XML delimiters
-   │  ├─ Stream via OpenAI-compatible API (Gateway/LM Studio/OpenAI)
+   │  ├─ Stream via AI Gateway OpenAI-compatible API
    │  ├─ Sanitize HTML from chunks
    │  └─ Fallback to keyword search if empty stream
    └─ SSE response with sanitized chunks
@@ -135,5 +135,5 @@
 - **Storage**: MinIO (S3-compatible) for documents
 - **Cache**: Redis 7 (BullMQ job queue)
 - **Secrets**: GCP Secret Manager
-- **AI**: AI Gateway (Gemini/OpenAI/Claude) or LM Studio (local)
+- **AI**: AI Gateway only
 - **Payments**: Stripe (checkout sessions + webhooks)

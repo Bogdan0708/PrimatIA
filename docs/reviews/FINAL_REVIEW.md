@@ -38,7 +38,7 @@ The codebase is well-structured, follows consistent patterns, and demonstrates s
 
 ---
 
-## 2. AI Chatbot — Rate Limiting, History, LM Studio
+## 2. AI Chatbot — Rate Limiting, History, Historical Local-Model Notes
 
 **Score: 7/10**
 
@@ -46,15 +46,15 @@ The codebase is well-structured, follows consistent patterns, and demonstrates s
 - ✅ In-memory rate limiter (10 req/min per IP) with cleanup interval
 - ✅ Input length validation (1000 chars)
 - ✅ History parsing with sanitization (max 5 messages)
-- ✅ Graceful fallback when LM Studio is unavailable
-- ✅ 10s timeout on LM Studio calls
+- ✅ Graceful fallback when the AI backend is unavailable
+- ✅ Timeout on AI calls
 - ✅ Keyword scoring with diacritic normalization
 
 **Issues:**
 - ⚠️ **In-memory rate limiter won't work with multiple server instances** — needs Redis or similar. Fine for single-instance MVP.
 - ⚠️ **No authentication required** — any IP can use the chatbot. Consider at least CSRF protection or session validation.
 - ⚠️ **`x-forwarded-for` IP extraction** is trivially spoofable. Need to trust only first proxy in chain or use Cloudflare/nginx real IP.
-- 🔴 **No output sanitization** — LM Studio response is returned directly. If the model hallucinates HTML/JS, it could be XSS in the frontend. Sanitize or escape the `answer` field.
+- 🔴 **No output sanitization** — at review time, AI output was returned directly. If the model hallucinates HTML/JS, it could be XSS in the frontend. Sanitize or escape the `answer` field.
 - Minor: `setInterval` in module scope is fine for App Router but could leak in tests.
 
 **Romanian accuracy:** ✅ Good — "Imi pare rau" should be "Îmi pare rău" (missing diacritics in fallback messages). Consistent but imperfect.
@@ -157,7 +157,7 @@ The codebase is well-structured, follows consistent patterns, and demonstrates s
 **Strengths:**
 - ✅ 15+ regex patterns for Romanian documents (CNP, serie CI, nr înmatriculare, VIN, etc.)
 - ✅ Confidence levels per extracted field
-- ✅ AI fallback via LM Studio for missing fields
+- ✅ AI fallback for missing fields
 - ✅ Supports 4 document types with trilingual labels (RO/EN/HU)
 - ✅ 15s timeout on AI calls
 
@@ -166,7 +166,7 @@ The codebase is well-structured, follows consistent patterns, and demonstrates s
 - ⚠️ **CNP regex `[1-8]\d{12}`** is correct for format but doesn't validate checksum (Romanian CNPs have a Luhn-like check digit). Should add validation.
 - ⚠️ **Nr înmatriculare regex** `[A-Z]{1,2}[-\s]?\d{2,3}[-\s]?[A-Z]{3}` misses Bucharest format `B-NNN-XXX` where county code is just "B" and number can be 3 digits.
 - ⚠️ **VIN regex excludes I, O, Q** correctly but the pattern `[A-HJ-NPR-Z0-9]{17}` — this is correct.
-- ⚠️ **No input sanitization** — raw text is sent to LM Studio without size limits.
+- ⚠️ **No input sanitization** — raw text was sent to the AI backend without size limits.
 
 **Romanian accuracy:** ✅ Good — Hungarian translations look reasonable.
 
@@ -203,14 +203,14 @@ The codebase is well-structured, follows consistent patterns, and demonstrates s
 - ✅ Keyword scoring with diacritic normalization
 - ✅ Article number matching with high weight (+5)
 - ✅ Title and content scoring with token overlap
-- ✅ Optional LM Studio re-ranking for enhanced results
-- ✅ 5s timeout on LM Studio re-ranking
+- ✅ Optional AI-assisted re-ranking for enhanced results
+- ✅ Timeout on AI-assisted re-ranking
 
 **Issues:**
 - ⚠️ **Knowledge base is hardcoded** — changes to fiscal law require code changes. Should be in DB or config file.
 - ⚠️ **No versioning** — fiscal code changes annually. No way to track which year's regulations are being returned.
 - ⚠️ **Score weighting is arbitrary** — keyword=3, title=2, article=5, content=0.5. Could benefit from tuning.
-- ⚠️ **LM Studio re-ranking** sends article content to local model — fine for privacy but could be slow.
+- ⚠️ **AI-assisted re-ranking** sends article content to the AI backend and could be slow if overused.
 - Minor: `searchRegulationsEnhanced` fetches 2x limit then re-ranks — could miss relevant entries outside the initial keyword window.
 
 **Romanian accuracy:** ✅ Verified several entries — accurate Cod Fiscal citations with correct article references.

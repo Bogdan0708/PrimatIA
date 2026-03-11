@@ -134,6 +134,7 @@ Gate script local/CI:
 
 ```bash
 npm run ops:staging-gate
+APP_BASE_URL=https://primaria-staging.exemplu.ro npm run ops:post-deploy-smoke
 # opțional, cu verificare import:
 TENANT_ID=<TENANT_ID> IMPORT_BATCH_ID=<BATCH_ID> npm run ops:staging-gate -- --verify-import
 # opțional, cu verificare rollback:

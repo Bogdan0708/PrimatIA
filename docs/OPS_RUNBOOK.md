@@ -86,9 +86,9 @@ curl -s http://localhost:3000/api/health/deep | jq .components.ai
 
 ### Remediation
 1. **Gateway unreachable**: Check if the gateway service is running, verify URL and API key
-2. **Fallback to direct provider**: Set `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to bypass gateway
-3. **All providers down**: The app gracefully degrades — AI features return structured error messages
-4. **Rate limited**: Check provider usage dashboards, consider increasing limits
+2. **Do not bypass the gateway**: PrimarIA is gateway-only. Fix `AI_GATEWAY_URL`, `AI_GATEWAY_KEY`, tenant routing, or the gateway deployment itself.
+3. **Gateway unavailable**: The app degrades gracefully — AI features return structured fallback responses while core tax/payment flows remain available.
+4. **Rate limited**: Check gateway and Cloud Run logs, then provider usage dashboards if the gateway indicates upstream exhaustion.
 
 ### Impact
 - AI features degrade gracefully; core tax/payment functionality is unaffected

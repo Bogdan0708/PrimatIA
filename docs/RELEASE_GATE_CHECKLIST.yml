@@ -59,12 +59,16 @@ release_gate:
     staging_gate_workflow: ".github/workflows/staging-release-gate.yml"
 
   manual:
-    - name: Health endpoint check
+    - name: Liveness endpoint check
       description: "curl /api/health returns 200 with status: ok"
       required: true
 
     - name: Deep health check
-      description: "curl /api/health/deep returns 200 with all components ok"
+      description: "curl /api/health/deep returns 200 with database ok, redis ok, and AI not error"
+      required: true
+
+    - name: AI smoke check
+      description: "Run one authenticated PrimarIA chatbot or OCR request against the configured AI gateway using the active tenant"
       required: true
 
     - name: Smoke test

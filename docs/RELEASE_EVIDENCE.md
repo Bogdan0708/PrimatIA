@@ -24,7 +24,23 @@ Result:
 
 Logs / link:
 
-### 2.2 Type-check / Tests / Lint
+### 2.2 Post-Deploy Smoke
+Command:
+```bash
+APP_BASE_URL=https://primaria-staging.exemplu.ro npm run ops:post-deploy-smoke
+```
+Result:
+- [ ] Pass
+- [ ] Fail
+
+Endpoints checked:
+- [ ] `/api/health`
+- [ ] `/api/health/deep`
+- [ ] `/ro/login`
+- [ ] `/ro/portal/login`
+- [ ] `/ro/portal/register`
+
+### 2.3 Type-check / Tests / Lint
 Commands:
 ```bash
 npm run type-check
@@ -91,6 +107,7 @@ Output snapshot:
 - [ ] Backup/restore drill validated for this RC window
 - [ ] Incident response runbook reviewed
 - [ ] Monitoring/alerts healthy after deploy
+- [ ] Post-deploy smoke evidence captured for the deployed URL
 
 ## 6. Final Decision
 - [ ] Approved for production

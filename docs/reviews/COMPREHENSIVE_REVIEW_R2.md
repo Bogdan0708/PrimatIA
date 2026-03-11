@@ -55,10 +55,10 @@
 ### Strengths
 - In-memory rate limiter with periodic cleanup (10 req/min per IP)
 - Input length validation (1000 chars max)
-- Graceful degradation: keyword-based fallback when LM Studio is unavailable
+- Graceful degradation: keyword-based fallback when the AI backend is unavailable
 - `AbortSignal.timeout(10_000)` — proper timeout on LLM calls
 - History support with validation and cap (`MAX_HISTORY = 5`)
-- Configurable model via `LM_STUDIO_MODEL` env var
+- At the time of review, a local-model env var existed. Current PrimarIA architecture is gateway-only and should not reintroduce local-model config.
 - Good Unicode normalization for Romanian text matching (NFD + diacritic strip)
 
 ### Issues & Improvements

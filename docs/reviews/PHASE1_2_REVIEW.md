@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Both features are well-structured and functional. The Stripe integration follows best practices for webhook verification and has proper chitanță generation. The chatbot has a solid keyword-matching fallback with graceful LM Studio degradation. However, there are **security concerns**, **race conditions**, and **missing edge cases** that should be fixed before production.
+Both features are well-structured and functional. The Stripe integration follows best practices for webhook verification and has proper chitanță generation. At the time of this review, the chatbot had a keyword fallback plus a local-model degradation path. That local-model path has since been removed in favor of gateway-only AI. The remaining concerns below should be read as historical review context, not current architecture.
 
 ---
 
@@ -87,7 +87,7 @@ Clever but fragile — no `has`, `set`, or `apply` traps. If any code does `inst
 
 ### ✅ What's Good
 
-- **Graceful degradation** — if LM Studio is down or `LM_STUDIO_URL` unset, falls back to keyword matching. This is excellent.
+- **Graceful degradation** — at review time, if the local model was down or unset, the chatbot fell back to keyword matching. Current PrimarIA behavior is gateway-or-keyword-fallback only.
 - **Text normalization** — strips diacritics, lowercases, cleans punctuation for fuzzy Romanian matching
 - **Knowledge base** — comprehensive 28 entries covering taxes, payments, documents, deadlines, exemptions
 - **UX** — smooth open/close animation, loading spinner, Enter-to-send, auto-scroll
@@ -97,31 +97,31 @@ Clever but fragile — no `has`, `set`, or `apply` traps. If any code does `inst
 ### 🟡 Medium Issues
 
 #### 2.1 No Rate Limiting on `/api/chatbot`
-The endpoint is unauthenticated and hits LM Studio on every request. Easy to abuse.  
+At review time, the endpoint was unauthenticated and could hit the AI backend on every request. Easy to abuse.  
 **Fix:** Add rate limiting (e.g., IP-based, 10 req/min).
 
 #### 2.2 No Input Length Limit
 ```typescript
 const message = typeof body?.message === "string" ? body.message.trim() : "";
 ```
-A user could send a 1MB string that gets normalized and compared against all keywords, then forwarded to LM Studio.  
+A user could send a 1MB string that gets normalized and compared against all keywords, then forwarded to the AI backend.  
 **Fix:** `message.slice(0, 500)` or similar.
 
-#### 2.3 LM Studio Request Has No Timeout
+#### 2.3 AI Backend Request Has No Timeout
 ```typescript
-const response = await fetch(getLmStudioEndpoint(lmStudioUrl), { ... });
+const response = await fetch(/* AI backend */, { ... });
 ```
-If LM Studio hangs, the request hangs indefinitely (until Next.js default timeout).  
+If the AI backend hangs, the request hangs indefinitely (until Next.js default timeout).  
 **Fix:** Add `signal: AbortSignal.timeout(10000)`.
 
-#### 2.4 Hardcoded `"local-model"` in LM Studio Payload
+#### 2.4 Hardcoded local model identifier in payload
 ```typescript
 model: "local-model",
 ```
-Should be configurable via env var (e.g., `LM_STUDIO_MODEL`) since model names vary.
+This was part of the older local-model path and is no longer applicable in the current gateway-only architecture.
 
 #### 2.5 No Conversation History
-Each message is stateless — no context from previous messages. The LM Studio call gets only the current question + knowledge snippets. This is fine for FAQ but means follow-up questions like "Și pentru teren?" after asking about clădiri won't work.  
+Each message is stateless — no context from previous messages. The AI call gets only the current question + knowledge snippets. This is fine for FAQ but means follow-up questions like "Și pentru teren?" after asking about clădiri won't work.  
 **Recommendation:** Low priority, but consider sending last 3-5 messages for context.
 
 ### 🟢 Minor Issues
@@ -160,9 +160,9 @@ Each message is stateless — no context from previous messages. The LM Studio c
 | # | Issue | File | Effort |
 |---|-------|------|--------|
 | 6 | Handle `checkout.session.expired` webhook event | `webhook/route.ts` | 1h |
-| 7 | Add timeout to LM Studio fetch | `api/chatbot/route.ts` | 5min |
+| 7 | Add timeout to AI backend fetch | `api/chatbot/route.ts` | 5min |
 | 8 | Move `getPaymentGateway` to proper export | `ghiseul-mock.ts` → `gateway.ts` | 15min |
-| 9 | Make LM Studio model name configurable | `api/chatbot/route.ts` | 5min |
+| 9 | Remove hardcoded local-model assumptions | `api/chatbot/route.ts` | 5min |
 | 10 | Bank transfer reconciliation flow | New endpoint | 4h |
 
 ### Nice to Have
@@ -178,7 +178,7 @@ Each message is stateless — no context from previous messages. The LM Studio c
 
 **Stripe Integration: 7.5/10** — Solid foundation with proper webhook verification and chitanță generation. The race condition and missing transaction wrapper are the main concerns. Amount validation is a security gap.
 
-**Chatbot Widget: 8/10** — Clean architecture with excellent graceful degradation. The keyword-based fallback means the chatbot works even without LM Studio. Main gaps are rate limiting and input validation.
+**Chatbot Widget: 8/10** — Clean architecture with excellent graceful degradation. The keyword-based fallback means the chatbot still works when the AI gateway is unavailable. Main gaps were rate limiting and input validation.
 
 **Architecture: 8.5/10** — The `GatewayProvider` abstraction is well-designed. The `PAYMENT_MODE` env toggle makes it easy to switch between mock and Stripe. Knowledge base is cleanly separated from the API route.
 

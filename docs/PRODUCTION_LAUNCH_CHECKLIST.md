@@ -22,8 +22,9 @@ Consolidated checklist for production deployment of PrimarIA. Each item referenc
 - [ ] Prompt injection detection on chatbot route
 
 ### Infrastructure
-- [ ] Cloud Run service configured (1Gi memory, 1 CPU, 0-3 instances)
+- [ ] Cloud Run service configured (1Gi memory, 1 CPU, 0-10 instances)
 - [ ] Cloud SQL PostgreSQL accessible from Cloud Run
+- [ ] Cloud Run revision wired to the intended Cloud SQL instance and VPC connector
 - [ ] All secrets configured in Secret Manager:
   - `DATABASE_URL`, `DIRECT_DATABASE_URL`
   - `NEXTAUTH_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
@@ -42,7 +43,9 @@ Consolidated checklist for production deployment of PrimarIA. Each item referenc
 
 ### Endpoints
 - [ ] `GET /api/health` returns `{"status": "ok"}` ([`src/app/api/health/route.ts`](../src/app/api/health/route.ts))
-- [ ] `GET /api/health/deep` returns all components OK ([`src/app/api/health/deep/route.ts`](../src/app/api/health/deep/route.ts))
+- [ ] `GET /api/health/deep` returns `status: "ok"` with database OK, Redis OK, and AI not error ([`src/app/api/health/deep/route.ts`](../src/app/api/health/deep/route.ts))
+- [ ] Canary promotion uses deep health, not liveness only ([`deploy/deploy-canary.sh`](../deploy/deploy-canary.sh))
+- [ ] `npm run ops:post-deploy-smoke` succeeds against the deployed URL
 
 ### Smoke Tests
 - [ ] Staff login works (NextAuth)
@@ -50,6 +53,8 @@ Consolidated checklist for production deployment of PrimarIA. Each item referenc
 - [ ] Tax assessment page loads
 - [ ] Payment flow (test mode Stripe) completes
 - [ ] Document generation works
+- [ ] One authenticated chatbot or OCR request succeeds against the configured AI gateway
+- [ ] `npm run ops:ai-smoke` succeeds with staging/prod tenant inputs
 
 ## Observability
 
