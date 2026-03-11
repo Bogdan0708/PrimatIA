@@ -37,9 +37,20 @@ interface ChatbotRateLimitResult {
   retryAfterSeconds: number;
 }
 
+function shouldFailClosed(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+function failClosedResult(): ChatbotRateLimitResult {
+  return { limited: true, retryAfterSeconds: 60 };
+}
+
+const REDIS_RECOVERY_COOLDOWN_MS = 30_000;
+
 interface RateLimitRedisGlobals {
   _chatbotRateLimitRedis?: IORedis;
   _chatbotRateLimitRedisFailed?: boolean;
+  _chatbotRateLimitRedisFailedAt?: number;
   _chatbotRateLimitRedisErrorLogged?: boolean;
 }
 
@@ -52,7 +63,20 @@ function getGlobalStore(): RateLimitRedisGlobals {
 function getRedisClient(): IORedis | null {
   const globalStore = getGlobalStore();
   if (globalStore._chatbotRateLimitRedisFailed) {
-    return null;
+    const failedAt = globalStore._chatbotRateLimitRedisFailedAt ?? 0;
+    if (Date.now() - failedAt < REDIS_RECOVERY_COOLDOWN_MS) {
+      return null;
+    }
+    // Cooldown elapsed — reset and attempt reconnection
+    globalStore._chatbotRateLimitRedisFailed = false;
+    globalStore._chatbotRateLimitRedisFailedAt = undefined;
+    globalStore._chatbotRateLimitRedisErrorLogged = false;
+    // Dispose old client so a fresh one is created below
+    if (globalStore._chatbotRateLimitRedis) {
+      globalStore._chatbotRateLimitRedis.disconnect();
+      globalStore._chatbotRateLimitRedis = undefined;
+    }
+    console.info("Chatbot rate limiter: attempting Redis reconnection after cooldown.");
   }
   if (globalStore._chatbotRateLimitRedis) {
     return globalStore._chatbotRateLimitRedis;
@@ -75,6 +99,7 @@ function getRedisClient(): IORedis | null {
       }
       if (process.env.NODE_ENV === "production") {
         store._chatbotRateLimitRedisFailed = true;
+        store._chatbotRateLimitRedisFailedAt = Date.now();
       }
     });
 
@@ -82,6 +107,7 @@ function getRedisClient(): IORedis | null {
     return redis;
   } catch {
     globalStore._chatbotRateLimitRedisFailed = true;
+    globalStore._chatbotRateLimitRedisFailedAt = Date.now();
     return null;
   }
 }
@@ -134,7 +160,9 @@ export async function checkChatbotRateLimit(ip: string): Promise<ChatbotRateLimi
   const now = Date.now();
   const redis = getRedisClient();
   if (!redis) {
-    // Fail open: use in-memory fallback when Redis is unavailable
+    if (shouldFailClosed()) {
+      return failClosedResult();
+    }
     return checkInMemoryFallback(ip, now);
   }
 
@@ -161,7 +189,9 @@ export async function checkChatbotRateLimit(ip: string): Promise<ChatbotRateLimi
       return parsed;
     }
   } catch {
-    // Redis error — fall through to in-memory fallback
+    if (shouldFailClosed()) {
+      return failClosedResult();
+    }
   }
 
   return checkInMemoryFallback(ip, now);

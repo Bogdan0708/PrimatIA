@@ -7,12 +7,8 @@ describe("AI Knowledge Base - Gateway Integration", () => {
   beforeEach(() => {
     vi.resetModules();
     process.env = { ...originalEnv };
-    // Clear all potential providers
     delete process.env.AI_GATEWAY_URL;
     delete process.env.AI_GATEWAY_KEY;
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.OPENAI_API_KEY;
-    delete process.env.LM_STUDIO_URL;
     
     global.fetch = vi.fn();
   });

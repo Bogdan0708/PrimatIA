@@ -9,8 +9,6 @@ describe("Document Processor - Gateway Integration", () => {
     process.env = { ...originalEnv };
     delete process.env.AI_GATEWAY_URL;
     delete process.env.AI_GATEWAY_KEY;
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.OPENAI_API_KEY;
     
     global.fetch = vi.fn();
   });

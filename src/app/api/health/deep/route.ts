@@ -20,6 +20,9 @@ async function checkDatabase() {
 
 async function checkRedis() {
   if (!process.env.REDIS_URL) {
+    if (process.env.NODE_ENV === "production") {
+      return { status: "error", message: "REDIS_URL not configured" };
+    }
     return { status: "skipped", message: "REDIS_URL not configured" };
   }
 
@@ -90,15 +93,18 @@ export async function GET(request: NextRequest) {
     checkAiProvider(),
   ]);
 
+  const aiDegraded = ai.status === "error";
   const status =
-    database.status === "ok" && redis.status !== "error" && ai.status !== "error"
+    database.status === "ok" && redis.status === "ok"
       ? "ok"
       : "error";
 
-  if (status === "error") {
+  if (status === "error" || aiDegraded) {
     logError(
       {
-        message: "Deep health check reported degraded dependencies",
+        message: aiDegraded && status === "ok"
+          ? "Deep health check OK but AI gateway degraded"
+          : "Deep health check reported degraded dependencies",
         ...logContext,
         databaseStatus: database.status,
         redisStatus: redis.status,
@@ -110,6 +116,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       status,
+      ...(aiDegraded && { aiDegraded: true }),
       timestamp: new Date().toISOString(),
       database,
       redis,
