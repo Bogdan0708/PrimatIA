@@ -1,7 +1,7 @@
 /**
  * OCR Document Processor
  * Extracts structured data from Romanian official documents using regex patterns
- * and optional LM Studio vision/text extraction.
+ * and optional AI gateway text extraction.
  */
 
 import { getGatewayHeaders, getLLMConfig } from "../ai/config";
@@ -140,7 +140,7 @@ function matchField(
 }
 
 // ============================================================================
-// LLM-powered structured extraction (supports Claude, OpenAI, LM Studio)
+// LLM-powered structured extraction via the AI gateway
 // ============================================================================
 
 const typeLabels: Record<DocumentType, string> = {
@@ -182,55 +182,15 @@ const fieldsByType: Record<DocumentType, { key: string; label: string; descripti
 
 function getLLMEndpoint(): { url: string; headers: Record<string, string>; model: string; useJsonMode: boolean; provider?: string } | null {
   const config = getLLMConfig();
-  if (config.provider === "none") return null;
+  if (config.provider !== "gateway") return null;
 
-  if (config.provider === "gateway") {
-    return {
-      url: `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`,
-      headers: getGatewayHeaders(config),
-      model: config.model,
-      useJsonMode: false,
-      provider: config.gatewayProvider || 'gemini',
-    };
-  }
-
-  if (config.provider === "claude") {
-    return {
-      url: 'https://api.anthropic.com/v1/messages',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': config.apiKey!,
-        'anthropic-version': '2023-06-01',
-      },
-      model: config.model,
-      useJsonMode: false,
-    };
-  }
-
-  if (config.provider === "openai") {
-    return {
-      url: 'https://api.openai.com/v1/chat/completions',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      model: config.model,
-      useJsonMode: true,
-    };
-  }
-
-  if (config.provider === "lm_studio") {
-    const trimmed = config.baseUrl!.replace(/\/+$/, '');
-    const endpoint = trimmed.endsWith('/v1') ? `${trimmed}/chat/completions` : `${trimmed}/v1/chat/completions`;
-    return {
-      url: endpoint,
-      headers: { 'Content-Type': 'application/json' },
-      model: config.model,
-      useJsonMode: false,
-    };
-  }
-
-  return null;
+  return {
+    url: `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`,
+    headers: getGatewayHeaders(config),
+    model: config.model,
+    useJsonMode: false,
+    provider: config.gatewayProvider || 'gemini',
+  };
 }
 
 async function aiExtractText(
@@ -247,59 +207,35 @@ async function aiExtractText(
   const sanitizedText = redactSensitiveText(text);
 
   try {
-    let response: Response;
+    const body: Record<string, unknown> = {
+      model: llm.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: sanitizedText },
+      ],
+      temperature: 0.1,
+      max_tokens: 500,
+    };
 
-    if (llm.url.includes('anthropic.com')) {
-      // Claude API format
-      response = await fetch(llm.url, {
-        method: 'POST',
-        headers: llm.headers,
-        body: JSON.stringify({
-          model: llm.model,
-          max_tokens: 500,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: sanitizedText }],
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-
-      if (!response.ok) return [];
-      const data = await response.json();
-      const content = data?.content?.[0]?.text || '';
-      return parseAIFields(content, fields);
-    } else {
-      // OpenAI-compatible API (including Gateway and LM Studio)
-      const body: Record<string, unknown> = {
-        model: llm.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: sanitizedText },
-        ],
-        temperature: 0.1,
-        max_tokens: 500,
-      };
-
-      if (llm.useJsonMode) {
-        body.response_format = { type: 'json_object' };
-      }
-
-      // Add provider for gateway routing if present
-      if (llm.provider) {
-        body.provider = llm.provider;
-      }
-
-      response = await fetch(llm.url, {
-        method: 'POST',
-        headers: llm.headers,
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15000),
-      });
-
-      if (!response.ok) return [];
-      const data = await response.json();
-      const content = data?.choices?.[0]?.message?.content || '';
-      return parseAIFields(content, fields);
+    if (llm.useJsonMode) {
+      body.response_format = { type: 'json_object' };
     }
+
+    if (llm.provider) {
+      body.provider = llm.provider;
+    }
+
+    const response = await fetch(llm.url, {
+      method: 'POST',
+      headers: llm.headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content || '';
+    return parseAIFields(content, fields);
   } catch {
     return [];
   }

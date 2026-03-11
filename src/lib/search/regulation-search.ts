@@ -1,4 +1,5 @@
 import { FISCAL_ENTRIES, type FiscalEntry } from "./fiscal-knowledge";
+import { getGatewayHeaders, getLLMConfig } from "@/lib/ai/config";
 
 // Normalize Romanian diacritics and text for search
 const normalizeText = (value: string): string =>
@@ -100,17 +101,17 @@ export function searchRegulations(
 }
 
 /**
- * Optional: enhance search with LM Studio for better relevance.
- * Falls back to keyword search if LM Studio unavailable.
+ * Optional: enhance search with the AI gateway for better relevance.
+ * Falls back to keyword search if the gateway is unavailable.
  */
 export async function searchRegulationsEnhanced(
   query: string,
   limit = 5
 ): Promise<SearchResult[]> {
   const keywordResults = searchRegulations(query, limit * 2);
+  const config = getLLMConfig();
 
-  const lmStudioUrl = process.env.LM_STUDIO_URL;
-  if (!lmStudioUrl || keywordResults.length === 0) {
+  if (config.provider !== "gateway" || keywordResults.length === 0) {
     return keywordResults.slice(0, limit);
   }
 
@@ -120,16 +121,13 @@ export async function searchRegulationsEnhanced(
       .map((r, i) => `[${i}] ${r.entry.article} - ${r.entry.title}: ${r.entry.content.slice(0, 150)}`)
       .join("\n");
 
-    const endpoint = lmStudioUrl.replace(/\/+$/, "").endsWith("/v1")
-      ? `${lmStudioUrl.replace(/\/+$/, "")}/chat/completions`
-      : `${lmStudioUrl.replace(/\/+$/, "")}/v1/chat/completions`;
-
-    const response = await fetch(endpoint, {
+    const response = await fetch(`${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getGatewayHeaders(config),
       body: JSON.stringify({
-        model: process.env.LM_STUDIO_MODEL || "local-model",
+        model: config.model,
         temperature: 0,
+        ...(config.gatewayProvider && { provider: config.gatewayProvider }),
         messages: [
           {
             role: "system",

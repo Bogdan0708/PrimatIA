@@ -2,12 +2,10 @@
  * RAG Knowledge Base for the PrimărIA chatbot.
  *
  * Strategy:
- * 1. Try LLM (Claude/GPT/LM Studio) with context from keyword search
+ * 1. Try the AI gateway with context from keyword search
  * 2. Fall back to keyword-based retrieval if no LLM available
  *
- * pgvector integration is optional — when ENABLE_PGVECTOR=true and the
- * extension is installed, embeddings are used for semantic search.
- * Otherwise, the enhanced keyword search from fiscal-knowledge.ts is used.
+ * Keyword-based retrieval is always available locally.
  */
 
 import { searchRegulations } from "@/lib/search/regulation-search";
@@ -116,74 +114,30 @@ async function callLLM(
   config: ReturnType<typeof getLLMConfig>,
 ): Promise<string | null> {
   try {
+    if (config.provider !== "gateway") {
+      return null;
+    }
+
     const sanitizedMessages = messages.map((message) => ({
       ...message,
       content: redactSensitiveText(message.content),
     }));
+    const response = await fetch(`${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`, {
+      method: "POST",
+      headers: getGatewayHeaders(config),
+      body: JSON.stringify({
+        model: config.model,
+        temperature: 0.2,
+        max_tokens: 600,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...sanitizedMessages],
+        ...(config.gatewayProvider && { provider: config.gatewayProvider }),
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
 
-    if (config.provider === "gateway" || config.provider === "openai" || config.provider === "lm_studio") {
-      const isGateway = config.provider === "gateway";
-      const isLM = config.provider === "lm_studio";
-      
-      let url: string;
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-      if (isGateway) {
-        url = `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`;
-        Object.assign(headers, getGatewayHeaders(config));
-      } else if (isLM) {
-        const baseUrl = config.baseUrl!.replace(/\/+$/, "");
-        url = baseUrl.endsWith("/v1") ? `${baseUrl}/chat/completions` : `${baseUrl}/v1/chat/completions`;
-      } else {
-        url = "https://api.openai.com/v1/chat/completions";
-        headers["Authorization"] = `Bearer ${config.apiKey}`;
-      }
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: config.model,
-          temperature: 0.2,
-          max_tokens: 600,
-          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...sanitizedMessages],
-          // Pass provider to gateway for internal routing if needed
-          ...(isGateway && config.gatewayProvider && { provider: config.gatewayProvider }),
-        }),
-        signal: AbortSignal.timeout(15_000),
-      });
-
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data?.choices?.[0]?.message?.content?.trim() || null;
-    }
-
-    if (config.provider === "claude") {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": config.apiKey!,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: config.model,
-          max_tokens: 600,
-          system: SYSTEM_PROMPT,
-          messages: sanitizedMessages.map((m) => ({
-            role: m.role === "system" ? "user" : m.role,
-            content: m.content,
-          })),
-        }),
-        signal: AbortSignal.timeout(15_000),
-      });
-
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data?.content?.[0]?.text?.trim() || null;
-    }
-
-    return null;
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data?.choices?.[0]?.message?.content?.trim() || null;
   } catch {
     return null;
   }
@@ -212,26 +166,11 @@ export async function* streamLLMResponse(
     ? `<context>\n${contextText}\n</context>\n\n<user_query>\n${sanitizedQuery}\n</user_query>`
     : `<user_query>\n${sanitizedQuery}\n</user_query>`;
 
-  // For streaming, we need the OpenAI-compatible API (Gateway, LM Studio or OpenAI)
-  if (config.provider === "gateway" || config.provider === "openai" || config.provider === "lm_studio") {
-    let baseUrl: string;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-    if (config.provider === "gateway") {
-      baseUrl = `${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`;
-      Object.assign(headers, getGatewayHeaders(config));
-    } else if (config.provider === "lm_studio") {
-      const trimmed = config.baseUrl!.replace(/\/+$/, "");
-      baseUrl = trimmed.endsWith("/v1") ? `${trimmed}/chat/completions` : `${trimmed}/v1/chat/completions`;
-    } else {
-      baseUrl = "https://api.openai.com/v1/chat/completions";
-      headers.Authorization = `Bearer ${config.apiKey}`;
-    }
-
+  if (config.provider === "gateway") {
     try {
-      const response = await fetch(baseUrl, {
+      const response = await fetch(`${config.baseUrl!.replace(/\/+$/, "")}/v1/chat/completions`, {
         method: "POST",
-        headers,
+        headers: getGatewayHeaders(config),
         body: JSON.stringify({
           model: config.model,
           temperature: 0.2,
@@ -242,7 +181,7 @@ export async function* streamLLMResponse(
             ...sanitizedHistory.map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content: redactSensitiveText(userPrompt) },
           ],
-          ...(config.provider === "gateway" && config.gatewayProvider && { provider: config.gatewayProvider }),
+          ...(config.gatewayProvider && { provider: config.gatewayProvider }),
         }),
         signal: AbortSignal.timeout(30_000),
       });
@@ -303,7 +242,7 @@ export async function* streamLLMResponse(
     return;
   }
 
-  // For Claude or no LLM, use non-streaming
+  // No gateway configured: use non-streaming keyword fallback
   const result = await generateRAGResponse(query, history);
   yield result.answer;
 }

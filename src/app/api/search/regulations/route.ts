@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Use enhanced search if LM Studio is available, otherwise keyword-only
-    const results = process.env.LM_STUDIO_URL
+    // Use enhanced search if the gateway is configured, otherwise keyword-only
+    const results = process.env.AI_GATEWAY_URL && process.env.AI_GATEWAY_KEY
       ? await searchRegulationsEnhanced(query, 5)
       : searchRegulations(query, 5);
 
