@@ -1,16 +1,25 @@
 import { test, expect, Page } from '@playwright/test';
 
-const BASE = 'https://primaria-j3dqdqxnyq-lm.a.run.app';
+const BASE = process.env.AUDIT_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000';
+const STAFF_EMAIL = process.env.E2E_STAFF_EMAIL ?? '';
+const STAFF_PASSWORD = process.env.E2E_STAFF_PASSWORD ?? '';
+const CITIZEN_EMAIL = process.env.E2E_CITIZEN_EMAIL ?? '';
+const CITIZEN_PASSWORD = process.env.E2E_CITIZEN_PASSWORD ?? '';
+const AUDIT_ARTIFACTS_ENABLED = process.env.AUDIT_ENABLE_ARTIFACTS === 'true';
 
 async function screenshotAndLog(page: Page, name: string) {
+  if (!AUDIT_ARTIFACTS_ENABLED) {
+    return;
+  }
+
   await page.screenshot({ path: `test-results/audit-${name}.png`, fullPage: true });
 }
 
 async function staffLogin(page: Page) {
   await page.goto(`${BASE}/ro/login`);
   await page.waitForLoadState('networkidle');
-  await page.getByLabel('Adresă de email').fill('admin@bogdanvoda.ro');
-  await page.getByLabel('Parolă').fill('Admin123!');
+  await page.getByLabel('Adresă de email').fill(STAFF_EMAIL);
+  await page.getByLabel('Parolă').fill(STAFF_PASSWORD);
   await page.getByRole('button', { name: 'Autentificare', exact: true }).click();
   await page.waitForURL('**/dashboard**', { timeout: 20000 });
 }
@@ -55,8 +64,8 @@ test.describe('PHASE B2 — Staff Admin Full Sweep', () => {
     await screenshotAndLog(p, 'B1r-wrong-creds');
 
     // Actual login
-    await p.getByLabel('Adresă de email').fill('admin@bogdanvoda.ro');
-    await p.getByLabel('Parolă').fill('Admin123!');
+    await p.getByLabel('Adresă de email').fill(STAFF_EMAIL);
+    await p.getByLabel('Parolă').fill(STAFF_PASSWORD);
     await p.getByRole('button', { name: 'Autentificare', exact: true }).click();
     await p.waitForURL('**/dashboard**', { timeout: 20000 });
     console.log('[B1] Logged in:', p.url());
@@ -338,8 +347,8 @@ test.describe('PHASE D2 — Diagnostics', () => {
 
     // Login as citizen
     await page.goto(`${BASE}/ro/portal/login`);
-    await page.locator('input[type="email"], input[name="email"]').first().fill('cetatean@example.ro');
-    await page.locator('input[type="password"]').first().fill('Citizen123!');
+    await page.locator('input[type="email"], input[name="email"]').first().fill(CITIZEN_EMAIL);
+    await page.locator('input[type="password"]').first().fill(CITIZEN_PASSWORD);
     await page.getByRole('button', { name: /autentificare/i }).click();
 
     try {
@@ -413,8 +422,8 @@ test.describe('PHASE E2 — Responsive', () => {
 
       // Login as admin
       await page.goto(`${BASE}/ro/login`);
-      await page.getByLabel('Adresă de email').fill('admin@bogdanvoda.ro');
-      await page.getByLabel('Parolă').fill('Admin123!');
+      await page.getByLabel('Adresă de email').fill(STAFF_EMAIL);
+      await page.getByLabel('Parolă').fill(STAFF_PASSWORD);
       await page.getByRole('button', { name: 'Autentificare', exact: true }).click();
       await page.waitForURL('**/dashboard**', { timeout: 20000 });
       await page.waitForTimeout(2000);
@@ -501,8 +510,8 @@ test.describe('PHASE F2 — Edge Cases', () => {
 
   test('F5: Double-click login', async ({ page }) => {
     await page.goto(`${BASE}/ro/login`);
-    await page.getByLabel('Adresă de email').fill('admin@bogdanvoda.ro');
-    await page.getByLabel('Parolă').fill('Admin123!');
+    await page.getByLabel('Adresă de email').fill(STAFF_EMAIL);
+    await page.getByLabel('Parolă').fill(STAFF_PASSWORD);
     const btn = page.getByRole('button', { name: 'Autentificare', exact: true });
     await btn.dblclick();
     await page.waitForTimeout(5000);
