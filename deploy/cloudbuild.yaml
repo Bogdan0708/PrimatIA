@@ -12,7 +12,7 @@ steps:
     entrypoint: 'sh'
     args:
       - '-c'
-      - 'DATABASE_URL="$$MIGRATION_DATABASE_URL" npx prisma migrate deploy'
+      - 'DATABASE_URL="$$MIGRATION_DATABASE_URL" DIRECT_DATABASE_URL="$$MIGRATION_DATABASE_URL" npx prisma migrate deploy'
     secretEnv: ['MIGRATION_DATABASE_URL']
 
   # Step 4: Deploy to Cloud Run
