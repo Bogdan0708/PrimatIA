@@ -1,6 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+# Source deploy config if present (create .env.deploy with GCP_PROJECT_ID, TENANT_ID, NEXTAUTH_URL)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/../.env.deploy" ]; then
+  set -a
+  source "$SCRIPT_DIR/../.env.deploy"
+  set +a
+fi
+
 PROJECT_ID="${GCP_PROJECT_ID:?Set GCP_PROJECT_ID}"
 REGION="europe-central2"
 SERVICE="primaria"
