@@ -46,5 +46,8 @@ availableSecrets:
     - versionName: projects/$PROJECT_ID/secrets/primaria-direct-database-url/versions/latest
       env: 'DIRECT_DATABASE_URL'
 
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+
 images:
   - 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA'
