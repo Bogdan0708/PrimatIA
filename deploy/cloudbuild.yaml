@@ -7,12 +7,10 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '--all-tags', 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app']
 
-  # Step 3: Run database migrations
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args: 
-      - '-c'
-      - 'docker run --rm -e DATABASE_URL=$$DATABASE_URL -e DIRECT_DATABASE_URL=$$DIRECT_DATABASE_URL europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA npx prisma migrate deploy'
+  # Step 3: Run database migrations (uses direct URL, not Cloud SQL proxy)
+  - name: 'europe-central2-docker.pkg.dev/$PROJECT_ID/primaria/app:$COMMIT_SHA'
+    entrypoint: 'npx'
+    args: ['prisma', 'migrate', 'deploy']
     secretEnv: ['DATABASE_URL', 'DIRECT_DATABASE_URL']
 
   # Step 4: Deploy to Cloud Run
