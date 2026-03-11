@@ -48,6 +48,23 @@ npm run type-check
 echo "[staging-gate] Tests"
 npm test
 
+if [[ -n "${AI_GATEWAY_URL:-}" || -n "${AI_GATEWAY_KEY:-}" ]]; then
+  : "${AI_GATEWAY_URL:?AI_GATEWAY_URL is required for AI smoke verification}"
+  : "${AI_GATEWAY_KEY:?AI_GATEWAY_KEY is required for AI smoke verification}"
+  : "${TENANT_ID:?TENANT_ID is required for AI smoke verification}"
+  echo "[staging-gate] AI gateway smoke"
+  npm run ops:ai-smoke
+else
+  echo "[staging-gate] AI gateway smoke skipped (AI_GATEWAY_URL / AI_GATEWAY_KEY not set)"
+fi
+
+if [[ -n "${APP_BASE_URL:-}" || -n "${NEXTAUTH_URL:-}" || -n "${PLAYWRIGHT_BASE_URL:-}" ]]; then
+  echo "[staging-gate] Post-deploy smoke"
+  npm run ops:post-deploy-smoke
+else
+  echo "[staging-gate] Post-deploy smoke skipped (APP_BASE_URL / NEXTAUTH_URL / PLAYWRIGHT_BASE_URL not set)"
+fi
+
 if [[ "$RUN_IMPORT_VERIFY" -eq 1 ]]; then
   : "${TENANT_ID:?TENANT_ID is required for import verification}"
   : "${IMPORT_BATCH_ID:?IMPORT_BATCH_ID is required for import verification}"
@@ -63,4 +80,3 @@ if [[ "$RUN_ROLLBACK_VERIFY" -eq 1 ]]; then
 fi
 
 echo "[staging-gate] OK"
-

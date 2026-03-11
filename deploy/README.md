@@ -44,8 +44,9 @@ openssl rand -base64 32 | gcloud secrets versions add primaria-nextauth-secret -
 echo -n "sk_live_..." | gcloud secrets versions add primaria-stripe-key --data-file=-
 echo -n "whsec_..." | gcloud secrets versions add primaria-stripe-webhook --data-file=-
 
-# LM Studio URL (or empty if not used)
-echo -n "" | gcloud secrets versions add primaria-lm-studio-url --data-file=-
+# AI gateway secrets
+echo -n "https://your-ai-gateway-url" | gcloud secrets versions add primaria-ai-gateway-url --data-file=-
+echo -n "CHANGE_ME" | gcloud secrets versions add primaria-ai-gateway-key --data-file=-
 ```
 
 ### 3. Connect Cloud SQL

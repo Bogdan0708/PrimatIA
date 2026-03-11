@@ -11,6 +11,8 @@ REGION="europe-central2"
 SERVICE="primaria"
 REPO="primaria"
 IMAGE="europe-central2-docker.pkg.dev/$PROJECT_ID/$REPO/app"
+CLOUDSQL_INSTANCE="${CLOUDSQL_INSTANCE:-$PROJECT_ID:$REGION:primaria-db}"
+VPC_CONNECTOR="${VPC_CONNECTOR:-primaria-vpc}"
 
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 TAG="${1:-$GIT_SHA}"
@@ -54,6 +56,8 @@ gcloud run deploy "$SERVICE" \
   --max-instances 10 \
   --no-cpu-throttling \
   --cpu-boost \
+  --vpc-connector "$VPC_CONNECTOR" \
+  --add-cloudsql-instances "$CLOUDSQL_INSTANCE" \
   --set-env-vars "NODE_ENV=production,TENANT_ID=${TENANT_ID:?Set TENANT_ID},NEXTAUTH_URL=${NEXTAUTH_URL:?Set NEXTAUTH_URL},AUTH_TRUST_HOST=true" \
   --set-secrets "\
 DATABASE_URL=primaria-database-url:latest,\
@@ -88,23 +92,23 @@ if [ -z "$CANARY_URL" ]; then
   CANARY_URL="${SERVICE_URL//$SERVICE/$CANARY_REV}"
 fi
 
-echo "==> Health-checking canary revision: $CANARY_REV"
+echo "==> Deep health-checking canary revision: $CANARY_REV"
 echo "    URL: $CANARY_URL"
 
 HEALTH_OK=false
 for i in 1 2 3 4 5; do
-  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$CANARY_URL/api/health" --max-time 10 2>/dev/null || echo "000")
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$CANARY_URL/api/health/deep" --max-time 10 2>/dev/null || echo "000")
   if [ "$HTTP_CODE" = "200" ]; then
     HEALTH_OK=true
-    echo "    Health check passed (attempt $i)"
+    echo "    Deep health check passed (attempt $i)"
     break
   fi
-  echo "    Health check failed (HTTP $HTTP_CODE, attempt $i/5), retrying in 10s..."
+  echo "    Deep health check failed (HTTP $HTTP_CODE, attempt $i/5), retrying in 10s..."
   sleep 10
 done
 
 if [ "$HEALTH_OK" != "true" ]; then
-  echo "ERROR: Canary health check failed after 5 attempts. Aborting."
+  echo "ERROR: Canary deep health check failed after 5 attempts. Aborting."
   echo "       The new revision has 0% traffic. Investigate and re-run, or run rollback.sh."
   exit 1
 fi
@@ -115,8 +119,17 @@ gcloud run services update-traffic "$SERVICE" \
   --region "$REGION" \
   --to-revisions "$CANARY_REV=10"
 
-echo "==> Waiting 60s for canary soak..."
-sleep 60
+echo "==> Waiting 300s (5 min) for canary soak..."
+sleep 300
+
+echo "==> Re-checking canary health before full promotion..."
+SOAK_HEALTH_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$CANARY_URL/api/health/deep" --max-time 10 2>/dev/null || echo "000")
+if [ "$SOAK_HEALTH_CODE" != "200" ]; then
+  echo "ERROR: Canary health check failed after soak (HTTP $SOAK_HEALTH_CODE). Not promoting to 100%."
+  echo "       Canary is still at 10% traffic. Investigate and re-run, or run rollback.sh."
+  exit 1
+fi
+echo "    Post-soak health check passed (HTTP $SOAK_HEALTH_CODE)"
 
 echo "==> Shifting 100% traffic to canary..."
 gcloud run services update-traffic "$SERVICE" \

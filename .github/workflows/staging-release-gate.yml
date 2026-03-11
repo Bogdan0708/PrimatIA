@@ -28,6 +28,12 @@ jobs:
       JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
       CNP_ENCRYPTION_KEY: ${{ secrets.STAGING_CNP_ENCRYPTION_KEY }}
       CNP_TENANT_SALT_SECRET: ${{ secrets.STAGING_CNP_TENANT_SALT_SECRET }}
+      NEXTAUTH_URL: ${{ secrets.STAGING_NEXTAUTH_URL }}
+      APP_BASE_URL: ${{ secrets.STAGING_APP_BASE_URL }}
+      AI_GATEWAY_URL: ${{ secrets.STAGING_AI_GATEWAY_URL }}
+      AI_GATEWAY_KEY: ${{ secrets.STAGING_AI_GATEWAY_KEY }}
+      AI_GATEWAY_PROVIDER: ${{ vars.STAGING_AI_GATEWAY_PROVIDER }}
+      AI_GATEWAY_MODEL: ${{ vars.STAGING_AI_GATEWAY_MODEL }}
       TENANT_ID: ${{ inputs.tenant_id }}
       IMPORT_BATCH_ID: ${{ inputs.import_batch_id }}
       ROLLBACK_BATCH_ID: ${{ inputs.rollback_batch_id }}
@@ -69,6 +75,7 @@ jobs:
             echo "- Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "- Commit: ${{ github.sha }}"
             echo "- Actor: ${{ github.actor }}"
+            echo "- App base URL: ${APP_BASE_URL:-${NEXTAUTH_URL:-<none>}}"
             echo "- Tenant ID input: ${TENANT_ID:-<none>}"
             echo "- Import batch ID input: ${IMPORT_BATCH_ID:-<none>}"
             echo "- Rollback batch ID input: ${ROLLBACK_BATCH_ID:-<none>}"

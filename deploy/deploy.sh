@@ -6,6 +6,8 @@ REGION="europe-central2"
 SERVICE="primaria"
 REPO="primaria"
 IMAGE="europe-central2-docker.pkg.dev/$PROJECT_ID/$REPO/app"
+CLOUDSQL_INSTANCE="${CLOUDSQL_INSTANCE:-$PROJECT_ID:$REGION:primaria-db}"
+VPC_CONNECTOR="${VPC_CONNECTOR:-primaria-vpc}"
 
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
@@ -50,8 +52,8 @@ gcloud run deploy "$SERVICE" \
   --max-instances 10 \
   --no-cpu-throttling \
   --cpu-boost \
-  --vpc-connector primaria-vpc \
-  --add-cloudsql-instances mitch-ai-services:europe-central2:primaria-db \
+  --vpc-connector "$VPC_CONNECTOR" \
+  --add-cloudsql-instances "$CLOUDSQL_INSTANCE" \
   --set-env-vars "NODE_ENV=production,TENANT_ID=${TENANT_ID:?Set TENANT_ID},NEXTAUTH_URL=${NEXTAUTH_URL:?Set NEXTAUTH_URL},AUTH_TRUST_HOST=true" \
   --set-secrets "\
 DATABASE_URL=primaria-database-url:latest,\
