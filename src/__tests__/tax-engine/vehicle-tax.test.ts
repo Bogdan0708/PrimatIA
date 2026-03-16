@@ -480,6 +480,120 @@ describe("calculateVehicleTax", () => {
     });
   });
 
+  describe("Electric vehicle tax (Art. 470 alin. 3¹)", () => {
+    it("calculates fixed annual tax for electric vehicles", async () => {
+      mockVehicleRate(40, "electric"); // 40 lei/year fixed by HCL
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "autoturism",
+          tipCombustibil: "electric",
+          cilindreeCmc: 0,
+          normaPoluare: undefined,
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.bazaImpozabila).toBe(1);
+      expect(result.rataAplicata).toBe(40);
+      expect(result.sumaCalculata).toBe(40);
+      expect(result.sumaDatorata).toBe(40);
+    });
+
+    it("does not apply Euro norm adjustment to electric vehicles", async () => {
+      mockVehicleRate(40, "electric");
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "autoturism",
+          tipCombustibil: "electric",
+          normaPoluare: "non_euro", // would be 1.5x if applied
+        }),
+        makeHcl(),
+        []
+      );
+
+      // Should still be 40, not 60
+      expect(result.sumaCalculata).toBe(40);
+    });
+
+    it("prorates electric vehicle tax for partial year", async () => {
+      mockVehicleRate(40, "electric");
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          tipVehicul: "autoturism",
+          tipCombustibil: "electric",
+          dataDobandire: new Date(2024, 5, 1), // June -> 6 months (Jul-Dec)
+        }),
+        makeHcl(),
+        []
+      );
+
+      expect(result.nrLuni).toBe(6);
+      // 40 * 6/12 = 20
+      expect(result.sumaCalculata).toBe(20);
+    });
+  });
+
+  describe("Hybrid vehicle reduction (Art. 470 alin. 3)", () => {
+    it("applies 30% reduction for hybrids with ≤50g CO₂/km", async () => {
+      mockVehicleRate(8, "autoturism_sub_1600");
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          cilindreeCmc: 1500,
+          normaPoluare: "euro_6",
+          tipCombustibil: "hybrid",
+          emisiiCo2GKm: 45, // ≤50g, eligible
+        }),
+        makeHcl(),
+        []
+      );
+
+      // 8 units * 8 = 64, euro_6 = 0.9 -> 57.6 -> then 30% reduction: 57.6 * 0.7 = 40.32 -> 40
+      expect(result.sumaCalculata).toBe(40);
+    });
+
+    it("does not apply hybrid reduction when CO2 > 50g/km", async () => {
+      mockVehicleRate(8, "autoturism_sub_1600");
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          cilindreeCmc: 1500,
+          normaPoluare: "euro_6",
+          tipCombustibil: "hybrid",
+          emisiiCo2GKm: 80, // >50g, not eligible
+        }),
+        makeHcl(),
+        []
+      );
+
+      // 8 units * 8 = 64, euro_6 = 0.9 -> 57.6 -> round = 58
+      // No hybrid reduction
+      expect(result.sumaCalculata).toBe(58);
+    });
+
+    it("does not apply hybrid reduction when emisiiCo2GKm is not provided", async () => {
+      mockVehicleRate(8, "autoturism_sub_1600");
+
+      const result = await calculateVehicleTax(
+        makeInput({
+          cilindreeCmc: 1500,
+          normaPoluare: "euro_4",
+          tipCombustibil: "hybrid",
+          // emisiiCo2GKm not provided
+        }),
+        makeHcl(),
+        []
+      );
+
+      // Standard calculation: 8 units * 8 = 64, euro_4 = 1.0
+      expect(result.sumaCalculata).toBe(64);
+    });
+  });
+
   describe("Trailer axle-weight calculator (Art. 470)", () => {
     it("R2 pneumatic, 22t -> 166 lei", async () => {
       const result = await calculateVehicleTax(

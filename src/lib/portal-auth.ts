@@ -5,15 +5,18 @@ import { NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
 import { prisma, withTenantScope } from "@/lib/db";
 
-/** Lazily resolved at request time so the module can be imported during build. */
-function getJwtSecret(): Uint8Array {
+/**
+ * Resolve the citizen portal JWT signing secret.
+ * SECURITY: Uses a dedicated secret (CITIZEN_JWT_SECRET or JWT_SECRET) to
+ * prevent token confusion between staff (NextAuth) and citizen sessions.
+ */
+export function getPortalJwtSecret(): Uint8Array {
   const secret =
-    process.env.JWT_SECRET ||
     process.env.CITIZEN_JWT_SECRET ||
-    process.env.NEXTAUTH_SECRET;
+    process.env.JWT_SECRET;
   if (!secret) {
     throw new Error(
-      "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
+      "CITIZEN_JWT_SECRET (or JWT_SECRET) must be configured"
     );
   }
   return new TextEncoder().encode(secret);
@@ -59,7 +62,7 @@ export async function getCitizenSession(): Promise<CitizenSession | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
     const session = payload as unknown as CitizenSession;
     if (!(await isCitizenSessionValid(session))) return null;
     return session;
@@ -77,7 +80,7 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
     const session = payload as unknown as CitizenSession;
     if (!(await isCitizenSessionValid(session))) return null;
     return session;
@@ -88,13 +91,12 @@ export async function getCitizenFromRequest(request: NextRequest): Promise<Citiz
 
 /**
  * Resolve tenant ID for a portal API request.
- * Checks x-tenant-id header first, then the deployment-scoped TENANT_ID env var.
- * Fails closed when neither is available.
+ * Uses ONLY the deployment-scoped TENANT_ID env var (server-side, not client-controllable).
+ * SECURITY: Never trust x-tenant-id from client headers — it can be spoofed.
+ * Fails closed when not available.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function resolvePortalTenant(request: NextRequest): Promise<string | null> {
-  const fromHeader = request.headers.get("x-tenant-id");
-  if (fromHeader) return fromHeader;
-
   const fromEnv = process.env.TENANT_ID?.trim();
   return fromEnv || null;
 }

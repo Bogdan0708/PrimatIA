@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { prisma, setTenantContext } from "@/lib/db";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+
+const profileUpdateSchema = z.object({
+  firstName: z.string().min(1).max(100).optional(),
+  lastName: z.string().min(1).max(100).optional(),
+  phone: z.string().max(20).nullable().optional(),
+  limbaPreferata: z.enum(["ro", "en", "hu"]).optional().default("ro"),
+  emailNotifications: z.boolean().optional().default(false),
+});
 
 export async function GET(request: NextRequest) {
   const logContext = getRequestLogContext(request);
@@ -70,7 +79,14 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { firstName, lastName, phone, limbaPreferata, emailNotifications } = body;
+    const parsed = profileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { firstName, lastName, phone, limbaPreferata, emailNotifications } = parsed.data;
 
     await setTenantContext(citizen.tenantId);
 

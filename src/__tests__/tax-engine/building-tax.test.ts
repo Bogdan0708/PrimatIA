@@ -242,6 +242,20 @@ describe("calculateBuildingTax", () => {
       // 120000 * 0.001 * 1.0 = 120
       expect(result.sumaCalculata).toBe(120);
     });
+
+    it("ignores age coefficients for fiscal year 2026+ (Legea 239/2025)", async () => {
+      mockRateEntry(0.1);
+
+      const result = await calculateBuildingTax(
+        makeInput({ anConstructie: 1920, fiscalYear: 2026 }),
+        makeHcl({ id: "hcl-2026", fiscalYear: 2026 }),
+        []
+      );
+
+      // age = 2026 - 1920 = 106 > 100, but coefficients abrogated for 2026
+      // So: 120000 * 0.001 * 1.0 (no reduction) = 120
+      expect(result.sumaCalculata).toBe(120);
+    });
   });
 
   it("prorates for partial year: acquired June 15 -> 6 taxable months (Jul-Dec)", async () => {

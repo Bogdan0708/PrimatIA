@@ -40,6 +40,7 @@ export default async function VehiculEditPage({
           nrLocuri: vehicul.nrLocuri,
           normaPoluare: vehicul.normaPoluare,
           tipCombustibil: vehicul.tipCombustibil,
+          emisiiCo2GKm: vehicul.emisiiCo2GKm,
           dataDobandire: new Date(vehicul.dataDobandire).toISOString().split("T")[0],
           dataInstrainare: vehicul.dataInstrainare ? new Date(vehicul.dataInstrainare).toISOString().split("T")[0] : null,
           status: vehicul.status,

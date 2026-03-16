@@ -9,6 +9,16 @@ type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string };
 
+function parseTargetImpozitIds(formData: FormData): string[] {
+  const explicitValues = formData
+    .getAll("targetImpozitIds")
+    .flatMap((value) => String(value).split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(explicitValues));
+}
+
 // ============================================================================
 // PAYMENTS — LIST
 // ============================================================================
@@ -161,6 +171,7 @@ export async function createPlata(
       const suma = parseFloat(formData.get("suma") as string);
       const modalitate = formData.get("modalitate") as string;
       const dataPlata = formData.get("dataPlata") as string;
+      const targetImpozitIds = parseTargetImpozitIds(formData);
 
       if (!contribuabilId || !suma || !modalitate || !dataPlata) {
         return {
@@ -207,7 +218,8 @@ export async function createPlata(
         session.user.tenantId,
         plata.id,
         contribuabilId,
-        suma
+        suma,
+        targetImpozitIds
       );
 
       revalidatePath(`/contribuabili/${contribuabilId}`);
@@ -230,18 +242,28 @@ export async function createPlata(
 // The prisma proxy will route queries through the tenant-scoped transaction.
 // ============================================================================
 
+/**
+ * Distribute a payment across outstanding taxes.
+ * Per Cod Procedura Fiscala Art. 165:
+ * - If targetImpozitIds is provided, taxpayer designates which debts to pay.
+ * - If not provided, FIFO applies: oldest debts first, penalties before principal.
+ */
 async function distributePayment(
   tenantId: string,
   plataId: string,
   contribuabilId: string,
-  amount: number
+  amount: number,
+  targetImpozitIds?: string[]
 ): Promise<number> {
-  // Get all outstanding taxes, oldest first (per Cod Procedura Fiscala)
+  // Get outstanding taxes — filtered by designation or FIFO-ordered (Art. 165 CPF)
   const outstandingTaxes = await prisma.impozit.findMany({
     where: {
       tenantId,
       contribuabilId,
       status: { in: ["calculat", "emis", "partial_platit", "executare"] },
+      ...(targetImpozitIds && targetImpozitIds.length > 0
+        ? { id: { in: targetImpozitIds } }
+        : {}),
     },
     orderBy: [{ fiscalYear: "asc" }, { rata1Scadenta: "asc" }],
   });
@@ -321,7 +343,7 @@ async function distributePayment(
 // PAYMENTS — RE-DISTRIBUTE (for manual correction)
 // ============================================================================
 
-export async function redistributePlata(id: string): Promise<ActionResult> {
+export async function redistributePlata(id: string, targetImpozitIds?: string[]): Promise<ActionResult> {
   const session = await auth();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
@@ -365,7 +387,8 @@ export async function redistributePlata(id: string): Promise<ActionResult> {
         session.user.tenantId,
         id,
         plata.contribuabilId,
-        Number(plata.suma)
+        Number(plata.suma),
+        targetImpozitIds
       );
 
       revalidatePath(`/contribuabili/${plata.contribuabilId}`);

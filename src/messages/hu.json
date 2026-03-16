@@ -695,6 +695,7 @@
     "contact": "Kapcsolat",
     "profile": "Profil",
     "footerText": "Digitális közszolgáltatási platform polgárok számára",
+    "privacyPolicy": "Adatvédelmi Szabályzat",
     "citizenLogin": "Polgári bejelentkezés",
     "loginDescription": "Jelentkezzen be polgári fiókjába",
     "loginError": "Bejelentkezés sikertelen. Ellenőrizze adatait.",
@@ -1095,5 +1096,29 @@
     "changes": "Változások",
     "ipAddress": "IP cím",
     "viewChanges": "Változások megtekintése"
+  },
+  "privacy": {
+    "title": "Adatvédelmi Szabályzat",
+    "controllerTitle": "1. Adatkezelő",
+    "controllerText": "Az adatkezelő a portált működtető Polgármesteri Hivatal (Primăria), mint helyi közigazgatási hatóság, amelynek székhelye a portál főoldalán található. Az adatkezelő elérhetőségei a Kapcsolat részben találhatók.",
+    "dpoTitle": "2. Adatvédelmi tisztviselő (DPO)",
+    "dpoText": "Az (EU) 2016/679 rendelet (GDPR) 37. cikk (1) bekezdés a) pontja értelmében a polgármesteri hivatal adatvédelmi tisztviselőt nevezett ki. A DPO elérhetőségei a portál főoldalán találhatók, vagy a polgármesteri hivatal székhelyén kérhetők.",
+    "legalBasisTitle": "3. Az adatkezelés jogalapja",
+    "legalBasisText": "A személyes adatok kezelése a GDPR 6. cikk (1) bekezdés c) pontja (jogi kötelezettség) és e) pontja (közérdekű feladat) alapján történik. A jogalapot a 227/2015. törvény (Adótörvénykönyv), a 207/2015. törvény (Adóeljárási törvénykönyv) és a helyi adóigazgatásra vonatkozó másodlagos jogszabályok képezik.",
+    "dataCategoriesTitle": "4. Kezelt adatkategóriák",
+    "dataCategoriesText": "A következő adatkategóriákat kezeljük: azonosító adatok (név, személyi szám/CNP, adóazonosító/CUI), kapcsolattartási adatok (cím, telefon, email), vagyoni adatok (ingatlanok, járművek, telkek), pénzügyi adatok (adókötelezettségek, befizetések, bírságok) és hitelesítési adatok (email, titkosított jelszó).",
+    "purposeTitle": "5. Az adatkezelés célja",
+    "purposeText": "Az adatkezelés kizárólag a következő célokra történik: helyi adók és illetékek megállapítása és beszedése, adóigazgatási határozatok kibocsátása, adófizetőkkel való kommunikáció az adókötelezettségekről, valamint online fizetések lehetővé tétele.",
+    "retentionTitle": "6. Megőrzési időszak",
+    "retentionText": "Az adóügyi adatokat a 16/1996. törvény (Nemzeti Levéltári Törvény) és az Adóeljárási Törvénykönyv szerint őrizzük meg. Az általános archiválási időszak 10 év az adóév lezárásától számítva.",
+    "rightsTitle": "7. Az Ön jogai",
+    "rightsText": "Önnek joga van a hozzáféréshez (GDPR 15. cikk), a helyesbítéshez (16. cikk), az adatkezelés korlátozásához (18. cikk) és panasz benyújtásához az ANSPDCP-nél. A törléshez való jog (17. cikk) nem vonatkozik az adóügyi adatokra. Az adathordozhatósághoz való jog (20. cikk) nem vonatkozik a jogi kötelezettségen alapuló adatkezelésre.",
+    "anspdcpTitle": "8. Felügyeleti hatóság",
+    "anspdcpText": "Önnek joga van panaszt benyújtani az ANSPDCP-hez (Személyes Adatok Feldolgozását Felügyelő Nemzeti Hatóság), B-dul G-ral Gheorghe Magheru nr. 28-30, sector 1, Bukarest, CP 010336, telefon: +40.318.059.211, email: anspdcp@dataprotection.ro, web: www.dataprotection.ro.",
+    "cookiesTitle": "9. Cookie-k",
+    "cookiesText": "A portál kizárólag a szolgáltatás működéséhez szükséges cookie-kat használ (munkamenet, hitelesítés, biztonság). Marketing vagy elemző cookie-kat nem használunk.",
+    "processorTitle": "10. Adatfeldolgozók",
+    "processorText": "Az adatkezelés a PrimărIA platformon keresztül történik, amely a GDPR 28. cikke szerinti adatfeldolgozóként jár el, az adatkezelővel kötött adatfeldolgozási megállapodás (DPA) alapján. Az adatokat az Európai Unióban található szervereken tároljuk.",
+    "footerLink": "Adatvédelmi Szabályzat"
   }
 }

@@ -125,6 +125,8 @@ export async function createScutireRegula(
         legalBasis,
         taxTypes,
         discountPercent,
+        exemptionType: "discretionara",
+        isSystemRule: false,
         conditions,
         requiredDocuments,
         autoRenewable: formData.get("autoRenewable") === "true",
@@ -165,6 +167,14 @@ export async function updateScutireRegula(
     });
     if (!existing)
       return { success: false, error: "Regula de scutire nu a fost gasita" };
+
+    // Art. 456: system rules (mandatory exemptions) cannot be modified by operators
+    if (existing.isSystemRule) {
+      return {
+        success: false,
+        error: "Regulile obligatorii de scutire (Art. 456) nu pot fi modificate",
+      };
+    }
 
     const discountPercent = parseFloat(
       formData.get("discountPercent") as string
@@ -244,6 +254,14 @@ export async function toggleScutireRegula(id: string): Promise<ActionResult> {
     });
     if (!existing)
       return { success: false, error: "Regula de scutire nu a fost gasita" };
+
+    // Art. 456: system rules (mandatory exemptions) cannot be deactivated
+    if (existing.isSystemRule) {
+      return {
+        success: false,
+        error: "Regulile obligatorii de scutire (Art. 456) nu pot fi dezactivate",
+      };
+    }
 
     await prisma.scutireRegula.update({
       where: { id },

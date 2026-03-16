@@ -6,6 +6,7 @@ import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { createHash } from "crypto";
 import { Prisma } from "@prisma/client";
+import { normalizeVehicleEuroNorm, normalizeVehicleFuelType, normalizeVehicleType } from "@/lib/vehicle-normalization";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -97,6 +98,7 @@ const IMPORT_SCHEMA: Record<ImportEntityType, ImportFieldDefinition[]> = {
     { key: "masa_totala_kg", aliases: ["masa_totala_kg", "masa_totala", "greutate"] },
     { key: "norma_poluare", aliases: ["norma_poluare", "euro"] },
     { key: "tip_combustibil", aliases: ["tip_combustibil", "combustibil"] },
+    { key: "emisii_co2_g_km", aliases: ["emisii_co2_g_km", "co2_g_km", "co2"] },
     { key: "data_dobandire", aliases: ["data_dobandire", "data_achizitie"] },
   ],
 };
@@ -1418,7 +1420,7 @@ async function importProprietatiVehicule(
           contribuabilId,
           numarInmatriculare: getField(row, colMap, "numar_inmatriculare") || undefined,
           serieSasiu: getField(row, colMap, "serie_sasiu") || undefined,
-          tipVehicul,
+          tipVehicul: normalizeVehicleType(tipVehicul) || tipVehicul,
           marca: getField(row, colMap, "marca") || undefined,
           model: getField(row, colMap, "model") || undefined,
           anFabricatie: parseInt(anFabricatieStr),
@@ -1431,8 +1433,11 @@ async function importProprietatiVehicule(
           masaTotalaKg: getField(row, colMap, "masa_totala_kg")
             ? parseInt(getField(row, colMap, "masa_totala_kg")!)
             : undefined,
-          normaPoluare: getField(row, colMap, "norma_poluare") || undefined,
-          tipCombustibil: getField(row, colMap, "tip_combustibil") || undefined,
+          normaPoluare: normalizeVehicleEuroNorm(getField(row, colMap, "norma_poluare")) || undefined,
+          tipCombustibil: normalizeVehicleFuelType(getField(row, colMap, "tip_combustibil")) || undefined,
+          emisiiCo2GKm: getField(row, colMap, "emisii_co2_g_km")
+            ? parseInt(getField(row, colMap, "emisii_co2_g_km")!)
+            : undefined,
           dataDobandire: dataDobandirii
             ? new Date(dataDobandirii)
             : new Date(),

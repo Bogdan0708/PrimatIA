@@ -4,6 +4,7 @@ import { prisma, withTenantScope } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
+import { normalizeVehicleEuroNorm, normalizeVehicleFuelType, normalizeVehicleType } from "@/lib/vehicle-normalization";
 
 type ActionResult = { success: true } | { success: false; error: string };
 const STAFF_ROLES = new Set(["super_admin", "primaria_admin", "operator", "contabil"]);
@@ -111,6 +112,7 @@ function getVehicleAuditSnapshot(
     nrLocuri: number | null;
     normaPoluare: string | null;
     tipCombustibil: string | null;
+    emisiiCo2GKm: number | null;
     numarInmatriculare: string | null;
     serieSasiu: string | null;
     nrCarteIdentitate: string | null;
@@ -132,6 +134,7 @@ function getVehicleAuditSnapshot(
     nrLocuri: vehicle.nrLocuri,
     normaPoluare: vehicle.normaPoluare,
     tipCombustibil: vehicle.tipCombustibil,
+    emisiiCo2GKm: vehicle.emisiiCo2GKm,
     numarInmatriculare: vehicle.numarInmatriculare,
     serieSasiu: vehicle.serieSasiu,
     nrCarteIdentitate: vehicle.nrCarteIdentitate,
@@ -369,6 +372,7 @@ export async function updateVehicle(
     nrLocuri?: number | null;
     normaPoluare?: string | null;
     tipCombustibil?: string | null;
+    emisiiCo2GKm?: number | null;
     numarInmatriculare?: string | null;
     serieSasiu?: string | null;
     nrCarteIdentitate?: string | null;
@@ -410,7 +414,7 @@ export async function updateVehicle(
       const updated = await prisma.proprietateVehicul.update({
         where: { id },
         data: {
-          tipVehicul: data.tipVehicul,
+          tipVehicul: normalizeVehicleType(data.tipVehicul) ?? data.tipVehicul,
           marca: data.marca ?? null,
           model: data.model ?? null,
           anFabricatie: data.anFabricatie,
@@ -418,8 +422,9 @@ export async function updateVehicle(
           putereKw: data.putereKw ?? null,
           masaTotalaKg: data.masaTotalaKg ?? null,
           nrLocuri: data.nrLocuri ?? null,
-          normaPoluare: data.normaPoluare ?? null,
-          tipCombustibil: data.tipCombustibil ?? null,
+          normaPoluare: normalizeVehicleEuroNorm(data.normaPoluare ?? null),
+          tipCombustibil: normalizeVehicleFuelType(data.tipCombustibil ?? null),
+          emisiiCo2GKm: data.emisiiCo2GKm ?? null,
           numarInmatriculare: data.numarInmatriculare ?? null,
           serieSasiu: data.serieSasiu ?? null,
           nrCarteIdentitate: data.nrCarteIdentitate ?? null,

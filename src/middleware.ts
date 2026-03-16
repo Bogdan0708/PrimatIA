@@ -218,7 +218,8 @@ export default function middleware(request: NextRequest) {
     !pathname.startsWith("/portal/register") &&
     !pathname.startsWith("/portal/verify") &&
     !pathname.startsWith("/portal/forgot-password") &&
-    !pathname.startsWith("/portal/reset-password");
+    !pathname.startsWith("/portal/reset-password") &&
+    !pathname.startsWith("/portal/confidentialitate");
 
   // Also check for locale-prefixed portal routes (e.g., /ro/portal/dashboard)
   const localePattern = LOCALES.join("|");
@@ -226,7 +227,7 @@ export default function middleware(request: NextRequest) {
   const isLocaleProtectedPortalRoute =
     localePortalMatch &&
     !pathname.match(
-      new RegExp(`^/(${localePattern})/portal/(login|register|verify|forgot-password|reset-password)`)
+      new RegExp(`^/(${localePattern})/portal/(login|register|verify|forgot-password|reset-password|confidentialitate)`)
     );
 
   if (isProtectedPortalRoute || isLocaleProtectedPortalRoute) {

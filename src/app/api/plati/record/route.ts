@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       ), rateLimit);
     }
 
-    const { contribuabilId, suma, modalitate, dataPlata, nrDocument, nota } = parsed.data;
+    const { contribuabilId, suma, modalitate, dataPlata, nrDocument, nota, targetImpozitIds } = parsed.data;
     let { nrChitanta } = parsed.data;
 
     return await withTenantScope(tenantId, async () => {
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Auto-distribute payment to outstanding debts
-      await distributePayment(tenantId, plata.id, contribuabilId, suma);
+      await distributePayment(tenantId, plata.id, contribuabilId, suma, targetImpozitIds);
 
       // Audit log for payment creation
       await prisma.auditLog.create({
@@ -175,18 +175,27 @@ export async function POST(request: NextRequest) {
 // Per Cod Procedura Fiscala: oldest debts first, penalties before principal
 // ============================================================================
 
+/**
+ * Distribute a payment across outstanding taxes.
+ * Per Cod Procedura Fiscala Art. 165:
+ * - If targetImpozitIds is provided, taxpayer designates which debts to pay.
+ * - If not provided, FIFO applies: oldest debts first, penalties before principal.
+ */
 async function distributePayment(
   tenantId: string,
   plataId: string,
   contribuabilId: string,
-  amount: number
+  amount: number,
+  targetImpozitIds?: string[]
 ): Promise<number> {
-  // Get all outstanding taxes, oldest first (per Cod Procedura Fiscala)
   const outstandingTaxes = await prisma.impozit.findMany({
     where: {
       tenantId,
       contribuabilId,
       status: { in: ["calculat", "emis", "partial_platit", "executare"] },
+      ...(targetImpozitIds && targetImpozitIds.length > 0
+        ? { id: { in: targetImpozitIds } }
+        : {}),
     },
     orderBy: [{ fiscalYear: "asc" }, { rata1Scadenta: "asc" }],
   });

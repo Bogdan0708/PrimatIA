@@ -8,6 +8,7 @@ const prismaMock = vi.hoisted(() => ({
 const ensureRedisConnectionMock = vi.hoisted(() => vi.fn());
 const getLLMConfigMock = vi.hoisted(() => vi.fn());
 const logErrorMock = vi.hoisted(() => vi.fn());
+const authMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/db", () => ({
   prisma: prismaMock,
@@ -30,6 +31,10 @@ vi.mock("@/lib/logger", () => ({
   }),
 }));
 
+vi.mock("@/lib/auth", () => ({
+  auth: authMock,
+}));
+
 describe("GET /api/health/deep", () => {
   const originalEnv = process.env;
   const originalFetch = global.fetch;
@@ -39,6 +44,9 @@ describe("GET /api/health/deep", () => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
     prismaMock.$queryRaw.mockResolvedValue([{ "?column?": 1 }]);
+    authMock.mockResolvedValue({
+      user: { id: "user-1", tenantId: "tenant-1" },
+    });
     ensureRedisConnectionMock.mockResolvedValue({
       ping: vi.fn().mockResolvedValue("PONG"),
     });
@@ -91,6 +99,15 @@ describe("GET /api/health/deep", () => {
     expect(payload.status).toBe("error");
     expect(payload.redis.status).toBe("error");
     expect(logErrorMock).toHaveBeenCalled();
+  });
+
+  it("returns 401 when no health key is configured and staff auth is missing", async () => {
+    authMock.mockResolvedValue(null);
+
+    const { GET } = await import("@/app/api/health/deep/route");
+    const response = await GET(new NextRequest("http://localhost/api/health/deep"));
+
+    expect(response.status).toBe(401);
   });
 
   afterEach(() => {

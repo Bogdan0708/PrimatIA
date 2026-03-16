@@ -53,9 +53,22 @@ function getInitialPenaltyStartDate(impozit: {
   return null;
 }
 
+/** Count calendar days between two dates (inclusive of both endpoints). */
+function daysBetweenInclusive(from: Date, to: Date): number {
+  const msPerDay = 86_400_000;
+  return Math.floor((to.getTime() - from.getTime()) / msPerDay) + 1;
+}
+
 /**
- * Calculate penalties for overdue taxes per Cod Procedura Fiscala.
- * Daily accrual: 0.01%/day delay interest + 0.01%/day penalties.
+ * Calculate penalties for overdue taxes per Cod Procedura Fiscala Art. 173-174.
+ *
+ * Rates: 0.02%/day interest (dobândă) + 0.01%/day penalties (penalitate de întârziere).
+ * Total: 0.03%/day.
+ *
+ * Calculation method: period-based (principal × rate × days), rounded to bani
+ * on the total per period — NOT rounded per day (avoids accumulation drift).
+ * Individual daily records are still stored for audit trail, but amounts
+ * are computed from the period total and distributed evenly.
  */
 export async function calculatePenalties(
   tenantId: string,
@@ -96,6 +109,41 @@ export async function calculatePenalties(
     return { totalPenalties: 0, totalInterest: 0, newRecords: 0 };
   }
 
+  // Build continuous segments where overdue principal is constant.
+  // The principal can change at rata2Scadenta + 1 day.
+  const rata2Boundary = new Date(impozit.rata2Scadenta);
+  rata2Boundary.setDate(rata2Boundary.getDate() + 1);
+
+  interface Segment { from: Date; to: Date; principal: number }
+  const segments: Segment[] = [];
+
+  if (startDate < rata2Boundary && calculationDate >= rata2Boundary) {
+    // Segment spans the rata2 boundary — split into two segments
+    const beforeEnd = new Date(rata2Boundary);
+    beforeEnd.setDate(beforeEnd.getDate() - 1);
+
+    const principalBefore = getOverduePrincipalForDate(impozit, startDate);
+    if (principalBefore > 0) {
+      segments.push({ from: new Date(startDate), to: beforeEnd, principal: principalBefore });
+    }
+
+    const principalAfter = getOverduePrincipalForDate(impozit, rata2Boundary);
+    if (principalAfter > 0) {
+      segments.push({ from: new Date(rata2Boundary), to: new Date(calculationDate), principal: principalAfter });
+    }
+  } else {
+    // Single segment — principal is constant throughout
+    const principal = getOverduePrincipalForDate(impozit, startDate);
+    if (principal > 0) {
+      segments.push({ from: new Date(startDate), to: new Date(calculationDate), principal });
+    }
+  }
+
+  if (segments.length === 0) {
+    return { totalPenalties: 0, totalInterest: 0, newRecords: 0 };
+  }
+
+  // Calculate period-based totals, rounded once per segment (not per day)
   let totalPenalties = 0;
   let totalInterest = 0;
   let newRecords = 0;
@@ -108,31 +156,46 @@ export async function calculatePenalties(
     sumaPenalizare: number;
   }> = [];
 
-  const currentDate = new Date(startDate);
-  while (currentDate <= calculationDate) {
-    const overduePrincipal = getOverduePrincipalForDate(impozit, currentDate);
-    if (overduePrincipal <= 0) {
-      currentDate.setDate(currentDate.getDate() + 1);
-      continue;
-    }
+  for (const seg of segments) {
+    const days = daysBetweenInclusive(seg.from, seg.to);
+    if (days <= 0) continue;
 
-    const dailyPenalty = roundToLei(overduePrincipal * PENALTY_DAILY_RATE * 100) / 100;
-    const dailyInterest = roundToLei(overduePrincipal * INTEREST_DAILY_RATE * 100) / 100;
+    // Period-based calculation: principal × rate × days, rounded to bani once
+    const segPenalty = Math.round(seg.principal * PENALTY_DAILY_RATE * days * 100) / 100;
+    const segInterest = Math.round(seg.principal * INTEREST_DAILY_RATE * days * 100) / 100;
+
+    totalPenalties += segPenalty;
+    totalInterest += segInterest;
+
+    // Distribute evenly across daily records for audit trail
+    const dailyPenalty = Math.round(segPenalty / days * 100) / 100;
+    const dailyInterest = Math.round(segInterest / days * 100) / 100;
     const dailyTotal = dailyPenalty + dailyInterest;
 
-    penaltyRecords.push({
-      tenantId,
-      impozitId,
-      dataCalcul: new Date(currentDate),
-      sumaRestanta: overduePrincipal,
-      rataPenalizare: PENALTY_DAILY_RATE + INTEREST_DAILY_RATE,
-      sumaPenalizare: dailyTotal,
-    });
+    // Track remainder to ensure daily records sum exactly to segment total
+    let penaltyRemainder = segPenalty;
+    let interestRemainder = segInterest;
 
-    totalPenalties += dailyPenalty;
-    totalInterest += dailyInterest;
-    newRecords++;
-    currentDate.setDate(currentDate.getDate() + 1);
+    const currentDate = new Date(seg.from);
+    for (let d = 0; d < days; d++) {
+      const isLast = d === days - 1;
+      const dayPen = isLast ? penaltyRemainder : dailyPenalty;
+      const dayInt = isLast ? interestRemainder : dailyInterest;
+
+      penaltyRecords.push({
+        tenantId,
+        impozitId,
+        dataCalcul: new Date(currentDate),
+        sumaRestanta: seg.principal,
+        rataPenalizare: PENALTY_DAILY_RATE + INTEREST_DAILY_RATE,
+        sumaPenalizare: isLast ? dayPen + dayInt : dailyTotal,
+      });
+
+      penaltyRemainder -= dailyPenalty;
+      interestRemainder -= dailyInterest;
+      newRecords++;
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
   }
 
   // Batch insert penalty records

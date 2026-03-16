@@ -112,11 +112,10 @@ export function VehiculNewForm({ contribuabili }: VehiculNewFormProps) {
                   <option value="" disabled>-</option>
                   <option value="autoturism">{t("car")}</option>
                   <option value="autobuz">{t("bus")}</option>
-                  <option value="autocamion">{t("truck")}</option>
+                  <option value="camion">{t("truck")}</option>
                   <option value="motocicleta">{t("motorcycle")}</option>
                   <option value="tractor">{t("tractor")}</option>
                   <option value="remorca">{t("trailer")}</option>
-                  <option value="autoutilitara">{t("van")}</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -156,12 +155,12 @@ export function VehiculNewForm({ contribuabili }: VehiculNewFormProps) {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <option value="">-</option>
-                  <option value="euro1">Euro 1</option>
-                  <option value="euro2">Euro 2</option>
-                  <option value="euro3">Euro 3</option>
-                  <option value="euro4">Euro 4</option>
-                  <option value="euro5">Euro 5</option>
-                  <option value="euro6">Euro 6</option>
+                  <option value="euro_1">Euro 1</option>
+                  <option value="euro_2">Euro 2</option>
+                  <option value="euro_3">Euro 3</option>
+                  <option value="euro_4">Euro 4</option>
+                  <option value="euro_5">Euro 5</option>
+                  <option value="euro_6">Euro 6</option>
                   <option value="non_euro">Non-Euro</option>
                 </select>
               </div>
@@ -178,8 +177,12 @@ export function VehiculNewForm({ contribuabili }: VehiculNewFormProps) {
                   <option value="motorina">{t("diesel")}</option>
                   <option value="gpl">GPL</option>
                   <option value="electric">{t("electric")}</option>
-                  <option value="hibrid">{t("hybrid")}</option>
+                  <option value="hybrid">{t("hybrid")}</option>
                 </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emisiiCo2GKm">CO2 (g/km)</Label>
+                <Input id="emisiiCo2GKm" name="emisiiCo2GKm" type="number" min="0" />
               </div>
             </div>
 

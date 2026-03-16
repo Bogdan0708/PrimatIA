@@ -1,23 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateCitizen } from "@/lib/citizen-auth";
 import { SignJWT } from "jose";
-import { resolvePortalTenant } from "@/lib/portal-auth";
+import { resolvePortalTenant, getPortalJwtSecret } from "@/lib/portal-auth";
 import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
-
-/** Lazily resolved at request time so the module can be imported during build. */
-function getJwtSecret(): Uint8Array {
-  const secret =
-    process.env.JWT_SECRET ||
-    process.env.CITIZEN_JWT_SECRET ||
-    process.env.NEXTAUTH_SECRET;
-  if (!secret) {
-    throw new Error(
-      "JWT_SECRET (or CITIZEN_JWT_SECRET/NEXTAUTH_SECRET) must be configured"
-    );
-  }
-  return new TextEncoder().encode(secret);
-}
 
 export async function POST(request: NextRequest) {
   const logContext = getRequestLogContext(request);
@@ -82,7 +68,7 @@ export async function POST(request: NextRequest) {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("4h")
-      .sign(getJwtSecret());
+      .sign(getPortalJwtSecret());
 
     const response = NextResponse.json({
       success: true,

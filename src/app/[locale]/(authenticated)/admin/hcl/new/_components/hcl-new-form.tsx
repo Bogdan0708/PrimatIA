@@ -80,6 +80,10 @@ export function HclNewForm() {
                 <Input id="inflationIndex" name="inflationIndex" type="number" step="0.0001" defaultValue="" />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="bonificatieProcent">{t("bonificatie")}</Label>
+                <Input id="bonificatieProcent" name="bonificatieProcent" type="number" step="0.01" min="0" max="10" defaultValue="10" />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="approvedBy">{t("approvedBy")}</Label>
                 <Input id="approvedBy" name="approvedBy" defaultValue="" />
               </div>

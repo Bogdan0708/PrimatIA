@@ -819,6 +819,57 @@ async function main() {
 
   const hclId = hclDecision.id;
 
+  // =============================================================================
+  // 11b. Mandatory exemption rules (Art. 456)
+  // =============================================================================
+
+  const mandatoryExemptionRules = [
+    {
+      nameRo: "Scutire obligatorie pentru persoane cu handicap grav sau accentuat",
+      legalBasis: "Art. 456 Cod fiscal",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_teren_intravilan", "impozit_vehicul"],
+    },
+    {
+      nameRo: "Scutire obligatorie pentru veterani de război",
+      legalBasis: "Art. 456 Cod fiscal",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_teren_intravilan", "impozit_vehicul"],
+    },
+    {
+      nameRo: "Scutire obligatorie pentru clădiri și terenuri ale cultelor religioase",
+      legalBasis: "Art. 456 Cod fiscal",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_cladiri_nerezidentiale", "impozit_teren_intravilan", "impozit_teren_extravilan"],
+    },
+  ];
+
+  for (const rule of mandatoryExemptionRules) {
+    const existingRule = await prisma.scutireRegula.findFirst({
+      where: {
+        tenantId,
+        nameRo: rule.nameRo,
+        isSystemRule: true,
+      },
+    });
+
+    if (!existingRule) {
+      await prisma.scutireRegula.create({
+        data: {
+          tenantId,
+          nameRo: rule.nameRo,
+          legalBasis: rule.legalBasis,
+          taxTypes: rule.taxTypes,
+          discountPercent: 100,
+          exemptionType: "obligatorie",
+          isSystemRule: true,
+          conditions: {},
+          requiredDocuments: [],
+          autoRenewable: true,
+          isActive: true,
+          validFrom: new Date("2026-01-01"),
+        },
+      });
+    }
+  }
+
   // Rate tables
   const rateTables: Array<{
     taxType: string;

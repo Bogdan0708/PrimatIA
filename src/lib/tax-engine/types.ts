@@ -143,6 +143,8 @@ export interface VehicleTaxInput {
   nrAxe?: number; // number of axles for trucks/trailers
   tipSuspensie?: SuspensionType; // suspension type for trucks/trailers
   normaPoluare?: string;
+  tipCombustibil?: string; // "benzina" | "motorina" | "electric" | "hybrid" | "gpl"
+  emisiiCo2GKm?: number; // CO2 emissions in g/km (for hybrid reduction, Art. 470 alin. 3)
   anFabricatie: number;
   dataDobandire: Date;
   dataInstrainare?: Date;
@@ -163,6 +165,7 @@ export interface HclDecisionContext {
   id: string;
   fiscalYear: number;
   inflationIndex?: number;
+  bonificatieProcent?: number; // 0-10%, defaults to BONIFICATIE_PERCENT if not set
 }
 
 export interface ExemptionContext {
@@ -189,10 +192,10 @@ export interface TaxCalculationResult {
   rateTableId: string;
 }
 
-// Penalty calculation
-export const PENALTY_DAILY_RATE = 0.0001; // 0.01% per day
-export const INTEREST_DAILY_RATE = 0.0001; // 0.01% per day
-export const BONIFICATIE_PERCENT = 10; // 10% discount for full payment by March 31
+// Penalty calculation (Cod Procedura Fiscala Art. 173-174)
+export const PENALTY_DAILY_RATE = 0.0001; // 0.01% per day (penalitate de întârziere)
+export const INTEREST_DAILY_RATE = 0.0002; // 0.02% per day (dobândă) — total accesorii: 0.03%/day
+export const BONIFICATIE_PERCENT = 10; // Max 10% discount for full payment by March 31 (ceiling, HCL sets 0-10%)
 export const BONIFICATIE_DEADLINE_MONTH = 3; // March
 export const BONIFICATIE_DEADLINE_DAY = 31;
 

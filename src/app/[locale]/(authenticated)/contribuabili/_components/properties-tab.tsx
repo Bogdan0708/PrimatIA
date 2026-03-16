@@ -94,6 +94,7 @@ interface VehicleData {
   nrLocuri?: number | null;
   normaPoluare?: string | null;
   tipCombustibil?: string | null;
+  emisiiCo2GKm?: number | null;
   numarInmatriculare?: string | null;
   serieSasiu?: string | null;
   nrCarteIdentitate?: string | null;
@@ -871,6 +872,7 @@ function EditVehicleDialog({
     nrLocuri: vehicle.nrLocuri ? String(vehicle.nrLocuri) : "",
     normaPoluare: vehicle.normaPoluare ?? "",
     tipCombustibil: vehicle.tipCombustibil ?? "",
+    emisiiCo2GKm: vehicle.emisiiCo2GKm ? String(vehicle.emisiiCo2GKm) : "",
     numarInmatriculare: vehicle.numarInmatriculare ?? "",
     serieSasiu: vehicle.serieSasiu ?? "",
     nrCarteIdentitate: vehicle.nrCarteIdentitate ?? "",
@@ -890,6 +892,7 @@ function EditVehicleDialog({
     const putereKw = parseOptionalNumberInput(form.putereKw, { min: 0 });
     const masaTotalaKg = parseOptionalNumberInput(form.masaTotalaKg, { integer: true, min: 0 });
     const nrLocuri = parseOptionalNumberInput(form.nrLocuri, { integer: true, min: 0 });
+    const emisiiCo2GKm = parseOptionalNumberInput(form.emisiiCo2GKm, { integer: true, min: 0 });
 
     if (
       !form.tipVehicul ||
@@ -899,6 +902,7 @@ function EditVehicleDialog({
       (form.putereKw.trim() && putereKw == null) ||
       (form.masaTotalaKg.trim() && masaTotalaKg == null) ||
       (form.nrLocuri.trim() && nrLocuri == null) ||
+      (form.emisiiCo2GKm.trim() && emisiiCo2GKm == null) ||
       !isValidDateInput(form.dataDobandire) ||
       (form.dataInstrainare.trim() && !isValidDateInput(form.dataInstrainare))
     ) {
@@ -919,6 +923,7 @@ function EditVehicleDialog({
         nrLocuri,
         normaPoluare: form.normaPoluare || null,
         tipCombustibil: form.tipCombustibil || null,
+        emisiiCo2GKm,
         numarInmatriculare: form.numarInmatriculare || null,
         serieSasiu: form.serieSasiu || null,
         nrCarteIdentitate: form.nrCarteIdentitate || null,
@@ -1009,12 +1014,12 @@ function EditVehicleDialog({
                 <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE_OPTION}>-</SelectItem>
-                  <SelectItem value="euro1">Euro 1</SelectItem>
-                  <SelectItem value="euro2">Euro 2</SelectItem>
-                  <SelectItem value="euro3">Euro 3</SelectItem>
-                  <SelectItem value="euro4">Euro 4</SelectItem>
-                  <SelectItem value="euro5">Euro 5</SelectItem>
-                  <SelectItem value="euro6">Euro 6</SelectItem>
+                  <SelectItem value="euro_1">Euro 1</SelectItem>
+                  <SelectItem value="euro_2">Euro 2</SelectItem>
+                  <SelectItem value="euro_3">Euro 3</SelectItem>
+                  <SelectItem value="euro_4">Euro 4</SelectItem>
+                  <SelectItem value="euro_5">Euro 5</SelectItem>
+                  <SelectItem value="euro_6">Euro 6</SelectItem>
                   <SelectItem value="non_euro">Non-Euro</SelectItem>
                 </SelectContent>
               </Select>
@@ -1022,7 +1027,7 @@ function EditVehicleDialog({
           </div>
 
           {/* Row 4: Fuel + Registration */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>{tp("fuelType")}</Label>
               <Select value={form.tipCombustibil || NONE_OPTION} onValueChange={(v) => set("tipCombustibil", v === NONE_OPTION ? "" : v)}>
@@ -1036,6 +1041,10 @@ function EditVehicleDialog({
                   <SelectItem value="hybrid">Hybrid</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>CO2 (g/km)</Label>
+              <Input type="number" value={form.emisiiCo2GKm} onChange={(e) => set("emisiiCo2GKm", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>{tp("registrationNumber")}</Label>

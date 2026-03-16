@@ -9,6 +9,7 @@ import { calculateBuildingTax } from "./building-tax";
 import { calculateLandTax } from "./land-tax";
 import { calculateVehicleTax } from "./vehicle-tax";
 import { toSafeNumber } from "./utils";
+import { normalizeVehicleType } from "@/lib/vehicle-normalization";
 import type {
   BuildingTaxInput,
   HclDecisionContext,
@@ -39,6 +40,9 @@ export async function resolveActiveHcl(
     fiscalYear: hcl.fiscalYear,
     inflationIndex: hcl.inflationIndex != null
       ? toSafeNumber(hcl.inflationIndex, "hclDecision.inflationIndex")
+      : undefined,
+    bonificatieProcent: hcl.bonificatieProcent != null
+      ? toSafeNumber(hcl.bonificatieProcent, "hclDecision.bonificatieProcent")
       : undefined,
   };
 }
@@ -260,7 +264,7 @@ export async function calculateAllTaxesForContribuabil(
           contribuabilId,
           tenantId,
           fiscalYear,
-          tipVehicul: v.tipVehicul,
+          tipVehicul: normalizeVehicleType(v.tipVehicul) ?? v.tipVehicul,
           cilindreeCmc: v.cilindreeCmc ?? undefined,
           putereKw: v.putereKw != null
             ? toSafeNumber(v.putereKw, "proprietateVehicul.putereKw")
@@ -268,6 +272,8 @@ export async function calculateAllTaxesForContribuabil(
           masaTotalaKg: v.masaTotalaKg ?? undefined,
           nrLocuri: v.nrLocuri ?? undefined,
           normaPoluare: v.normaPoluare ?? undefined,
+          tipCombustibil: v.tipCombustibil ?? undefined,
+          emisiiCo2GKm: v.emisiiCo2GKm ?? undefined,
           anFabricatie: v.anFabricatie,
           dataDobandire: v.dataDobandire,
           dataInstrainare: v.dataInstrainare ?? undefined,

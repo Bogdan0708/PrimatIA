@@ -379,6 +379,7 @@ model ProprietateVehicul {
   nrLocuri       Int?     @map("nr_locuri")
   normaPoluare   String?  @map("norma_poluare") @db.VarChar(10)
   tipCombustibil String?  @map("tip_combustibil") @db.VarChar(20)
+  emisiiCo2GKm   Int?     @map("emisii_co2_g_km") // CO2 g/km for hybrid reduction (Art. 470 alin. 3)
 
   // Ownership
   dataDobandire   DateTime  @map("data_dobandire") @db.Date
@@ -411,9 +412,10 @@ model HclDecision {
   fiscalYear Int      @map("fiscal_year")
   title      String?
 
-  inflationIndex Decimal?  @map("inflation_index") @db.Decimal(6, 4)
-  validFrom      DateTime  @map("valid_from") @db.Date
-  validTo        DateTime? @map("valid_to") @db.Date
+  inflationIndex     Decimal?  @map("inflation_index") @db.Decimal(6, 4)
+  bonificatieProcent Decimal?  @map("bonificatie_procent") @db.Decimal(4, 2) // 0-10%, default 10% ceiling per Art. 462
+  validFrom          DateTime  @map("valid_from") @db.Date
+  validTo            DateTime? @map("valid_to") @db.Date
 
   status      String  @default("draft") @db.VarChar(20)
   approvedBy  String? @map("approved_by") @db.VarChar(255)
@@ -477,6 +479,11 @@ model ScutireRegula {
 
   taxTypes        String[] @map("tax_types")
   discountPercent Decimal  @map("discount_percent") @db.Decimal(5, 2)
+
+  // Art. 456: "obligatorie" = mandatory by law, "discretionara" = HCL discretion
+  exemptionType String  @default("discretionara") @map("exemption_type") @db.VarChar(20)
+  // System rules (Art. 456 mandatory exemptions) cannot be modified/deleted by operators
+  isSystemRule  Boolean @default(false) @map("is_system_rule")
 
   conditions        Json     @default("{}") @db.JsonB
   requiredDocuments String[] @map("required_documents")

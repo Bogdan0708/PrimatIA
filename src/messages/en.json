@@ -695,6 +695,7 @@
     "contact": "Contact",
     "profile": "Profile",
     "footerText": "Digital public services platform for citizens",
+    "privacyPolicy": "Privacy Policy",
     "citizenLogin": "Citizen Login",
     "loginDescription": "Access your citizen account",
     "loginError": "Login failed. Please check your credentials.",
@@ -1095,5 +1096,29 @@
     "changes": "Changes",
     "ipAddress": "IP Address",
     "viewChanges": "View changes"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "controllerTitle": "1. Data Controller",
+    "controllerText": "The data controller is the Municipality (Primăria) that administers this portal, acting as a local public administration authority, headquartered at the address indicated on the portal's main page. The controller's contact details are available in the Contact section.",
+    "dpoTitle": "2. Data Protection Officer (DPO)",
+    "dpoText": "In accordance with Art. 37(1)(a) of Regulation (EU) 2016/679 (GDPR), the municipality has appointed a Data Protection Officer. The DPO's contact details are displayed on the portal's main page or can be requested at the municipality's headquarters.",
+    "legalBasisTitle": "3. Legal Basis for Processing",
+    "legalBasisText": "Personal data processing is carried out under Art. 6(1)(c) GDPR (legal obligation) and Art. 6(1)(e) (exercise of official authority). The legal basis is Law 227/2015 (Fiscal Code), Law 207/2015 (Fiscal Procedure Code), and applicable secondary legislation for local tax administration.",
+    "dataCategoriesTitle": "4. Categories of Data Processed",
+    "dataCategoriesText": "We process the following data categories: identification data (name, personal identification number/CNP, tax ID/CUI), contact data (address, phone, email), property data (buildings, vehicles, land), financial data (tax obligations, payments, penalties), and authentication data (email, encrypted password). The CNP is encrypted at rest (AES-256-GCM) and masked in display.",
+    "purposeTitle": "5. Purpose of Processing",
+    "purposeText": "Data is processed exclusively for: establishing and collecting local taxes and fees, issuing fiscal administrative acts (tax assessments, enforcement notices, fiscal attestation certificates), communicating with taxpayers regarding fiscal obligations, and facilitating online payments.",
+    "retentionTitle": "6. Retention Period",
+    "retentionText": "Fiscal data is retained in accordance with Law 16/1996 (National Archives Law) and the Fiscal Procedure Code. The standard archival period is 10 years from the close of the fiscal year, with potentially longer periods for certain document categories as defined by the institution's Archival Nomenclature.",
+    "rightsTitle": "7. Your Rights",
+    "rightsText": "You have the right of access (Art. 15 GDPR), right to rectification (Art. 16), right to restriction of processing (Art. 18), and the right to lodge a complaint with the ANSPDCP. The right to erasure (Art. 17) does not apply to fiscal data, being exempt under Art. 17(3)(b) and (e). The right to data portability (Art. 20) does not apply to processing based on legal obligation or public interest.",
+    "anspdcpTitle": "8. Supervisory Authority",
+    "anspdcpText": "You have the right to lodge a complaint with the National Supervisory Authority for Personal Data Processing (ANSPDCP), B-dul G-ral Gheorghe Magheru nr. 28-30, sector 1, Bucharest, CP 010336, phone: +40.318.059.211, email: anspdcp@dataprotection.ro, web: www.dataprotection.ro.",
+    "cookiesTitle": "9. Cookies",
+    "cookiesText": "The portal uses only strictly necessary cookies for service operation (session, authentication, security). No marketing or analytics cookies are used. Under Law 506/2004, strictly necessary cookies do not require user consent.",
+    "processorTitle": "10. Data Processors",
+    "processorText": "Data processing is carried out through the PrimărIA platform, acting as a data processor under Art. 28 GDPR, based on a Data Processing Agreement (DPA) concluded with the controller. Data is stored on servers located within the European Union.",
+    "footerLink": "Privacy Policy"
   }
 }

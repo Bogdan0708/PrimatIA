@@ -40,6 +40,7 @@ interface HclEditFormProps {
     fiscalYear: number;
     title: string | null;
     inflationIndex: number | null;
+    bonificatieProcent: number | null;
     validFrom: string;
     validTo: string | null;
     approvedBy: string | null;
@@ -111,6 +112,10 @@ export function HclEditForm({ hcl, rateTables }: HclEditFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="inflationIndex">{t("inflationIndex")}</Label>
                 <Input id="inflationIndex" name="inflationIndex" type="number" step="0.0001" defaultValue={hcl.inflationIndex ?? ""} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bonificatieProcent">{t("bonificatie")}</Label>
+                <Input id="bonificatieProcent" name="bonificatieProcent" type="number" step="0.01" min="0" max="10" defaultValue={hcl.bonificatieProcent ?? 10} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="approvedBy">{t("approvedBy")}</Label>

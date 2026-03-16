@@ -182,6 +182,7 @@ export const vehiculSchema = z.object({
   nrLocuri: z.number().int().positive().optional().nullable(),
   normaPoluare: z.enum(["non_euro", "euro_1", "euro_2", "euro_3", "euro_4", "euro_5", "euro_6"]).optional().nullable(),
   tipCombustibil: z.enum(["benzina", "motorina", "electric", "hybrid", "gpl"]).optional().nullable(),
+  emisiiCo2GKm: z.number().int().min(0).max(999).optional().nullable(),
   dataDobandire: z.coerce.date(),
   dataInstrainare: z.coerce.date().optional().nullable(),
 });
@@ -198,6 +199,7 @@ export const hclDecisionSchema = z.object({
   fiscalYear: z.number().int().min(2020).max(2100),
   title: z.string().optional().nullable(),
   inflationIndex: z.number().min(0).max(10).optional().nullable(),
+  bonificatieProcent: z.number().min(0).max(10).optional().nullable(),
   validFrom: z.coerce.date(),
   validTo: z.coerce.date().optional().nullable(),
   approvedBy: z.string().max(255).optional().nullable(),
@@ -276,6 +278,7 @@ export const plataSchema = z.object({
   nrChitanta: z.string().max(50).optional().nullable(),
   nrDocument: z.string().max(50).optional().nullable(),
   nota: z.string().optional().nullable(),
+  targetImpozitIds: z.array(z.string().uuid()).optional(),
 });
 
 export type PlataInput = z.infer<typeof plataSchema>;

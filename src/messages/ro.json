@@ -695,6 +695,7 @@
     "contact": "Contact",
     "profile": "Profil",
     "footerText": "Platformă de servicii publice digitale pentru cetățeni",
+    "privacyPolicy": "Politica de Confidențialitate",
     "citizenLogin": "Autentificare Cetățean",
     "loginDescription": "Accesați contul dumneavoastră de cetățean",
     "loginError": "Autentificare eșuată. Verificați credențialele.",
@@ -1095,5 +1096,29 @@
     "changes": "Modificări",
     "ipAddress": "Adresă IP",
     "viewChanges": "Vezi modificări"
+  },
+  "privacy": {
+    "title": "Politica de Confidențialitate",
+    "controllerTitle": "1. Operatorul de date",
+    "controllerText": "Operatorul de date cu caracter personal este Primăria care administrează acest portal, în calitate de autoritate a administrației publice locale, cu sediul indicat pe pagina principală a portalului. Datele de contact ale operatorului sunt disponibile în secțiunea Contact.",
+    "dpoTitle": "2. Responsabilul cu Protecția Datelor (DPO)",
+    "dpoText": "Conform art. 37 alin. (1) lit. (a) din Regulamentul (UE) 2016/679 (GDPR), primăria a desemnat un Responsabil cu Protecția Datelor. Datele de contact ale DPO sunt afișate pe pagina principală a portalului sau pot fi solicitate la sediul primăriei.",
+    "legalBasisTitle": "3. Temeiul legal al prelucrării",
+    "legalBasisText": "Prelucrarea datelor cu caracter personal se realizează în temeiul art. 6 alin. (1) lit. (c) GDPR (obligație legală) și lit. (e) (exercitarea autorității publice). Baza legală o constituie Legea 227/2015 (Codul Fiscal), Legea 207/2015 (Codul de Procedură Fiscală) și legislația secundară aplicabilă administrării impozitelor și taxelor locale.",
+    "dataCategoriesTitle": "4. Categorii de date prelucrate",
+    "dataCategoriesText": "Prelucrăm următoarele categorii de date: date de identificare (nume, prenume, CNP, CUI), date de contact (adresă, telefon, email), date patrimoniale (proprietăți imobiliare, vehicule, terenuri), date financiare (obligații fiscale, plăți, penalități) și date de autentificare (email, parolă criptată). CNP-ul este criptat la stocare (AES-256-GCM) și mascat la afișare.",
+    "purposeTitle": "5. Scopul prelucrării",
+    "purposeText": "Datele sunt prelucrate exclusiv pentru: stabilirea și încasarea impozitelor și taxelor locale, emiterea actelor administrativ-fiscale (decizii de impunere, somații, certificate de atestare fiscală), comunicarea cu contribuabilii privind obligațiile fiscale și facilitarea plăților online.",
+    "retentionTitle": "6. Durata de stocare",
+    "retentionText": "Datele fiscale sunt păstrate conform Legii 16/1996 (Legea Arhivelor Naționale) și Codului de Procedură Fiscală. Perioada standard de arhivare este de 10 ani de la închiderea exercițiului fiscal, cu posibilitatea unor termene mai lungi pentru anumite categorii de documente conform Nomenclatorului Arhivistic al instituției.",
+    "rightsTitle": "7. Drepturile dumneavoastră",
+    "rightsText": "Aveți dreptul de acces la date (art. 15 GDPR), dreptul la rectificare (art. 16), dreptul la restricționarea prelucrării (art. 18) și dreptul de a depune o plângere la ANSPDCP. Dreptul la ștergere (art. 17) nu se aplică datelor fiscale, fiind exceptat prin art. 17 alin. (3) lit. (b) și (e). Dreptul la portabilitate (art. 20) nu se aplică prelucrărilor bazate pe obligație legală sau interes public.",
+    "anspdcpTitle": "8. Autoritatea de supraveghere",
+    "anspdcpText": "Aveți dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (ANSPDCP), B-dul G-ral Gheorghe Magheru nr. 28-30, sector 1, București, CP 010336, telefon: +40.318.059.211, email: anspdcp@dataprotection.ro, web: www.dataprotection.ro.",
+    "cookiesTitle": "9. Cookie-uri",
+    "cookiesText": "Portalul utilizează exclusiv cookie-uri strict necesare pentru funcționarea serviciului (sesiune, autentificare, securitate). Nu sunt utilizate cookie-uri de marketing sau analytics. Conform Legii 506/2004, cookie-urile strict necesare nu necesită consimțământul utilizatorului.",
+    "processorTitle": "10. Persoane împuternicite",
+    "processorText": "Prelucrarea datelor se realizează prin intermediul platformei PrimărIA, în calitate de persoană împuternicită conform art. 28 GDPR, pe baza unui acord de prelucrare a datelor (DPA) încheiat cu operatorul. Datele sunt stocate pe servere situate în Uniunea Europeană.",
+    "footerLink": "Politica de Confidențialitate"
   }
 }

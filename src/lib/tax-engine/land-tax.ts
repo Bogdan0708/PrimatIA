@@ -91,7 +91,7 @@ export async function calculateLandTax(
 
   // 8. Final
   const sumaDatorata = roundToLei(sumaCalculata - sumaScutire);
-  const bonificatie = calculateBonificatie(sumaDatorata);
+  const bonificatie = calculateBonificatie(sumaDatorata, hclDecision.bonificatieProcent);
   const { rata1, rata1Scadenta, rata2, rata2Scadenta } = splitInstallments(
     sumaDatorata,
     input.fiscalYear

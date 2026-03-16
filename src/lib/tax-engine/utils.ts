@@ -219,10 +219,14 @@ export function splitInstallments(
 
 /**
  * Calculate bonificatie (Art. 462 Cod Fiscal).
- * 10% discount if full annual tax is paid by March 31.
+ * Discount for full annual tax payment by March 31.
+ * BONIFICATIE_PERCENT (10%) is the legal ceiling; each HCL sets 0-10%.
  */
-export function calculateBonificatie(totalAmount: number): number {
-  return roundToLei(totalAmount * (BONIFICATIE_PERCENT / 100));
+export function calculateBonificatie(totalAmount: number, hclPercent?: number): number {
+  const percent = hclPercent != null
+    ? Math.min(hclPercent, BONIFICATIE_PERCENT) // Cap at legal ceiling
+    : BONIFICATIE_PERCENT; // Default to ceiling if HCL doesn't specify
+  return roundToLei(totalAmount * (percent / 100));
 }
 
 /**
@@ -236,13 +240,21 @@ export function applyInflationIndex(amount: number, inflationIndex?: number): nu
 
 /**
  * Building age coefficient (Art. 457 Cod Fiscal).
- * Reduction coefficient based on building age:
+ *
+ * IMPORTANT: Art. 457 alin. (7)-(9) were ABROGATED by Legea 239/2025.
+ * Age coefficients no longer apply starting fiscal year 2026.
+ * Kept for historical correctness (fiscal years ≤ 2025).
+ *
+ * Historical coefficients:
  * - Over 100 years: 0.85
  * - 50-100 years: 0.90
  * - 30-50 years: 0.95
  * - Under 30 years: 1.00
  */
 export function getBuildingAgeCoefficient(anConstructie: number, fiscalYear: number): number {
+  // Legea 239/2025: age coefficients abrogated starting 2026
+  if (fiscalYear >= 2026) return 1.0;
+
   const age = fiscalYear - anConstructie;
   if (age > 100) return 0.85;
   if (age > 50) return 0.9;

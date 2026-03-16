@@ -18,6 +18,7 @@ import {
   toMicroLei,
   toSafeNumber,
 } from "./utils";
+import { normalizeVehicleEuroNorm, normalizeVehicleFuelType, normalizeVehicleType } from "@/lib/vehicle-normalization";
 
 /**
  * Vehicle tax brackets per Art. 470 Cod Fiscal.
@@ -43,7 +44,8 @@ const MOTORCYCLE_BRACKETS = [
   { minCmc: 501, maxCmc: Infinity, label: "peste_500" },
 ] as const;
 
-// Euro norm adjustment factors (surcharges/discounts)
+// Euro norm adjustment factors (surcharges/discounts) — Art. 470 alin. (3) Cod Fiscal
+// These are default/fallback values; actual values should be configured per HCL
 const EURO_NORM_ADJUSTMENTS: Record<string, number> = {
   non_euro: 1.5, // +50%
   euro_1: 1.3,
@@ -53,6 +55,11 @@ const EURO_NORM_ADJUSTMENTS: Record<string, number> = {
   euro_5: 0.95,
   euro_6: 0.9,
 };
+
+// Maximum hybrid reduction percentage per Art. 470 alin. (3) — HCL sets 0-30%
+const MAX_HYBRID_REDUCTION_PERCENT = 30;
+// CO2 threshold for hybrid reduction eligibility (g/km)
+const HYBRID_CO2_THRESHOLD_GKM = 50;
 
 /**
  * Truck axle-weight table per Art. 470 Cod Fiscal.
@@ -290,6 +297,10 @@ export async function calculateVehicleTax(
   hclDecision: HclDecisionContext,
   exemptions: ExemptionContext[]
 ): Promise<TaxCalculationResult> {
+  const normalizedTipVehicul = normalizeVehicleType(input.tipVehicul) ?? input.tipVehicul;
+  const normalizedNormaPoluare = normalizeVehicleEuroNorm(input.normaPoluare) ?? undefined;
+  const normalizedTipCombustibil = normalizeVehicleFuelType(input.tipCombustibil) ?? undefined;
+
   const taxType = "impozit_mijloace_transport";
 
   // Validate masaTotalaKg if provided
@@ -303,7 +314,23 @@ export async function calculateVehicleTax(
   let rateTableId = "";
   let category = "";
 
-  if (input.tipVehicul === "autoturism") {
+  // Electric vehicles: fixed annual tax per Art. 470 alin. (3¹) — Legea 239/2025
+  if (normalizedTipCombustibil === "electric") {
+    category = "electric";
+    const rateEntry = await findVehicleRate(
+      input.tenantId,
+      hclDecision.id,
+      taxType,
+      category
+    );
+    if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+
+    rateTableId = rateEntry.id;
+    bazaImpozabila = 1;
+    rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
+    sumaCalculataMicroLei = toMicroLei(rataAplicata); // Fixed annual amount
+    // No Euro norm or hybrid adjustments for electric vehicles
+  } else if (normalizedTipVehicul === "autoturism") {
     // Per 200 cm3 bracket
     const cmc = input.cilindreeCmc ?? 0;
     const bracket =
@@ -325,7 +352,7 @@ export async function calculateVehicleTax(
     // Rate is per 200 cm3
     const units = Math.ceil(cmc / 200);
     sumaCalculataMicroLei = units * toMicroLei(rataAplicata);
-  } else if (input.tipVehicul === "motocicleta") {
+  } else if (normalizedTipVehicul === "motocicleta") {
     const cmc = input.cilindreeCmc ?? 0;
     const bracket =
       MOTORCYCLE_BRACKETS.find((b) => cmc >= b.minCmc && cmc <= b.maxCmc) ??
@@ -344,7 +371,7 @@ export async function calculateVehicleTax(
     bazaImpozabila = cmc;
     rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
     sumaCalculataMicroLei = toMicroLei(rataAplicata); // Flat rate for motorcycles
-  } else if (input.tipVehicul === "autobuz") {
+  } else if (normalizedTipVehicul === "autobuz") {
     category = "autobuz";
     const rateEntry = await findVehicleRate(
       input.tenantId,
@@ -358,7 +385,7 @@ export async function calculateVehicleTax(
     bazaImpozabila = input.nrLocuri ?? 0;
     rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
     sumaCalculataMicroLei = bazaImpozabila * toMicroLei(rataAplicata); // Per seat
-  } else if (input.tipVehicul === "camion") {
+  } else if (normalizedTipVehicul === "camion") {
     // Try axle-weight table first (Art. 470 proper)
     const truckResult = calculateTruckTax(input);
     if (truckResult) {
@@ -383,7 +410,7 @@ export async function calculateVehicleTax(
       rataAplicata = toSafeNumber(rateEntry.rateValue, "taxRateTable.rateValue");
       sumaCalculataMicroLei = bazaImpozabila * toMicroLei(rataAplicata);
     }
-  } else if (input.tipVehicul === "remorca") {
+  } else if (normalizedTipVehicul === "remorca") {
     // Trailer: axle-weight table (Art. 470)
     const trailerResult = calculateTrailerTax(input);
     if (trailerResult) {
@@ -410,7 +437,7 @@ export async function calculateVehicleTax(
     }
   } else {
     // Tractor, etc. -- flat rate by category
-    category = input.tipVehicul;
+    category = normalizedTipVehicul;
     const rateEntry = await findVehicleRate(
       input.tenantId,
       hclDecision.id,
@@ -425,11 +452,33 @@ export async function calculateVehicleTax(
     sumaCalculataMicroLei = toMicroLei(rataAplicata);
   }
 
-  // Apply Euro norm adjustment (not applied to weight-table trucks/trailers)
+  // Apply Euro norm adjustment (not applied to weight-table trucks/trailers or electric vehicles)
   const isWeightTable = rateTableId.startsWith("weight_table_");
-  if (!isWeightTable) {
-    const normAdjustment = EURO_NORM_ADJUSTMENTS[input.normaPoluare ?? "euro_4"] ?? 1.0;
+  const isElectric = normalizedTipCombustibil === "electric";
+  if (!isWeightTable && !isElectric) {
+    const norm = normalizedNormaPoluare ?? "euro_4";
+    // Try HCL-configured norm multiplier first, fall back to hardcoded defaults
+    const hclNormEntry = await findVehicleRate(
+      input.tenantId,
+      hclDecision.id,
+      "ajustare_norma_euro",
+      norm
+    );
+    const normAdjustment = hclNormEntry
+      ? toSafeNumber(hclNormEntry.rateValue, "euroNormAdjustment")
+      : (EURO_NORM_ADJUSTMENTS[norm] ?? 1.0);
     sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, normAdjustment);
+  }
+
+  // Hybrid reduction: up to 30% for hybrids with ≤50g CO₂/km (Art. 470 alin. 3)
+  if (
+    normalizedTipCombustibil === "hybrid" &&
+    input.emisiiCo2GKm != null &&
+    input.emisiiCo2GKm <= HYBRID_CO2_THRESHOLD_GKM
+  ) {
+    // Apply maximum reduction (HCL could configure a lower %; for now use the legal max)
+    const reductionMultiplier = 1 - MAX_HYBRID_REDUCTION_PERCENT / 100; // 0.70
+    sumaCalculataMicroLei = applyMultiplierToMicroLei(sumaCalculataMicroLei, reductionMultiplier);
   }
 
   // 4b. Apply HCL inflation coefficient when configured
@@ -456,7 +505,7 @@ export async function calculateVehicleTax(
   sumaScutire = Math.min(sumaScutire, sumaCalculata);
 
   const sumaDatorata = roundToLei(sumaCalculata - sumaScutire);
-  const bonificatie = calculateBonificatie(sumaDatorata);
+  const bonificatie = calculateBonificatie(sumaDatorata, hclDecision.bonificatieProcent);
   const { rata1, rata1Scadenta, rata2, rata2Scadenta } = splitInstallments(
     sumaDatorata,
     input.fiscalYear

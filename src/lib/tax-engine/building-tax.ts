@@ -122,6 +122,7 @@ export async function calculateBuildingTax(
   let rateTableId: string;
 
   if (input.destinatie === "mixta") {
+    // Art. 459: Split the taxable base by surface area, tax each part separately
     const [residentialRateEntry, nonResidentialRateEntry] = await Promise.all([
       findRateTableEntry(
         input.tenantId,
@@ -146,7 +147,10 @@ export async function calculateBuildingTax(
     }
 
     const { residentialShare, nonResidentialShare } = resolveMixedUseShares(input);
-    bazaImpozabila = input.valoareImpozabila ?? input.valoareInventar ?? 0;
+    const totalBase = input.valoareImpozabila ?? input.valoareInventar ?? 0;
+    // Split the taxable base proportionally by surface
+    const residentialBase = totalBase * residentialShare;
+    const nonResidentialBase = totalBase * nonResidentialShare;
 
     const residentialRate = residentialRateEntry.rateValue;
     const nonResidentialRate =
@@ -159,6 +163,8 @@ export async function calculateBuildingTax(
           )
         : nonResidentialRateEntry.rateValue;
 
+    // Store the total base and the dominant rate for the record
+    bazaImpozabila = totalBase;
     rataAplicata =
       residentialRate * residentialShare +
       nonResidentialRate * nonResidentialShare;
@@ -166,6 +172,74 @@ export async function calculateBuildingTax(
       residentialShare >= nonResidentialShare
         ? residentialRateEntry.id
         : nonResidentialRateEntry.id;
+
+    // Calculate each portion separately, then sum (Art. 459 compliant)
+    let resMicroLei = applyPercentToMicroLei(toMicroLei(residentialBase), residentialRate);
+    let nonResMicroLei = applyPercentToMicroLei(toMicroLei(nonResidentialBase), nonResidentialRate);
+
+    // Age coefficient applies only to PF residential portion
+    if (input.tipContribuabil !== "PJ") {
+      const ageCoeff = getBuildingAgeCoefficient(input.anConstructie, input.fiscalYear);
+      resMicroLei = applyMultiplierToMicroLei(resMicroLei, ageCoeff);
+    }
+
+    // Zone multiplier applies to both portions
+    const zoneMultiplier = getCommuneRankMultiplier(input.communeRank);
+    resMicroLei = applyMultiplierToMicroLei(resMicroLei, zoneMultiplier);
+    nonResMicroLei = applyMultiplierToMicroLei(nonResMicroLei, zoneMultiplier);
+
+    // Inflation index
+    if (hclDecision.inflationIndex && hclDecision.inflationIndex > 0) {
+      resMicroLei = Math.round(resMicroLei * hclDecision.inflationIndex);
+      nonResMicroLei = Math.round(nonResMicroLei * hclDecision.inflationIndex);
+    }
+
+    // Co-ownership
+    resMicroLei = applyPercentToMicroLei(resMicroLei, input.cotaParte);
+    nonResMicroLei = applyPercentToMicroLei(nonResMicroLei, input.cotaParte);
+
+    // Proration
+    const { months, startDate, endDate } = calculateTaxableMonths(
+      input.fiscalYear,
+      input.dataDobandire,
+      input.dataInstrainare
+    );
+    const sumaCalculata = roundMicroLeiToLei(prorateMicroLei(resMicroLei + nonResMicroLei, months));
+
+    // Exemptions
+    let sumaScutire = 0;
+    const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
+    for (const exemption of exemptions) {
+      sumaScutire += roundMicroLeiToLei(
+        applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
+      );
+    }
+    sumaScutire = Math.min(sumaScutire, sumaCalculata);
+
+    const sumaDatorata = roundToLei(sumaCalculata - sumaScutire);
+    const bonificatie = calculateBonificatie(sumaDatorata, hclDecision.bonificatieProcent);
+    const { rata1, rata1Scadenta, rata2, rata2Scadenta } = splitInstallments(
+      sumaDatorata,
+      input.fiscalYear
+    );
+
+    return {
+      bazaImpozabila,
+      rataAplicata,
+      sumaCalculata,
+      sumaScutire,
+      bonificatie,
+      sumaDatorata,
+      nrLuni: months,
+      rata1,
+      rata1Scadenta,
+      rata2,
+      rata2Scadenta,
+      dataStartCalcul: startDate,
+      dataStopCalcul: endDate,
+      hclDecisionId: hclDecision.id,
+      rateTableId,
+    };
   } else {
     // 1. Look up rate table
     const taxType = getTaxTypeForBuilding(input.destinatie);
@@ -245,7 +319,7 @@ export async function calculateBuildingTax(
   const sumaDatorata = roundToLei(sumaCalculata - sumaScutire);
 
   // 9. Calculate bonificatie
-  const bonificatie = calculateBonificatie(sumaDatorata);
+  const bonificatie = calculateBonificatie(sumaDatorata, hclDecision.bonificatieProcent);
 
   // 10. Split installments
   const { rata1, rata1Scadenta, rata2, rata2Scadenta } = splitInstallments(

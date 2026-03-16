@@ -72,6 +72,9 @@ export async function createHclDecision(
         inflationIndex: formData.get("inflationIndex")
           ? parseFloat(formData.get("inflationIndex") as string)
           : undefined,
+        bonificatieProcent: formData.get("bonificatieProcent")
+          ? parseFloat(formData.get("bonificatieProcent") as string)
+          : undefined,
         validFrom: new Date(formData.get("validFrom") as string),
         validTo: formData.get("validTo")
           ? new Date(formData.get("validTo") as string)
@@ -113,6 +116,9 @@ export async function updateHclDecision(
         inflationIndex: formData.get("inflationIndex")
           ? parseFloat(formData.get("inflationIndex") as string)
           : null,
+        bonificatieProcent: formData.get("bonificatieProcent")
+          ? parseFloat(formData.get("bonificatieProcent") as string)
+          : null,
         validFrom: new Date(formData.get("validFrom") as string),
         validTo: formData.get("validTo")
           ? new Date(formData.get("validTo") as string)
@@ -134,7 +140,7 @@ export async function updateHclDecision(
 // HCL DECISIONS — ACTIVATE (with supersede logic)
 // ============================================================================
 
-export async function activateHclDecision(id: string): Promise<ActionResult> {
+export async function activateHclDecision(id: string): Promise<ActionResult<{ warning?: string }>> {
   const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
@@ -145,6 +151,18 @@ export async function activateHclDecision(id: string): Promise<ActionResult> {
       where: { id, tenantId: session.user.tenantId },
     });
     if (!hcl) return { success: false, error: "HCL not found" };
+
+    // Compliance warning: Art. 491 requires inflation indexing
+    const hasInflationIndex = hcl.inflationIndex != null &&
+      Number(hcl.inflationIndex) > 0 &&
+      Number(hcl.inflationIndex) !== 1;
+    if (!hasInflationIndex) {
+      console.warn(
+        `[COMPLIANCE] HCL ${hcl.hclNumber} for fiscal year ${hcl.fiscalYear} ` +
+        `has no inflation index set. Art. 491 Cod Fiscal requires annual indexation ` +
+        `with the rate communicated by MFP. This may result in audit findings.`
+      );
+    }
 
     // Supersede any existing active HCL for same fiscal year
     await prisma.hclDecision.updateMany({
@@ -163,6 +181,17 @@ export async function activateHclDecision(id: string): Promise<ActionResult> {
     });
 
     revalidatePath("/admin/hcl");
+
+    if (!hasInflationIndex) {
+      return {
+        success: true,
+        data: {
+          warning: `HCL ${hcl.hclNumber} nu are indicele de inflație configurat. ` +
+            `Conform art. 491 Cod Fiscal, indexarea anuală cu rata inflației este obligatorie.`,
+        },
+      };
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Error activating HCL:", error);

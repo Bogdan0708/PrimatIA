@@ -6,6 +6,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { normalizeVehicleEuroNorm, normalizeVehicleFuelType, normalizeVehicleType } from "@/lib/vehicle-normalization";
 
 // Type for the result of actions
 type ActionResult<T = void> =
@@ -32,6 +33,7 @@ function getVehicleAuditSnapshot(vehicle: {
   nrLocuri: number | null;
   normaPoluare: string | null;
   tipCombustibil: string | null;
+  emisiiCo2GKm: number | null;
   dataDobandire: Date;
   dataInstrainare: Date | null;
   status: string;
@@ -52,6 +54,7 @@ function getVehicleAuditSnapshot(vehicle: {
     nrLocuri: vehicle.nrLocuri,
     normaPoluare: vehicle.normaPoluare,
     tipCombustibil: vehicle.tipCombustibil,
+    emisiiCo2GKm: vehicle.emisiiCo2GKm,
     dataDobandire: serializeDate(vehicle.dataDobandire),
     dataInstrainare: serializeDate(vehicle.dataInstrainare),
     status: vehicle.status,
@@ -197,7 +200,7 @@ export async function createVehicul(
         serieSasiu: (formData.get("serieSasiu") as string) || undefined,
         nrCarteIdentitate:
           (formData.get("nrCarteIdentitate") as string) || undefined,
-        tipVehicul,
+        tipVehicul: normalizeVehicleType(tipVehicul) ?? tipVehicul,
         marca: (formData.get("marca") as string) || undefined,
         model: (formData.get("model") as string) || undefined,
         anFabricatie: parseInt(anFabricatieRaw),
@@ -213,10 +216,15 @@ export async function createVehicul(
         nrLocuri: formData.get("nrLocuri")
           ? parseInt(formData.get("nrLocuri") as string)
           : undefined,
-        normaPoluare:
-          (formData.get("normaPoluare") as string) || undefined,
-        tipCombustibil:
-          (formData.get("tipCombustibil") as string) || undefined,
+        normaPoluare: normalizeVehicleEuroNorm(
+          (formData.get("normaPoluare") as string) || undefined
+        ) ?? undefined,
+        tipCombustibil: normalizeVehicleFuelType(
+          (formData.get("tipCombustibil") as string) || undefined
+        ) ?? undefined,
+        emisiiCo2GKm: formData.get("emisiiCo2GKm")
+          ? parseInt(formData.get("emisiiCo2GKm") as string)
+          : undefined,
         dataDobandire: new Date(dataDobandireRaw),
         dataInstrainare: formData.get("dataInstrainare")
           ? new Date(formData.get("dataInstrainare") as string)
@@ -271,7 +279,8 @@ export async function updateVehicul(
         nrCarteIdentitate:
           (formData.get("nrCarteIdentitate") as string) || null,
         tipVehicul:
-          (formData.get("tipVehicul") as string) || existing.tipVehicul,
+          normalizeVehicleType((formData.get("tipVehicul") as string) || existing.tipVehicul)
+            ?? existing.tipVehicul,
         marca: (formData.get("marca") as string) || null,
         model: (formData.get("model") as string) || null,
         anFabricatie:
@@ -289,9 +298,15 @@ export async function updateVehicul(
         nrLocuri: formData.get("nrLocuri")
           ? parseInt(formData.get("nrLocuri") as string)
           : null,
-        normaPoluare: (formData.get("normaPoluare") as string) || null,
-        tipCombustibil:
-          (formData.get("tipCombustibil") as string) || null,
+        normaPoluare: normalizeVehicleEuroNorm(
+          (formData.get("normaPoluare") as string) || null
+        ),
+        tipCombustibil: normalizeVehicleFuelType(
+          (formData.get("tipCombustibil") as string) || null
+        ),
+        emisiiCo2GKm: formData.get("emisiiCo2GKm")
+          ? parseInt(formData.get("emisiiCo2GKm") as string)
+          : null,
         dataDobandire: formData.get("dataDobandire")
           ? new Date(formData.get("dataDobandire") as string)
           : existing.dataDobandire,

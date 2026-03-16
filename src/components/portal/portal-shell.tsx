@@ -306,9 +306,17 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
               <Building2 className="h-5 w-5 text-portal-primary" />
               <span className="font-semibold text-white">PrimărIA</span>
             </div>
-            <p className="text-sm text-center">
-              {t("footerText")}
-            </p>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-sm text-center">
+                {t("footerText")}
+              </p>
+              <Link
+                href={toLocalePath("/portal/confidentialitate")}
+                className="text-xs text-gray-400 hover:text-white transition-colors underline"
+              >
+                {t("privacyPolicy")}
+              </Link>
+            </div>
             <div className="text-sm">
               © {new Date().getFullYear()} PrimărIA
             </div>

@@ -45,6 +45,7 @@ export default function NewPaymentPage() {
     nrChitanta: "",
     nrDocument: "",
     nota: "",
+    targetImpozitIds: "",
   });
 
   // Monitor online status
@@ -96,6 +97,9 @@ export default function NewPaymentPage() {
           nrChitanta: formData.nrChitanta || undefined,
           nrDocument: formData.nrDocument || undefined,
           nota: formData.nota || undefined,
+          targetImpozitIds: formData.targetImpozitIds
+            ? formData.targetImpozitIds.split(",").map((value) => value.trim()).filter(Boolean)
+            : undefined,
         }),
       });
 
@@ -294,6 +298,21 @@ export default function NewPaymentPage() {
                 placeholder="Optional notes..."
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="targetImpozitIds">ID-uri impozite țintă</Label>
+              <Input
+                id="targetImpozitIds"
+                value={formData.targetImpozitIds}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetImpozitIds: e.target.value })
+                }
+                placeholder="uuid-1, uuid-2"
+              />
+              <p className="text-xs text-muted-foreground">
+                Lasă gol pentru FIFO automat sau trimite ID-urile obligațiilor desemnate de contribuabil.
+              </p>
             </div>
 
             {/* Auto-distribution info */}

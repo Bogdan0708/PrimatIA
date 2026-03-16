@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getLLMConfig } from "@/lib/ai/config";
 import { ensureRedisConnection } from "@/lib/redis";
 import { logError, getRequestLogContext } from "@/lib/logger";
+import { auth } from "@/lib/auth";
 
 async function checkDatabase() {
   const start = Date.now();
@@ -86,6 +87,21 @@ async function checkAiProvider() {
 }
 
 export async function GET(request: NextRequest) {
+  // SECURITY: Require API key or authenticated staff access to prevent topology leakage.
+  const healthKey = process.env.HEALTH_CHECK_SECRET;
+  if (healthKey) {
+    const authHeader = request.headers.get("authorization");
+    const providedKey = authHeader?.replace(/^Bearer\s+/i, "");
+    if (providedKey !== healthKey) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else {
+    const session = await auth();
+    if (!session?.user?.tenantId || !session.user.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   const logContext = getRequestLogContext(request);
   const [database, redis, ai] = await Promise.all([
     checkDatabase(),
