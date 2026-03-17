@@ -33,7 +33,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Prisma
-prisma/migrations/**/migration_lock.toml
 
 # Docker volumes
 docker/postgres/data/
