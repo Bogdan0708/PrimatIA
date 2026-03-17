@@ -15,6 +15,14 @@ ALTER TABLE "contribuabili" ADD COLUMN "pensionar" BOOLEAN NOT NULL DEFAULT fals
 ALTER TABLE "proprietati_cladiri" ADD COLUMN "is_cult_religios" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE "proprietati_cladiri" ADD COLUMN "is_monument_istoric" BOOLEAN NOT NULL DEFAULT false;
 
+-- Non-residential occupancy tracking (Art. 459 — mixed/non-residential buildings)
+ALTER TABLE "proprietati_cladiri" ADD COLUMN "ocupare_nerezidentiala" VARCHAR(20);
+ALTER TABLE "proprietati_cladiri" ADD COLUMN "chirias_nume" VARCHAR(255);
+ALTER TABLE "proprietati_cladiri" ADD COLUMN "chirias_cui" VARCHAR(20);
+ALTER TABLE "proprietati_cladiri" ADD COLUMN "contract_nr" VARCHAR(50);
+ALTER TABLE "proprietati_cladiri" ADD COLUMN "contract_data" DATE;
+ALTER TABLE "proprietati_cladiri" ADD COLUMN "contract_expirare" DATE;
+
 -- Land property flags
 ALTER TABLE "proprietati_terenuri" ADD COLUMN "is_cult_religios" BOOLEAN NOT NULL DEFAULT false;
 

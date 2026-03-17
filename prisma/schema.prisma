@@ -302,6 +302,14 @@ model ProprietateCladire {
   suprafataRezidentiala   Decimal? @map("suprafata_rezidentiala") @db.Decimal(12, 2)
   suprafataNerezidentiala Decimal? @map("suprafata_nerezidentiala") @db.Decimal(12, 2)
 
+  // Non-residential occupancy (Art. 459 — mixed/non-residential buildings)
+  ocupareNerezidentiala String? @map("ocupare_nerezidentiala") @db.VarChar(20) // "proprietar" | "inchiriat" | "comodat"
+  chiriasNume           String? @map("chirias_nume") @db.VarChar(255)
+  chiriasCui            String? @map("chirias_cui") @db.VarChar(20)
+  contractNr            String? @map("contract_nr") @db.VarChar(50)
+  contractData          DateTime? @map("contract_data") @db.Date
+  contractExpirare      DateTime? @map("contract_expirare") @db.Date
+
   // Ownership
   cotaParte          Decimal   @default(100.00) @map("cota_parte") @db.Decimal(5, 2)
   nrProprietari      Int       @default(1) @map("nr_proprietari")

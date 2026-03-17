@@ -29,6 +29,10 @@ export function CladireNewForm({ contribuabili }: CladireNewFormProps) {
   const localePrefix = `/${locale}`;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [destinatie, setDestinatie] = useState("rezidential");
+  const [ocupare, setOcupare] = useState("");
+  const showNonResFields = destinatie === "mixta" || destinatie === "mixt" || destinatie === "nerezidentiala" || destinatie === "nerezidential";
+  const showTenantFields = showNonResFields && (ocupare === "inchiriat" || ocupare === "comodat");
 
   const selectClassName =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -147,7 +151,8 @@ export function CladireNewForm({ contribuabili }: CladireNewFormProps) {
                 <select
                   id="destinatie"
                   name="destinatie"
-                  defaultValue="rezidential"
+                  value={destinatie}
+                  onChange={(e) => setDestinatie(e.target.value)}
                   className={selectClassName}
                   required
                 >
@@ -229,6 +234,53 @@ export function CladireNewForm({ contribuabili }: CladireNewFormProps) {
                 {te("isMonumentIstoric")}
               </label>
             </div>
+
+            {/* Non-residential occupancy (Art. 459) */}
+            {showNonResFields && (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ocupareNerezidentiala">{t("nonResOccupancy")}</Label>
+                    <select
+                      id="ocupareNerezidentiala"
+                      name="ocupareNerezidentiala"
+                      value={ocupare}
+                      onChange={(e) => setOcupare(e.target.value)}
+                      className={selectClassName}
+                    >
+                      <option value="">&mdash;</option>
+                      <option value="proprietar">{t("occupancyOwner")}</option>
+                      <option value="inchiriat">{t("occupancyRented")}</option>
+                      <option value="comodat">{t("occupancyFreeUse")}</option>
+                    </select>
+                  </div>
+                </div>
+                {showTenantFields && (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="chiriasNume">{t("tenantName")}</Label>
+                      <Input id="chiriasNume" name="chiriasNume" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chiriasCui">{t("tenantCui")}</Label>
+                      <Input id="chiriasCui" name="chiriasCui" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contractNr">{t("contractNumber")}</Label>
+                      <Input id="contractNr" name="contractNr" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contractData">{t("contractDate")}</Label>
+                      <Input id="contractData" name="contractData" type="date" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contractExpirare">{t("contractExpiry")}</Label>
+                      <Input id="contractExpirare" name="contractExpirare" type="date" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Dates & Status */}
             <div className="grid gap-4 md:grid-cols-3">

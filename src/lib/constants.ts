@@ -149,3 +149,6 @@ export type Art456TaxpayerFlag = (typeof ART456_TAXPAYER_FLAGS)[number];
 
 export const ART456_PROPERTY_FLAGS_CLADIRE = ["isCultReligios", "isMonumentIstoric"] as const;
 export const ART456_PROPERTY_FLAGS_TEREN = ["isCultReligios"] as const;
+
+export const OCUPARE_NEREZIDENTIALA = ["proprietar", "inchiriat", "comodat"] as const;
+export type OcupareNerezidentiala = (typeof OCUPARE_NEREZIDENTIALA)[number];

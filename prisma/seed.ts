@@ -950,6 +950,236 @@ async function main() {
     }
   }
 
+  // =============================================================================
+  // 11c. ENRICH SEED DATA for tax calculation testing
+  // =============================================================================
+
+  // --- Art. 456 eligibility flags on select contribuabili ---
+
+  // PF index 0 (Popescu Ion): handicap grav with valid certificate
+  await prisma.contribuabil.update({
+    where: { id: contribuabilIds[0] },
+    data: {
+      handicapGrav: true,
+      handicapCertNr: "CERT-HG-2026-001",
+      handicapCertExp: new Date("2028-12-31"),
+    },
+  });
+
+  // PF index 1 (Ionescu Maria): veteran de razboi
+  await prisma.contribuabil.update({
+    where: { id: contribuabilIds[1] },
+    data: { veteranRazboi: true },
+  });
+
+  // PF index 2 (Popa Gheorghe): erou revolutie
+  await prisma.contribuabil.update({
+    where: { id: contribuabilIds[2] },
+    data: { erouRevolutie: true },
+  });
+
+  // PF index 3 (Stoica Elena): vaduva veteran
+  await prisma.contribuabil.update({
+    where: { id: contribuabilIds[3] },
+    data: { vaduvaVeteran: true },
+  });
+
+  // PF index 4 (Stan Vasile): pensionar
+  await prisma.contribuabil.update({
+    where: { id: contribuabilIds[4] },
+    data: { pensionar: true },
+  });
+
+  // PJ index 35+7=42 (SC Ferma Bogdan SRL at contribuabilIdx 42): nonprofit
+  if (contribuabilIds[42]) {
+    await prisma.contribuabil.update({
+      where: { id: contribuabilIds[42] },
+      data: { organizatieNonpro: true },
+    });
+  }
+
+  console.log("Set Art. 456 eligibility flags on 6 contribuabili");
+
+  // --- Property-level Art. 456 flags ---
+
+  // First building (contribuabil 0, building 0): mark as cult religios
+  if (buildingIds[0]) {
+    await prisma.proprietateCladire.update({
+      where: { id: buildingIds[0] },
+      data: { isCultReligios: true },
+    });
+  }
+
+  // Second building (contribuabil 1, building 1): mark as monument istoric
+  if (buildingIds[1]) {
+    await prisma.proprietateCladire.update({
+      where: { id: buildingIds[1] },
+      data: { isMonumentIstoric: true },
+    });
+  }
+
+  // First land parcel (contribuabil 0, land 0): mark as cult religios
+  if (landIds[0]) {
+    await prisma.proprietateTeren.update({
+      where: { id: landIds[0] },
+      data: { isCultReligios: true },
+    });
+  }
+
+  console.log("Set Art. 456 property flags on 2 buildings + 1 land parcel");
+
+  // --- Mixed-use buildings (Art. 459) ---
+  // Add 2 mixed-use buildings so the split-tax logic can be tested
+  const mixedBuildingAddress = allAddresses[0];
+  if (mixedBuildingAddress) {
+    await prisma.proprietateCladire.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000001" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000001",
+        tenantId,
+        contribuabilId: contribuabilIds[35], // first PJ
+        adresaId: mixedBuildingAddress.id,
+        zona: "A",
+        numarCadastral: "NC-MIX-00001",
+        numarCarteFunciara: "CF-MIX-00001",
+        destinatie: "mixta",
+        tipConstructie: "cadre_beton",
+        anConstructie: 2010,
+        suprafataConstruita: 400,
+        suprafataUtila: 360,
+        suprafataDesfasurata: 400,
+        nrEtaje: 1,
+        valoareImpozabila: 700000,
+        suprafataRezidentiala: 160,
+        suprafataNerezidentiala: 240,
+        ocupareNerezidentiala: "proprietar",
+        cotaParte: 100.0,
+        nrProprietari: 1,
+        tipActProprietate: "contract_vanzare",
+        nrActProprietate: "CV-MIX-0001",
+        dataActProprietate: new Date("2010-06-15"),
+        dataDobandire: new Date("2010-06-15"),
+        status: "activ",
+      },
+    });
+
+    await prisma.proprietateCladire.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000002" },
+      update: {},
+      create: {
+        id: "00000000-0000-0000-0000-000000000002",
+        tenantId,
+        contribuabilId: contribuabilIds[5], // PF Dumitrescu Ana
+        adresaId: mixedBuildingAddress.id,
+        zona: "B",
+        numarCadastral: "NC-MIX-00002",
+        numarCarteFunciara: "CF-MIX-00002",
+        destinatie: "mixta",
+        tipConstructie: "pereti_caramida",
+        anConstructie: 1998,
+        suprafataConstruita: 250,
+        suprafataUtila: 220,
+        suprafataDesfasurata: 250,
+        nrEtaje: 1,
+        valoareImpozabila: 350000,
+        suprafataRezidentiala: 150,
+        suprafataNerezidentiala: 100,
+        ocupareNerezidentiala: "inchiriat",
+        chiriasNume: "SC Contabilitate Expert SRL",
+        chiriasCui: "RO99887766",
+        contractNr: "C-2024-001",
+        contractData: new Date("2024-01-15"),
+        contractExpirare: new Date("2027-01-14"),
+        cotaParte: 100.0,
+        nrProprietari: 1,
+        tipActProprietate: "contract_vanzare",
+        nrActProprietate: "CV-MIX-0002",
+        dataActProprietate: new Date("1998-09-20"),
+        dataDobandire: new Date("1998-09-20"),
+        status: "activ",
+      },
+    });
+    console.log("Seeded 2 mixed-use buildings");
+  }
+
+  // --- Electric & hybrid vehicles (Legea 239/2025) ---
+  await prisma.proprietateVehicul.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000003" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-000000000003",
+      tenantId,
+      contribuabilId: contribuabilIds[7], // PF Radu Ioana
+      numarInmatriculare: "MM-EV-001",
+      serieSasiu: "WBAEV00120230001",
+      tipVehicul: "autoturism",
+      marca: "Tesla",
+      model: "Model 3",
+      anFabricatie: 2023,
+      cilindreeCmc: null,
+      putereKw: 208,
+      masaTotalaKg: 1830,
+      nrLocuri: 5,
+      normaPoluare: "euro_6",
+      tipCombustibil: "electric",
+      dataDobandire: new Date("2023-06-01"),
+      status: "activ",
+    },
+  });
+
+  await prisma.proprietateVehicul.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000004" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-000000000004",
+      tenantId,
+      contribuabilId: contribuabilIds[9], // PF Matei Daniela
+      numarInmatriculare: "MM-HY-001",
+      serieSasiu: "WBAHY00120220001",
+      tipVehicul: "autoturism",
+      marca: "Toyota",
+      model: "RAV4 Hybrid",
+      anFabricatie: 2022,
+      cilindreeCmc: 2487,
+      putereKw: 163,
+      masaTotalaKg: 1800,
+      nrLocuri: 5,
+      normaPoluare: "euro_6",
+      tipCombustibil: "hybrid",
+      emisiiCo2GKm: 22,
+      dataDobandire: new Date("2022-03-15"),
+      status: "activ",
+    },
+  });
+
+  await prisma.proprietateVehicul.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000005" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-000000000005",
+      tenantId,
+      contribuabilId: contribuabilIds[11], // PF Nistor Cornelia
+      numarInmatriculare: "MM-HY-002",
+      serieSasiu: "WBAHY00220210001",
+      tipVehicul: "autoturism",
+      marca: "Volvo",
+      model: "XC60 T8",
+      anFabricatie: 2021,
+      cilindreeCmc: 1969,
+      putereKw: 288,
+      masaTotalaKg: 2150,
+      nrLocuri: 5,
+      normaPoluare: "euro_6",
+      tipCombustibil: "hybrid",
+      emisiiCo2GKm: 55,
+      dataDobandire: new Date("2021-09-10"),
+      status: "activ",
+    },
+  });
+
+  console.log("Seeded 1 electric + 2 hybrid vehicles");
+
   // Rate tables
   const rateTables: Array<{
     taxType: string;

@@ -44,6 +44,12 @@ interface CladireEditFormProps {
     dataInstrainare: string | null;
     isCultReligios: boolean;
     isMonumentIstoric: boolean;
+    ocupareNerezidentiala: string | null;
+    chiriasNume: string | null;
+    chiriasCui: string | null;
+    contractNr: string | null;
+    contractData: string | null;
+    contractExpirare: string | null;
     status: string;
     adresa: {
       strada: string | null;
@@ -68,6 +74,10 @@ export function CladireEditForm({ cladire }: CladireEditFormProps) {
   const localePrefix = `/${locale}`;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [destinatie, setDestinatie] = useState(cladire.destinatie);
+  const [ocupare, setOcupare] = useState(cladire.ocupareNerezidentiala ?? "");
+  const showNonResFields = destinatie === "mixta" || destinatie === "mixt" || destinatie === "nerezidentiala" || destinatie === "nerezidential";
+  const showTenantFields = showNonResFields && (ocupare === "inchiriat" || ocupare === "comodat");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -168,7 +178,8 @@ export function CladireEditForm({ cladire }: CladireEditFormProps) {
                 <select
                   id="destinatie"
                   name="destinatie"
-                  defaultValue={cladire.destinatie}
+                  value={destinatie}
+                  onChange={(e) => setDestinatie(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   required
                 >
@@ -250,6 +261,53 @@ export function CladireEditForm({ cladire }: CladireEditFormProps) {
                 {te("isMonumentIstoric")}
               </label>
             </div>
+
+            {/* Non-residential occupancy (Art. 459) */}
+            {showNonResFields && (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ocupareNerezidentiala">{t("nonResOccupancy")}</Label>
+                    <select
+                      id="ocupareNerezidentiala"
+                      name="ocupareNerezidentiala"
+                      value={ocupare}
+                      onChange={(e) => setOcupare(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">&mdash;</option>
+                      <option value="proprietar">{t("occupancyOwner")}</option>
+                      <option value="inchiriat">{t("occupancyRented")}</option>
+                      <option value="comodat">{t("occupancyFreeUse")}</option>
+                    </select>
+                  </div>
+                </div>
+                {showTenantFields && (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="chiriasNume">{t("tenantName")}</Label>
+                      <Input id="chiriasNume" name="chiriasNume" defaultValue={cladire.chiriasNume ?? ""} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chiriasCui">{t("tenantCui")}</Label>
+                      <Input id="chiriasCui" name="chiriasCui" defaultValue={cladire.chiriasCui ?? ""} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contractNr">{t("contractNumber")}</Label>
+                      <Input id="contractNr" name="contractNr" defaultValue={cladire.contractNr ?? ""} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contractData">{t("contractDate")}</Label>
+                      <Input id="contractData" name="contractData" type="date" defaultValue={cladire.contractData ?? ""} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contractExpirare">{t("contractExpiry")}</Label>
+                      <Input id="contractExpirare" name="contractExpirare" type="date" defaultValue={cladire.contractExpirare ?? ""} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Dates & Status */}
             <div className="grid gap-4 md:grid-cols-3">

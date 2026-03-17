@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { setTenantContext } from "@/lib/db";
+import { sanitizeOccupancyFields } from "@/lib/occupancy-sanitization";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
@@ -76,6 +77,12 @@ function getBuildingAuditSnapshot(
     dataInstrainare: Date | null;
     isCultReligios?: boolean;
     isMonumentIstoric?: boolean;
+    ocupareNerezidentiala?: string | null;
+    chiriasNume?: string | null;
+    chiriasCui?: string | null;
+    contractNr?: string | null;
+    contractData?: Date | null;
+    contractExpirare?: Date | null;
     status?: string | null;
   },
   address?: Parameters<typeof getAddressAuditSnapshot>[0]
@@ -110,6 +117,12 @@ function getBuildingAuditSnapshot(
     dataInstrainare: serializeDate(building.dataInstrainare),
     isCultReligios: building.isCultReligios ?? false,
     isMonumentIstoric: building.isMonumentIstoric ?? false,
+    ocupareNerezidentiala: building.ocupareNerezidentiala ?? null,
+    chiriasNume: building.chiriasNume ?? null,
+    chiriasCui: building.chiriasCui ?? null,
+    contractNr: building.contractNr ?? null,
+    contractData: building.contractData ? serializeDate(building.contractData) : null,
+    contractExpirare: building.contractExpirare ? serializeDate(building.contractExpirare) : null,
     status: building.status ?? null,
     adresa: getAddressAuditSnapshot(address ?? null),
   };
@@ -315,6 +328,14 @@ export async function createCladire(
           : undefined,
         isCultReligios: formData.get("isCultReligios") === "on",
         isMonumentIstoric: formData.get("isMonumentIstoric") === "on",
+        ...sanitizeOccupancyFields(destinatie, {
+          ocupareNerezidentiala: formData.get("ocupareNerezidentiala") as string | null,
+          chiriasNume: formData.get("chiriasNume") as string | null,
+          chiriasCui: formData.get("chiriasCui") as string | null,
+          contractNr: formData.get("contractNr") as string | null,
+          contractData: formData.get("contractData") as string | null,
+          contractExpirare: formData.get("contractExpirare") as string | null,
+        }),
       },
       include: { adresa: true },
     });
@@ -437,6 +458,17 @@ export async function updateCladire(
         status: (formData.get("status") as string) || existing.status,
         isCultReligios: formData.get("isCultReligios") === "on",
         isMonumentIstoric: formData.get("isMonumentIstoric") === "on",
+        ...sanitizeOccupancyFields(
+          (formData.get("destinatie") as string) || existing.destinatie,
+          {
+            ocupareNerezidentiala: formData.get("ocupareNerezidentiala") as string | null,
+            chiriasNume: formData.get("chiriasNume") as string | null,
+            chiriasCui: formData.get("chiriasCui") as string | null,
+            contractNr: formData.get("contractNr") as string | null,
+            contractData: formData.get("contractData") as string | null,
+            contractExpirare: formData.get("contractExpirare") as string | null,
+          }
+        ),
       },
       include: { adresa: true },
     });

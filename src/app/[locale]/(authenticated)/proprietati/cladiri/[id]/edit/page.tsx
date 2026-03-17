@@ -50,6 +50,12 @@ export default async function CladireEditPage({
           dataInstrainare: cladire.dataInstrainare ? new Date(cladire.dataInstrainare).toISOString().split("T")[0] : null,
           isCultReligios: cladire.isCultReligios,
           isMonumentIstoric: cladire.isMonumentIstoric,
+          ocupareNerezidentiala: cladire.ocupareNerezidentiala,
+          chiriasNume: cladire.chiriasNume,
+          chiriasCui: cladire.chiriasCui,
+          contractNr: cladire.contractNr,
+          contractData: cladire.contractData ? new Date(cladire.contractData).toISOString().split("T")[0] : null,
+          contractExpirare: cladire.contractExpirare ? new Date(cladire.contractExpirare).toISOString().split("T")[0] : null,
           status: cladire.status,
           adresa: cladire.adresa ? {
             strada: cladire.adresa.strada,
