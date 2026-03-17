@@ -78,6 +78,9 @@ jobs:
             echo "schema_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
       - name: DB preflight
         run: npm run db:preflight:strict
 
@@ -89,9 +92,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Run database migrations
-        run: npx prisma migrate deploy
 
       - name: Check migration drift
         if: github.event_name == 'pull_request' && steps.schema-check.outputs.schema_changed == 'true'
