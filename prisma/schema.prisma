@@ -558,8 +558,9 @@ model ScutireContribuabil {
   scutireRegula ScutireRegula @relation(fields: [scutireRegulaId], references: [id])
   approvedBy    TenantUser?   @relation("ApprovedByUser", fields: [approvedById], references: [id])
 
-  // Managed by SQL migration as a UNIQUE INDEX ... NULLS NOT DISTINCT because
-  // Prisma schema cannot express the null-equality semantics required here.
+  // The actual DB index uses NULLS NOT DISTINCT (created in raw SQL migration).
+  // This @@unique maps to it so Prisma's drift check stays clean.
+  @@unique([tenantId, contribuabilId, scutireRegulaId, fiscalYear, proprietateType, proprietateId], map: "scutiri_contribuabil_dedup_idx")
   @@index([tenantId, contribuabilId, fiscalYear])
   @@map("scutiri_contribuabil")
 }
