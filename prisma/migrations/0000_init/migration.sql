@@ -645,6 +645,7 @@ CREATE TABLE "online_payments" (
     "modalitate" VARCHAR(30) NOT NULL DEFAULT 'ghiseul_ro',
     "gateway_ref" VARCHAR(255),
     "gateway_response" JSONB,
+    "stripe_event_id" VARCHAR(255),
     "selected_debts" JSONB NOT NULL DEFAULT '[]',
     "plata_id" UUID,
     "initiated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
