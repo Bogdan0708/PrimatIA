@@ -357,7 +357,12 @@ describe("calculateBuildingTax", () => {
     mockRateEntry(0.1);
 
     const exemptions: ExemptionContext[] = [
-      { discountPercent: 50, ruleId: "rule-1", ruleName: "Handicap gr. I" },
+      {
+        discountPercent: 50,
+        ruleId: "rule-1",
+        ruleName: "Handicap gr. I",
+        taxTypes: ["impozit_cladiri_rezidentiale"],
+      },
     ];
 
     const result = await calculateBuildingTax(
@@ -377,8 +382,18 @@ describe("calculateBuildingTax", () => {
     mockRateEntry(0.1);
 
     const exemptions: ExemptionContext[] = [
-      { discountPercent: 70, ruleId: "rule-1", ruleName: "Handicap gr. I" },
-      { discountPercent: 50, ruleId: "rule-2", ruleName: "Veteran de razboi" },
+      {
+        discountPercent: 70,
+        ruleId: "rule-1",
+        ruleName: "Handicap gr. I",
+        taxTypes: ["impozit_cladiri_rezidentiale"],
+      },
+      {
+        discountPercent: 50,
+        ruleId: "rule-2",
+        ruleName: "Veteran de razboi",
+        taxTypes: ["impozit_cladiri_rezidentiale"],
+      },
     ];
 
     const result = await calculateBuildingTax(
@@ -394,6 +409,64 @@ describe("calculateBuildingTax", () => {
     expect(result.sumaCalculata).toBe(120);
     expect(result.sumaScutire).toBe(120);
     expect(result.sumaDatorata).toBe(0);
+  });
+
+  it("applies tax-type-scoped exemptions only to the matching mixed-use portion", async () => {
+    mockedFindFirst
+      .mockResolvedValueOnce({
+        id: "rate-res",
+        tenantId: "tenant-1",
+        hclDecisionId: "hcl-2024",
+        taxType: "impozit_cladiri_rezidentiale",
+        rateType: "percentage",
+        rateValue: 0.1,
+        unit: null,
+        minRate: null,
+        maxRate: null,
+        category: "cadre_beton",
+        zona: "A",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      } as unknown as TaxRateTable)
+      .mockResolvedValueOnce({
+        id: "rate-nonres",
+        tenantId: "tenant-1",
+        hclDecisionId: "hcl-2024",
+        taxType: "impozit_cladiri_nerezidentiale",
+        rateType: "percentage",
+        rateValue: 1.0,
+        unit: null,
+        minRate: null,
+        maxRate: 1.5,
+        category: "cadre_beton",
+        zona: "A",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      } as unknown as TaxRateTable);
+
+    const result = await calculateBuildingTax(
+      makeInput({
+        destinatie: "mixta",
+        valoareImpozabila: 100000,
+        suprafataRezidentiala: 60,
+        suprafataNerezidentiala: 40,
+      }),
+      makeHcl(),
+      [
+        {
+          discountPercent: 100,
+          ruleId: "rule-pensioner",
+          ruleName: "Pensionar",
+          taxTypes: ["impozit_cladiri_rezidentiale"],
+        },
+      ]
+    );
+
+    expect(result.sumaCalculata).toBe(460);
+    expect(result.sumaScutire).toBe(60);
+    expect(result.sumaDatorata).toBe(400);
   });
 
   it("throws an error when no rate table entry is found", async () => {

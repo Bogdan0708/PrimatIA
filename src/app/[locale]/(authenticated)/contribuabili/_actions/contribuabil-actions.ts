@@ -206,6 +206,16 @@ export async function createContribuabil(formData: FormData): Promise<ActionResu
       const limbaPreferata = (formData.get("limbaPreferata") as string) || "ro";
       const note = formData.get("note") as string | null;
 
+      // Art. 456 flags
+      const handicapGrav = formData.get("handicapGrav") === "on";
+      const handicapCertNr = formData.get("handicapCertNr") as string | null;
+      const handicapCertExpRaw = formData.get("handicapCertExp") as string | null;
+      const veteranRazboi = formData.get("veteranRazboi") === "on";
+      const vaduvaVeteran = formData.get("vaduvaVeteran") === "on";
+      const erouRevolutie = formData.get("erouRevolutie") === "on";
+      const organizatieNonpro = formData.get("organizatieNonpro") === "on";
+      const pensionar = formData.get("pensionar") === "on";
+
       if (!tip || !nume) {
         return { success: false, error: "Numele și tipul sunt obligatorii" };
       }
@@ -263,6 +273,14 @@ export async function createContribuabil(formData: FormData): Promise<ActionResu
           limbaPreferata,
           note: note || undefined,
           adresaDomiciliuId,
+          handicapGrav,
+          handicapCertNr: handicapGrav ? (handicapCertNr || undefined) : undefined,
+          handicapCertExp: handicapGrav && handicapCertExpRaw ? new Date(handicapCertExpRaw) : undefined,
+          veteranRazboi,
+          vaduvaVeteran,
+          erouRevolutie,
+          organizatieNonpro,
+          pensionar,
         },
       });
 
@@ -281,6 +299,12 @@ export async function createContribuabil(formData: FormData): Promise<ActionResu
           email: contribuabil.email,
           telefon: contribuabil.telefon,
           status: contribuabil.status,
+          handicapGrav,
+          veteranRazboi,
+          vaduvaVeteran,
+          erouRevolutie,
+          organizatieNonpro,
+          pensionar,
         },
       });
 
@@ -323,6 +347,16 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
       const statusVal = (formData.get("status") as string) || "activ";
       const note = formData.get("note") as string | null;
 
+      // Art. 456 flags
+      const handicapGrav = formData.get("handicapGrav") === "on";
+      const handicapCertNr = formData.get("handicapCertNr") as string | null;
+      const handicapCertExpRaw = formData.get("handicapCertExp") as string | null;
+      const veteranRazboi = formData.get("veteranRazboi") === "on";
+      const vaduvaVeteran = formData.get("vaduvaVeteran") === "on";
+      const erouRevolutie = formData.get("erouRevolutie") === "on";
+      const organizatieNonpro = formData.get("organizatieNonpro") === "on";
+      const pensionar = formData.get("pensionar") === "on";
+
       const updateData: Prisma.ContribuabilUpdateInput = {
         tip,
         nume,
@@ -337,6 +371,14 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
         limbaPreferata,
         status: statusVal,
         note: note || null,
+        handicapGrav,
+        handicapCertNr: handicapGrav ? (handicapCertNr || null) : null,
+        handicapCertExp: handicapGrav && handicapCertExpRaw ? new Date(handicapCertExpRaw) : null,
+        veteranRazboi,
+        vaduvaVeteran,
+        erouRevolutie,
+        organizatieNonpro,
+        pensionar,
       };
 
       // Handle CNP update
@@ -364,6 +406,14 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
           email: existing.email,
           telefon: existing.telefon,
           status: existing.status,
+          handicapGrav: existing.handicapGrav,
+          handicapCertNr: existing.handicapCertNr,
+          handicapCertExp: existing.handicapCertExp?.toISOString() ?? null,
+          veteranRazboi: existing.veteranRazboi,
+          vaduvaVeteran: existing.vaduvaVeteran,
+          erouRevolutie: existing.erouRevolutie,
+          organizatieNonpro: existing.organizatieNonpro,
+          pensionar: existing.pensionar,
         },
         newValues: {
           tip,
@@ -374,6 +424,14 @@ export async function updateContribuabil(id: string, formData: FormData): Promis
           telefon: telefon || null,
           status: statusVal,
           limbaPreferata,
+          handicapGrav,
+          handicapCertNr: handicapGrav ? (handicapCertNr || null) : null,
+          handicapCertExp: handicapGrav && handicapCertExpRaw ? handicapCertExpRaw : null,
+          veteranRazboi,
+          vaduvaVeteran,
+          erouRevolutie,
+          organizatieNonpro,
+          pensionar,
         },
       });
 

@@ -42,6 +42,8 @@ interface CladireEditFormProps {
     dataActProprietate: string | null;
     dataDobandire: string;
     dataInstrainare: string | null;
+    isCultReligios: boolean;
+    isMonumentIstoric: boolean;
     status: string;
     adresa: {
       strada: string | null;
@@ -60,6 +62,7 @@ interface CladireEditFormProps {
 export function CladireEditForm({ cladire }: CladireEditFormProps) {
   const router = useRouter();
   const t = useTranslations("property");
+  const te = useTranslations("exemption");
   const tc = useTranslations("common");
   const locale = useLocale();
   const localePrefix = `/${locale}`;
@@ -234,6 +237,18 @@ export function CladireEditForm({ cladire }: CladireEditFormProps) {
                 <Label htmlFor="dataActProprietate">{t("ownershipDocDate")}</Label>
                 <Input id="dataActProprietate" name="dataActProprietate" type="date" defaultValue={cladire.dataActProprietate ?? ""} />
               </div>
+            </div>
+
+            {/* Art. 456 Property Flags */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="isCultReligios" defaultChecked={cladire.isCultReligios} className="rounded border-input" />
+                {te("isCultReligios")}
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="isMonumentIstoric" defaultChecked={cladire.isMonumentIstoric} className="rounded border-input" />
+                {te("isMonumentIstoric")}
+              </label>
             </div>
 
             {/* Dates & Status */}

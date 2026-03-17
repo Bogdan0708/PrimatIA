@@ -74,6 +74,8 @@ function getBuildingAuditSnapshot(
     dataActProprietate: Date | null;
     dataDobandire: Date;
     dataInstrainare: Date | null;
+    isCultReligios?: boolean;
+    isMonumentIstoric?: boolean;
     status?: string | null;
   },
   address?: Parameters<typeof getAddressAuditSnapshot>[0]
@@ -106,6 +108,8 @@ function getBuildingAuditSnapshot(
     dataActProprietate: serializeDate(building.dataActProprietate),
     dataDobandire: serializeDate(building.dataDobandire),
     dataInstrainare: serializeDate(building.dataInstrainare),
+    isCultReligios: building.isCultReligios ?? false,
+    isMonumentIstoric: building.isMonumentIstoric ?? false,
     status: building.status ?? null,
     adresa: getAddressAuditSnapshot(address ?? null),
   };
@@ -309,6 +313,8 @@ export async function createCladire(
         dataInstrainare: formData.get("dataInstrainare")
           ? new Date(formData.get("dataInstrainare") as string)
           : undefined,
+        isCultReligios: formData.get("isCultReligios") === "on",
+        isMonumentIstoric: formData.get("isMonumentIstoric") === "on",
       },
       include: { adresa: true },
     });
@@ -429,6 +435,8 @@ export async function updateCladire(
           ? new Date(formData.get("dataInstrainare") as string)
           : null,
         status: (formData.get("status") as string) || existing.status,
+        isCultReligios: formData.get("isCultReligios") === "on",
+        isMonumentIstoric: formData.get("isMonumentIstoric") === "on",
       },
       include: { adresa: true },
     });

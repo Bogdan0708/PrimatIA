@@ -39,6 +39,7 @@ export default async function TerenEditPage({
           dataActProprietate: teren.dataActProprietate ? new Date(teren.dataActProprietate).toISOString().split("T")[0] : null,
           dataDobandire: new Date(teren.dataDobandire).toISOString().split("T")[0],
           dataInstrainare: teren.dataInstrainare ? new Date(teren.dataInstrainare).toISOString().split("T")[0] : null,
+          isCultReligios: teren.isCultReligios,
           status: teren.status,
           adresa: teren.adresa ? {
             strada: teren.adresa.strada,

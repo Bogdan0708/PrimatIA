@@ -239,7 +239,12 @@ describe("calculateLandTax", () => {
     mockLandRate(2.0, "lei/mp");
 
     const exemptions: ExemptionContext[] = [
-      { discountPercent: 25, ruleId: "rule-1", ruleName: "Zona defavorizata" },
+      {
+        discountPercent: 25,
+        ruleId: "rule-1",
+        ruleName: "Zona defavorizata",
+        taxTypes: ["impozit_teren_intravilan"],
+      },
     ];
 
     const result = await calculateLandTax(makeInput(), makeHcl(), exemptions);
@@ -255,8 +260,18 @@ describe("calculateLandTax", () => {
     mockLandRate(2.0, "lei/mp");
 
     const exemptions: ExemptionContext[] = [
-      { discountPercent: 80, ruleId: "rule-1", ruleName: "Exemption A" },
-      { discountPercent: 80, ruleId: "rule-2", ruleName: "Exemption B" },
+      {
+        discountPercent: 80,
+        ruleId: "rule-1",
+        ruleName: "Exemption A",
+        taxTypes: ["impozit_teren_intravilan"],
+      },
+      {
+        discountPercent: 80,
+        ruleId: "rule-2",
+        ruleName: "Exemption B",
+        taxTypes: ["impozit_teren_intravilan"],
+      },
     ];
 
     const result = await calculateLandTax(makeInput(), makeHcl(), exemptions);

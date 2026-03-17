@@ -65,6 +65,7 @@ function getLandAuditSnapshot(
     dataActProprietate: Date | null;
     dataDobandire: Date;
     dataInstrainare: Date | null;
+    isCultReligios?: boolean;
     status?: string | null;
   },
   address?: Parameters<typeof getAddressAuditSnapshot>[0]
@@ -85,6 +86,7 @@ function getLandAuditSnapshot(
     dataActProprietate: serializeDate(land.dataActProprietate),
     dataDobandire: serializeDate(land.dataDobandire),
     dataInstrainare: serializeDate(land.dataInstrainare),
+    isCultReligios: land.isCultReligios ?? false,
     status: land.status ?? null,
     adresa: getAddressAuditSnapshot(address ?? null),
   };
@@ -269,6 +271,7 @@ export async function createTeren(
         dataInstrainare: formData.get("dataInstrainare")
           ? new Date(formData.get("dataInstrainare") as string)
           : undefined,
+        isCultReligios: formData.get("isCultReligios") === "on",
       },
       include: { adresa: true },
     });
@@ -365,6 +368,7 @@ export async function updateTeren(
           ? new Date(formData.get("dataInstrainare") as string)
           : null,
         status: (formData.get("status") as string) || existing.status,
+        isCultReligios: formData.get("isCultReligios") === "on",
       },
       include: { adresa: true },
     });

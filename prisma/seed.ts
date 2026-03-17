@@ -823,30 +823,100 @@ async function main() {
   // 11b. Mandatory exemption rules (Art. 456)
   // =============================================================================
 
-  const mandatoryExemptionRules = [
+  const exemptionRuleDefs = [
+    // Mandatory (obligatorie) rules — isSystemRule: true
     {
       nameRo: "Scutire obligatorie pentru persoane cu handicap grav sau accentuat",
-      legalBasis: "Art. 456 Cod fiscal",
+      legalBasis: "Art. 456 alin. (1) lit. a) Cod fiscal",
       taxTypes: ["impozit_cladiri_rezidentiale", "impozit_teren_intravilan", "impozit_vehicul"],
+      exemptionType: "obligatorie" as const,
+      isSystemRule: true,
+      conditions: { scope: "taxpayer", requires: ["handicapGrav"], autoApprove: false },
+      requiredDocuments: ["certificat_handicap"],
     },
     {
       nameRo: "Scutire obligatorie pentru veterani de război",
-      legalBasis: "Art. 456 Cod fiscal",
+      legalBasis: "Art. 456 alin. (1) lit. b) Cod fiscal",
       taxTypes: ["impozit_cladiri_rezidentiale", "impozit_teren_intravilan", "impozit_vehicul"],
+      exemptionType: "obligatorie" as const,
+      isSystemRule: true,
+      conditions: { scope: "taxpayer", requires: ["veteranRazboi"], autoApprove: false },
+      requiredDocuments: ["legitimatie_veteran"],
     },
     {
-      nameRo: "Scutire obligatorie pentru clădiri și terenuri ale cultelor religioase",
-      legalBasis: "Art. 456 Cod fiscal",
-      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_cladiri_nerezidentiale", "impozit_teren_intravilan", "impozit_teren_extravilan"],
+      nameRo: "Scutire obligatorie pentru văduve/văduvi de veterani",
+      legalBasis: "Art. 456 alin. (1) lit. b) Cod fiscal",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_teren_intravilan"],
+      exemptionType: "obligatorie" as const,
+      isSystemRule: true,
+      conditions: { scope: "taxpayer", requires: ["vaduvaVeteran"], autoApprove: false },
+      requiredDocuments: ["certificat_deces_veteran", "certificat_casatorie"],
+    },
+    {
+      nameRo: "Scutire obligatorie pentru eroii Revoluției 1989",
+      legalBasis: "Art. 456 alin. (1) lit. c) Cod fiscal",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_teren_intravilan", "impozit_vehicul"],
+      exemptionType: "obligatorie" as const,
+      isSystemRule: true,
+      conditions: { scope: "taxpayer", requires: ["erouRevolutie"], autoApprove: false },
+      requiredDocuments: ["certificat_revolutionar"],
+    },
+    {
+      nameRo: "Scutire obligatorie pentru clădiri ale cultelor religioase",
+      legalBasis: "Art. 456 alin. (1) lit. d) Cod fiscal",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_cladiri_nerezidentiale"],
+      exemptionType: "obligatorie" as const,
+      isSystemRule: true,
+      conditions: { scope: "property", propertyType: "cladire", requires: "isCultReligios", autoApprove: true },
+      requiredDocuments: [],
+    },
+    {
+      nameRo: "Scutire obligatorie pentru terenuri ale cultelor religioase",
+      legalBasis: "Art. 456 alin. (1) lit. d) Cod fiscal",
+      taxTypes: ["impozit_teren_intravilan", "impozit_teren_extravilan"],
+      exemptionType: "obligatorie" as const,
+      isSystemRule: true,
+      conditions: { scope: "property", propertyType: "teren", requires: "isCultReligios", autoApprove: true },
+      requiredDocuments: [],
+    },
+    // Discretionary rules — isSystemRule: false
+    {
+      nameRo: "Scutire pentru clădiri monument istoric",
+      legalBasis: "Art. 456 alin. (2) Cod fiscal + HCL",
+      taxTypes: ["impozit_cladiri_rezidentiale", "impozit_cladiri_nerezidentiale"],
+      exemptionType: "discretionara" as const,
+      isSystemRule: false,
+      conditions: { scope: "property", propertyType: "cladire", requires: "isMonumentIstoric", autoApprove: false },
+      requiredDocuments: ["certificat_monument"],
+      discountPercent: 50,
+    },
+    {
+      nameRo: "Scutire pentru organizații nonprofit",
+      legalBasis: "Art. 456 alin. (2) Cod fiscal + HCL",
+      taxTypes: ["impozit_cladiri_nerezidentiale", "impozit_teren_intravilan"],
+      exemptionType: "discretionara" as const,
+      isSystemRule: false,
+      conditions: { scope: "taxpayer", requires: ["organizatieNonpro"], tipContribuabil: "PJ", autoApprove: false },
+      requiredDocuments: ["certificat_ong", "statut_organizatie"],
+      discountPercent: 50,
+    },
+    {
+      nameRo: "Scutire pentru pensionari",
+      legalBasis: "Art. 456 alin. (2) Cod fiscal + HCL",
+      taxTypes: ["impozit_cladiri_rezidentiale"],
+      exemptionType: "discretionara" as const,
+      isSystemRule: false,
+      conditions: { scope: "taxpayer", requires: ["pensionar"], autoApprove: false },
+      requiredDocuments: ["cupon_pensie"],
+      discountPercent: 50,
     },
   ];
 
-  for (const rule of mandatoryExemptionRules) {
+  for (const rule of exemptionRuleDefs) {
     const existingRule = await prisma.scutireRegula.findFirst({
       where: {
         tenantId,
         nameRo: rule.nameRo,
-        isSystemRule: true,
       },
     });
 
@@ -857,14 +927,24 @@ async function main() {
           nameRo: rule.nameRo,
           legalBasis: rule.legalBasis,
           taxTypes: rule.taxTypes,
-          discountPercent: 100,
-          exemptionType: "obligatorie",
-          isSystemRule: true,
-          conditions: {},
-          requiredDocuments: [],
-          autoRenewable: true,
+          discountPercent: ("discountPercent" in rule ? rule.discountPercent : 100) as number,
+          exemptionType: rule.exemptionType,
+          isSystemRule: rule.isSystemRule,
+          conditions: rule.conditions,
+          requiredDocuments: rule.requiredDocuments,
+          autoRenewable: rule.isSystemRule,
           isActive: true,
           validFrom: new Date("2026-01-01"),
+        },
+      });
+    } else {
+      // Update conditions on existing rules
+      await prisma.scutireRegula.update({
+        where: { id: existingRule.id },
+        data: {
+          conditions: rule.conditions,
+          requiredDocuments: rule.requiredDocuments,
+          legalBasis: rule.legalBasis,
         },
       });
     }

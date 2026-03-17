@@ -19,6 +19,7 @@ import {
   toSafeNumber,
   calculateBonificatie,
   getBuildingAgeCoefficient,
+  exemptionAppliesToTaxType,
 } from "./utils";
 
 /**
@@ -97,6 +98,22 @@ function resolveMixedUseShares(input: BuildingTaxInput): {
     residentialShare: residentialSurface / totalDeclaredSurface,
     nonResidentialShare: nonResidentialSurface / totalDeclaredSurface,
   };
+}
+
+function calculateExemptionForTaxType(
+  amountLei: number,
+  exemptions: ExemptionContext[],
+  taxType: string
+): number {
+  let totalExemptionLei = 0;
+  const amountMicroLei = toMicroLei(amountLei);
+  for (const exemption of exemptions) {
+    if (!exemptionAppliesToTaxType(exemption, taxType)) continue;
+    totalExemptionLei += roundMicroLeiToLei(
+      applyPercentToMicroLei(amountMicroLei, exemption.discountPercent)
+    );
+  }
+  return Math.min(totalExemptionLei, amountLei);
 }
 
 /**
@@ -204,16 +221,22 @@ export async function calculateBuildingTax(
       input.dataDobandire,
       input.dataInstrainare
     );
-    const sumaCalculata = roundMicroLeiToLei(prorateMicroLei(resMicroLei + nonResMicroLei, months));
+    const residentialLei = roundMicroLeiToLei(prorateMicroLei(resMicroLei, months));
+    const nonResidentialLei = roundMicroLeiToLei(prorateMicroLei(nonResMicroLei, months));
+    const sumaCalculata = residentialLei + nonResidentialLei;
 
     // Exemptions
-    let sumaScutire = 0;
-    const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
-    for (const exemption of exemptions) {
-      sumaScutire += roundMicroLeiToLei(
-        applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
+    let sumaScutire =
+      calculateExemptionForTaxType(
+        residentialLei,
+        exemptions,
+        "impozit_cladiri_rezidentiale"
+      ) +
+      calculateExemptionForTaxType(
+        nonResidentialLei,
+        exemptions,
+        "impozit_cladiri_nerezidentiale"
       );
-    }
     sumaScutire = Math.min(sumaScutire, sumaCalculata);
 
     const sumaDatorata = roundToLei(sumaCalculata - sumaScutire);
@@ -308,7 +331,9 @@ export async function calculateBuildingTax(
   // 7. Apply exemptions
   let sumaScutire = 0;
   const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
+  const taxType = getTaxTypeForBuilding(input.destinatie);
   for (const exemption of exemptions) {
+    if (!exemptionAppliesToTaxType(exemption, taxType)) continue;
     sumaScutire += roundMicroLeiToLei(
       applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
     );

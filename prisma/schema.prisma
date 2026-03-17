@@ -228,6 +228,16 @@ model Contribuabil {
   nrDosarFiscal    String?  @map("nr_dosar_fiscal") @db.VarChar(50)
   dataInregistrare DateTime @default(now()) @map("data_inregistrare") @db.Date
 
+  // Art. 456 eligibility flags
+  handicapGrav      Boolean   @default(false) @map("handicap_grav")
+  handicapCertNr    String?   @map("handicap_cert_nr") @db.VarChar(50)
+  handicapCertExp   DateTime? @map("handicap_cert_exp") @db.Date
+  veteranRazboi     Boolean   @default(false) @map("veteran_razboi")
+  vaduvaVeteran     Boolean   @default(false) @map("vaduva_veteran")
+  erouRevolutie     Boolean   @default(false) @map("erou_revolutie")
+  organizatieNonpro Boolean   @default(false) @map("organizatie_nonpro")
+  pensionar         Boolean   @default(false) @map("pensionar")
+
   // Status
   limbaPreferata String? @default("ro") @map("limba_preferata") @db.VarChar(2)
   status         String  @default("activ") @db.VarChar(20)
@@ -299,6 +309,10 @@ model ProprietateCladire {
   nrActProprietate   String?   @map("nr_act_proprietate") @db.VarChar(50)
   dataActProprietate DateTime? @map("data_act_proprietate") @db.Date
 
+  // Art. 456 property flags
+  isCultReligios    Boolean @default(false) @map("is_cult_religios")
+  isMonumentIstoric Boolean @default(false) @map("is_monument_istoric")
+
   // Status
   dataDobandire   DateTime  @map("data_dobandire") @db.Date
   dataInstrainare DateTime? @map("data_instrainare") @db.Date
@@ -339,6 +353,9 @@ model ProprietateTeren {
   tipActProprietate  String?   @map("tip_act_proprietate") @db.VarChar(50)
   nrActProprietate   String?   @map("nr_act_proprietate") @db.VarChar(50)
   dataActProprietate DateTime? @map("data_act_proprietate") @db.Date
+
+  // Art. 456 property flags
+  isCultReligios Boolean @default(false) @map("is_cult_religios")
 
   // Status
   dataDobandire   DateTime  @map("data_dobandire") @db.Date
@@ -533,6 +550,8 @@ model ScutireContribuabil {
   scutireRegula ScutireRegula @relation(fields: [scutireRegulaId], references: [id])
   approvedBy    TenantUser?   @relation("ApprovedByUser", fields: [approvedById], references: [id])
 
+  // Managed by SQL migration as a UNIQUE INDEX ... NULLS NOT DISTINCT because
+  // Prisma schema cannot express the null-equality semantics required here.
   @@index([tenantId, contribuabilId, fiscalYear])
   @@map("scutiri_contribuabil")
 }

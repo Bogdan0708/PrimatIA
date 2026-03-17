@@ -34,6 +34,40 @@ export async function getScutiriReguli(
   });
 }
 
+export async function getPendingScutiriReview(fiscalYear?: number) {
+  const session = await requireAdmin();
+  if (!session?.user?.tenantId) throw new Error("No tenant context");
+  await setTenantContext(session.user.tenantId);
+
+  const where: Prisma.ScutireContribuabilWhereInput = {
+    tenantId: session.user.tenantId,
+    status: "pending",
+  };
+  if (fiscalYear) where.fiscalYear = fiscalYear;
+
+  return prisma.scutireContribuabil.findMany({
+    where,
+    include: {
+      contribuabil: {
+        select: {
+          id: true,
+          tip: true,
+          nume: true,
+          prenume: true,
+        },
+      },
+      scutireRegula: {
+        select: {
+          id: true,
+          nameRo: true,
+          legalBasis: true,
+        },
+      },
+    },
+    orderBy: [{ fiscalYear: "desc" }, { createdAt: "desc" }],
+  });
+}
+
 // ============================================================================
 // EXEMPTION RULES — GET BY ID
 // ============================================================================

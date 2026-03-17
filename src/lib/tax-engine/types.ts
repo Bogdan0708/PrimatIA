@@ -172,6 +172,7 @@ export interface ExemptionContext {
   discountPercent: number;
   ruleId: string;
   ruleName: string;
+  taxTypes: string[];
 }
 
 export interface TaxCalculationResult {

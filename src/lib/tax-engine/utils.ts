@@ -1,4 +1,4 @@
-import { BONIFICATIE_PERCENT } from "./types";
+import { BONIFICATIE_PERCENT, type ExemptionContext } from "./types";
 
 /**
  * Calculate the number of taxable months for partial year (Art. 461).
@@ -193,6 +193,35 @@ export function prorateBani(amountBani: number, months: number): number {
 
 export function roundBaniToLei(amountBani: number): number {
   return roundToLei(amountBani / BANI_PER_LEU);
+}
+
+function normalizeTaxTypeForMatching(taxType: string): string[] {
+  switch (taxType) {
+    case "impozit_mijloace_transport":
+      return ["impozit_mijloace_transport", "impozit_vehicul"];
+    case "impozit_vehicul":
+      return ["impozit_vehicul", "impozit_mijloace_transport"];
+    case "impozit_teren_curti":
+      return ["impozit_teren_curti", "impozit_teren_intravilan"];
+    default:
+      return [taxType];
+  }
+}
+
+export function exemptionAppliesToTaxType(
+  exemption: ExemptionContext,
+  taxType: string
+): boolean {
+  if (exemption.taxTypes.length === 0) {
+    return true;
+  }
+
+  const candidateTypes = new Set(normalizeTaxTypeForMatching(taxType));
+  return exemption.taxTypes.some((ruleTaxType) =>
+    normalizeTaxTypeForMatching(ruleTaxType).some((candidate) =>
+      candidateTypes.has(candidate)
+    )
+  );
 }
 
 /**

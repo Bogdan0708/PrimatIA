@@ -279,7 +279,12 @@ describe("calculateVehicleTax", () => {
     mockVehicleRate(8, "autoturism_sub_1600");
 
     const exemptions: ExemptionContext[] = [
-      { discountPercent: 100, ruleId: "rule-1", ruleName: "Handicap gr. I" },
+      {
+        discountPercent: 100,
+        ruleId: "rule-1",
+        ruleName: "Handicap gr. I",
+        taxTypes: ["impozit_mijloace_transport"],
+      },
     ];
 
     const result = await calculateVehicleTax(

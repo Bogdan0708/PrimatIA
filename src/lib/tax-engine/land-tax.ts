@@ -16,6 +16,7 @@ import {
   calculateBonificatie,
   toMicroLei,
   toSafeNumber,
+  exemptionAppliesToTaxType,
 } from "./utils";
 
 /**
@@ -83,6 +84,7 @@ export async function calculateLandTax(
   let sumaScutire = 0;
   const sumaCalculataMicroLeiRounded = toMicroLei(sumaCalculata);
   for (const exemption of exemptions) {
+    if (!exemptionAppliesToTaxType(exemption, taxType)) continue;
     sumaScutire += roundMicroLeiToLei(
       applyPercentToMicroLei(sumaCalculataMicroLeiRounded, exemption.discountPercent)
     );

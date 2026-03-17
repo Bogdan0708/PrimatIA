@@ -1,15 +1,23 @@
 "use server";
 
-import { prisma } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-utils";
 import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import {
   calculateAllTaxesForContribuabil,
   resolveActiveHcl,
   type TaxCalculationResult,
 } from "@/lib/tax-engine";
 import { clearAnomalyCache } from "@/lib/ai/anomaly-detection";
+import {
+  evaluateConditions,
+  type ContribuabilSnapshot,
+  type BuildingSnapshot,
+  type LandSnapshot,
+  type RuleSnapshot,
+} from "@/lib/tax-engine/exemption-conditions";
 
 type ActionResult<T = void> =
   | { success: true; data?: T }
@@ -227,17 +235,202 @@ export async function runMassCalculation(
           err
         );
         errors++;
-            }
-          }
-      
-          clearAnomalyCache(session.user.tenantId);
-          revalidatePath("/admin/calcul");
-          revalidatePath("/contribuabili");    return {
+      }
+    }
+
+    clearAnomalyCache(session.user.tenantId);
+    revalidatePath("/admin/calcul");
+    revalidatePath("/contribuabili");
+
+    return {
       success: true,
       data: { processed, taxes: totalTaxes, errors },
     };
   } catch (error) {
     console.error("Error running mass calculation:", error);
     return { success: false, error: "Eroare la calculul în masă" };
+  }
+}
+
+// ============================================================================
+// ELIGIBILITY DETECTION (Art. 456)
+// ============================================================================
+
+export async function runEligibilityDetection(
+  fiscalYear: number
+): Promise<ActionResult<{ checked: number; detected: number; skipped: number; errors: number }>> {
+  const session = await requireAdmin();
+  if (!session?.user?.tenantId)
+    return { success: false, error: "No tenant context" };
+
+  // Validate fiscal year
+  if (!Number.isFinite(fiscalYear) || fiscalYear < 2020 || fiscalYear > 2100) {
+    return { success: false, error: "Anul fiscal este invalid" };
+  }
+
+  const tenantId = session.user.tenantId;
+
+  try {
+    return await withTenantScope(tenantId, async () => {
+      // Load all active rules with structured conditions
+      const rules = await prisma.scutireRegula.findMany({
+        where: {
+          tenantId,
+          isActive: true,
+          conditions: { not: Prisma.JsonNull },
+        },
+        select: {
+          id: true,
+          nameRo: true,
+          conditions: true,
+          discountPercent: true,
+        },
+      });
+
+      if (rules.length === 0) {
+        return { success: false, error: "Nu există reguli active cu condiții" };
+      }
+
+      // Load all active contribuabili with eligibility flags
+      const contribuabili = await prisma.contribuabil.findMany({
+        where: {
+          tenantId,
+          status: "activ",
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          tip: true,
+          handicapGrav: true,
+          handicapCertNr: true,
+          handicapCertExp: true,
+          veteranRazboi: true,
+          vaduvaVeteran: true,
+          erouRevolutie: true,
+          organizatieNonpro: true,
+          pensionar: true,
+          proprietatiCladiri: {
+            where: { status: "activ", deletedAt: null },
+            select: { id: true, isCultReligios: true, isMonumentIstoric: true },
+          },
+          proprietatiTerenuri: {
+            where: { status: "activ", deletedAt: null },
+            select: { id: true, isCultReligios: true },
+          },
+        },
+      });
+
+      // Pre-load existing exemptions into a Set for O(1) dedup lookups
+      const existingExemptions = await prisma.scutireContribuabil.findMany({
+        where: { tenantId, fiscalYear },
+        select: {
+          contribuabilId: true,
+          scutireRegulaId: true,
+          proprietateType: true,
+          proprietateId: true,
+        },
+      });
+      const existingKeys = new Set(
+        existingExemptions.map(
+          (e) => `${e.contribuabilId}|${e.scutireRegulaId}|${e.proprietateType ?? ""}|${e.proprietateId ?? ""}`
+        )
+      );
+
+      let checked = 0;
+      let detected = 0;
+      let skipped = 0;
+      let errors = 0;
+
+      const yearStart = new Date(`${fiscalYear}-01-01`);
+
+      // Collect all new records for batch insert
+      const newRecords: Array<{
+        tenantId: string;
+        contribuabilId: string;
+        scutireRegulaId: string;
+        fiscalYear: number;
+        validFrom: Date;
+        proprietateType: string | null;
+        proprietateId: string | null;
+        status: string;
+        note: string;
+        approvedById: string | null;
+        approvedAt: Date | null;
+      }> = [];
+
+      for (const c of contribuabili) {
+        try {
+          const snapshot: ContribuabilSnapshot = {
+            id: c.id,
+            tip: c.tip,
+            handicapGrav: c.handicapGrav,
+            handicapCertNr: c.handicapCertNr,
+            handicapCertExp: c.handicapCertExp,
+            veteranRazboi: c.veteranRazboi,
+            vaduvaVeteran: c.vaduvaVeteran,
+            erouRevolutie: c.erouRevolutie,
+            organizatieNonpro: c.organizatieNonpro,
+            pensionar: c.pensionar,
+          };
+
+          const buildings: BuildingSnapshot[] = c.proprietatiCladiri;
+          const land: LandSnapshot[] = c.proprietatiTerenuri;
+
+          for (const rule of rules as RuleSnapshot[]) {
+            const results = evaluateConditions(rule, snapshot, buildings, land);
+
+            for (const result of results) {
+              if (!result.eligible) continue;
+
+              const dedupKey = `${c.id}|${rule.id}|${result.proprietateType ?? ""}|${result.proprietateId ?? ""}`;
+              if (existingKeys.has(dedupKey)) {
+                skipped++;
+                continue;
+              }
+              // Also mark as seen for within-batch dedup
+              existingKeys.add(dedupKey);
+
+              newRecords.push({
+                tenantId,
+                contribuabilId: c.id,
+                scutireRegulaId: rule.id,
+                fiscalYear,
+                validFrom: yearStart,
+                proprietateType: result.proprietateType ?? null,
+                proprietateId: result.proprietateId ?? null,
+                status: result.autoApprove ? "approved" : "pending",
+                note: `Detectat automat — ${result.matchedFlag}`,
+                approvedById: result.autoApprove ? session.user.id : null,
+                approvedAt: result.autoApprove ? new Date() : null,
+              });
+              detected++;
+            }
+          }
+          checked++;
+        } catch (err) {
+          console.error(`Error detecting eligibility for ${c.id}:`, err);
+          errors++;
+        }
+      }
+
+      // Batch insert all detected exemptions
+      if (newRecords.length > 0) {
+        await prisma.scutireContribuabil.createMany({
+          data: newRecords,
+          skipDuplicates: true, // safety net for unique constraint
+        });
+      }
+
+      revalidatePath("/admin/calcul");
+      revalidatePath("/admin/scutiri");
+
+      return {
+        success: true as const,
+        data: { checked, detected, skipped, errors },
+      };
+    });
+  } catch (error) {
+    console.error("Error running eligibility detection:", error);
+    return { success: false, error: "Eroare la detectarea eligibilității" };
   }
 }

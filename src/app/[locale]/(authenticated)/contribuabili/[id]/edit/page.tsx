@@ -38,6 +38,14 @@ export default async function ContribuabilEditPage({
           limbaPreferata: contribuabil.limbaPreferata,
           status: contribuabil.status,
           note: contribuabil.note,
+          handicapGrav: contribuabil.handicapGrav,
+          handicapCertNr: contribuabil.handicapCertNr,
+          handicapCertExp: contribuabil.handicapCertExp ? new Date(contribuabil.handicapCertExp).toISOString().split("T")[0] : null,
+          veteranRazboi: contribuabil.veteranRazboi,
+          vaduvaVeteran: contribuabil.vaduvaVeteran,
+          erouRevolutie: contribuabil.erouRevolutie,
+          organizatieNonpro: contribuabil.organizatieNonpro,
+          pensionar: contribuabil.pensionar,
           adresaDomiciliu: contribuabil.adresaDomiciliu,
         }}
       />

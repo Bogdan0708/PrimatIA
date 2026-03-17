@@ -135,3 +135,17 @@ export type OwnershipActType = (typeof OWNERSHIP_ACT_TYPES)[number];
 
 export const RATE_TYPES = ["percent", "fixed", "per_unit"] as const;
 export type RateType = (typeof RATE_TYPES)[number];
+
+// Art. 456 eligibility flags
+export const ART456_TAXPAYER_FLAGS = [
+  "handicapGrav",
+  "veteranRazboi",
+  "vaduvaVeteran",
+  "erouRevolutie",
+  "organizatieNonpro",
+  "pensionar",
+] as const;
+export type Art456TaxpayerFlag = (typeof ART456_TAXPAYER_FLAGS)[number];
+
+export const ART456_PROPERTY_FLAGS_CLADIRE = ["isCultReligios", "isMonumentIstoric"] as const;
+export const ART456_PROPERTY_FLAGS_TEREN = ["isCultReligios"] as const;

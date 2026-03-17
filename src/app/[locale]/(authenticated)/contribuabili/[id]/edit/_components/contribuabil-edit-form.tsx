@@ -33,6 +33,14 @@ interface ContribuabilEditFormProps {
     limbaPreferata: string | null;
     status: string;
     note: string | null;
+    handicapGrav: boolean;
+    handicapCertNr: string | null;
+    handicapCertExp: string | null;
+    veteranRazboi: boolean;
+    vaduvaVeteran: boolean;
+    erouRevolutie: boolean;
+    organizatieNonpro: boolean;
+    pensionar: boolean;
     adresaDomiciliu: {
       strada: string | null;
       numar: string | null;
@@ -50,12 +58,14 @@ interface ContribuabilEditFormProps {
 export function ContribuabilEditForm({ contribuabil }: ContribuabilEditFormProps) {
   const router = useRouter();
   const t = useTranslations("taxpayer");
+  const te = useTranslations("exemption");
   const tc = useTranslations("common");
   const locale = useLocale();
   const localePrefix = `/${locale}`;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [tip, setTip] = useState(contribuabil.tip);
+  const [handicapGrav, setHandicapGrav] = useState(contribuabil.handicapGrav);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -188,6 +198,61 @@ export function ContribuabilEditForm({ contribuabil }: ContribuabilEditFormProps
                 <Input id="nrDosarFiscal" name="nrDosarFiscal" defaultValue={contribuabil.nrDosarFiscal ?? ""} />
               </div>
             </div>
+
+            {/* Art. 456 Eligibility Flags */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{te("eligibilitySection")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="handicapGrav"
+                      checked={handicapGrav}
+                      onChange={(e) => setHandicapGrav(e.target.checked)}
+                      className="rounded border-input"
+                    />
+                    {te("handicapGrav")}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" name="veteranRazboi" defaultChecked={contribuabil.veteranRazboi} className="rounded border-input" />
+                    {te("veteranRazboi")}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" name="vaduvaVeteran" defaultChecked={contribuabil.vaduvaVeteran} className="rounded border-input" />
+                    {te("vaduvaVeteran")}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" name="erouRevolutie" defaultChecked={contribuabil.erouRevolutie} className="rounded border-input" />
+                    {te("erouRevolutie")}
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" name="pensionar" defaultChecked={contribuabil.pensionar} className="rounded border-input" />
+                    {te("pensionar")}
+                  </label>
+                  {tip === "PJ" && (
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" name="organizatieNonpro" defaultChecked={contribuabil.organizatieNonpro} className="rounded border-input" />
+                      {te("organizatieNonpro")}
+                    </label>
+                  )}
+                </div>
+                {handicapGrav && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="handicapCertNr">{te("handicapCertNr")}</Label>
+                      <Input id="handicapCertNr" name="handicapCertNr" defaultValue={contribuabil.handicapCertNr ?? ""} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="handicapCertExp">{te("handicapCertExp")}</Label>
+                      <Input id="handicapCertExp" name="handicapCertExp" type="date" defaultValue={contribuabil.handicapCertExp ?? ""} />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Notes */}
             <div className="space-y-2">

@@ -33,6 +33,7 @@ interface TerenEditFormProps {
     dataActProprietate: string | null;
     dataDobandire: string;
     dataInstrainare: string | null;
+    isCultReligios: boolean;
     status: string;
     adresa: {
       strada: string | null;
@@ -47,6 +48,7 @@ interface TerenEditFormProps {
 export function TerenEditForm({ teren }: TerenEditFormProps) {
   const router = useRouter();
   const t = useTranslations("property");
+  const te = useTranslations("exemption");
   const tc = useTranslations("common");
   const locale = useLocale();
   const localePrefix = `/${locale}`;
@@ -192,6 +194,14 @@ export function TerenEditForm({ teren }: TerenEditFormProps) {
                 <Label htmlFor="dataActProprietate">{t("ownershipDocDate")}</Label>
                 <Input id="dataActProprietate" name="dataActProprietate" type="date" defaultValue={teren.dataActProprietate ?? ""} />
               </div>
+            </div>
+
+            {/* Art. 456 Property Flags */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="isCultReligios" defaultChecked={teren.isCultReligios} className="rounded border-input" />
+                {te("isCultReligios")}
+              </label>
             </div>
 
             {/* Dates & Status */}

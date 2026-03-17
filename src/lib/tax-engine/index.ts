@@ -83,6 +83,7 @@ export async function getApplicableExemptions(
     ),
     ruleId: e.scutireRegula.id,
     ruleName: e.scutireRegula.nameRo,
+    taxTypes: e.scutireRegula.taxTypes,
   }));
 }
 

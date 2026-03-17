@@ -11,13 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, CreditCard, AlertTriangle, Building2, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { Users, CreditCard, AlertTriangle, Building2, Clock, TrendingUp, TrendingDown, Shield } from "lucide-react";
 import { DashboardCharts } from "./_components/dashboard-charts";
 import { PageHeader } from "@/components/ui/page-header";
 
 export default async function DashboardPage() {
   await requireStaff();
   const t = await getTranslations("dashboard");
+  const te = await getTranslations("exemption");
   const tpay = await getTranslations("payment");
   const tc = await getTranslations("common");
   const locale = await getLocale();
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
     recentCladiri,
     recentTerenuri,
     recentVehicule,
+    pendingExemptionsCount,
   ] = await Promise.all([
     prisma.contribuabil.count({
       where: { tenantId, deletedAt: null, status: "activ" },
@@ -156,6 +158,13 @@ export default async function DashboardPage() {
       },
       orderBy: { createdAt: "desc" },
       take: 5,
+    }),
+    prisma.scutireContribuabil.count({
+      where: {
+        tenantId,
+        status: "pending",
+        fiscalYear: new Date().getFullYear(),
+      },
     }),
   ]);
 
@@ -277,6 +286,21 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} />
+
+      {/* Art. 456 Pending Exemptions Alert */}
+      {pendingExemptionsCount > 0 && (
+        <Card className="border-warning">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Shield className="h-5 w-5 text-warning" />
+            <p className="text-sm font-medium">
+              {te("pendingExemptionsAlert", { count: pendingExemptionsCount })}
+            </p>
+            <Link href={`${localePrefix}/admin/scutiri?status=pending`} className="ml-auto">
+              <Button variant="outline" size="sm">{tc("viewAll")}</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
