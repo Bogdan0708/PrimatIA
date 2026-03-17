@@ -8,7 +8,18 @@ Safe, repeatable migration rollout with preflight checks and rollback readiness.
 - `DIRECT_DATABASE_URL`
 - `SHADOW_DATABASE_URL` (required for strict drift checks)
 
+## One-Time Baseline (existing databases only)
+If the database was created before the `0000_init` baseline migration existed
+(i.e., tables were originally created via `db push`), you must mark the baseline
+as already applied **before** running `migrate deploy`:
+```bash
+npx prisma migrate resolve --applied 0000_init
+```
+Skip this step for fresh databases (CI, new environments) — the baseline runs normally there.
+
 ## Preflight
+For existing databases, complete the one-time baseline step above first if it applies.
+
 ```bash
 npm run db:preflight:strict
 ```

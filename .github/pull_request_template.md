@@ -35,6 +35,7 @@
 - [ ] Migration is backward-compatible (old code works with new schema)
 - [ ] Rollback plan documented (can old revision run on new schema?)
 - [ ] No destructive operations without data backup confirmation
+- [ ] If adding a baseline migration: `prisma migrate resolve --applied <name>` run on all existing databases before deploy (see `docs/DB_RELEASE_RUNBOOK.md`)
 
 ## AI Gateway Checklist (if PR touches `src/lib/ai/`)
 - [ ] Fallback chain still works (gateway > claude > openai > lm_studio > none)
