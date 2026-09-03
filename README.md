@@ -1,12 +1,21 @@
 # PrimărIA — Sistem Integrat de Administrare a Impozitelor și Taxelor Locale
 
-*Platformă SaaS pentru administrarea impozitelor și taxelor locale în comunele din România*
+*Prototip de platformă SaaS pentru administrarea impozitelor și taxelor locale în comunele din România*
 
 ---
 
+> **Project status:** PrimărIA is a portfolio/pilot project. There is no current
+> public deployment, no municipality production rollout, and no certification or
+> regulatory approval represented by this repository. The code and deployment
+> materials demonstrate an implementation approach that still requires technical,
+> security, operational, and Romanian legal review before use with real taxpayer data.
+>
+> **Naming:** **PrimărIA** is the product/brand name (Primărie + IA). **PrimatIA**
+> is the ASCII GitHub repository slug used in clone URLs and local path examples.
+
 ## Overview
 
-PrimărIA is a modern, multi-tenant SaaS platform for managing local taxes in Romanian communes. Built with Next.js 14, PostgreSQL, and TypeScript, it automates tax calculation, document generation, and citizen self-service for small and medium municipalities.
+PrimărIA is a multi-tenant portfolio prototype for exploring local-tax administration in Romanian communes. Built with Next.js 14, PostgreSQL, and TypeScript, the repository contains tax-calculation, document-generation, and citizen self-service workflows for evaluation in local or controlled pilot environments.
 
 The name combines **Primărie** (town hall) + **IA** (AI / Inteligență Artificială), reflecting the vision of intelligent digitization for local public administration.
 
@@ -14,16 +23,16 @@ The name combines **Primărie** (town hall) + **IA** (AI / Inteligență Artific
 
 ## Key Features
 
-- **Multi-tenant architecture** -- Each primărie gets isolated data via PostgreSQL Row-Level Security (RLS)
-- **Tax Engine** -- Automated calculation for buildings, land, and vehicles per Cod Fiscal (Titlul IX, L227/2015)
+- **Multi-tenant architecture** -- Tenant-scoped schema and PostgreSQL RLS controls implemented for evaluation; not independently audited as an isolation guarantee
+- **Tax Engine** -- Calculation rules for buildings, land, and vehicles modeled on Cod Fiscal (Titlul IX, L227/2015); outputs require expert validation
 - **Document Generation** -- PDF fiscal decisions, certificates, summons, collection logs via @react-pdf/renderer
-- **PatrimVen XML Export** -- ANAF-compatible XML for DUKIntegrator (F3001--F3003, F3101)
+- **PatrimVen XML Export** -- Experimental XML generation for selected PatrimVen form families (F3001--F3003, F3101); not certified by or interoperability-tested with ANAF
 - **Citizen Portal** -- Self-service portal for viewing taxes, payments, and certificate requests
 - **Online Payments** -- Ghișeul.ro integration (mock implementation for development)
 - **Notifications** -- Email notification system for payment reminders, due dates, and document delivery
 - **Multilingual** -- Romanian (primary), Hungarian, and English via next-intl
 - **PWA / Offline Support** -- Service worker with offline capabilities for rural areas with intermittent connectivity
-- **Enforcement Workflow** -- Automated summons and penalty tracking per Cod de Procedură Fiscală
+- **Enforcement Workflow** -- Prototype summons and penalty-tracking workflow modeled on Cod de Procedură Fiscală concepts
 
 ## Tech Stack
 
@@ -56,8 +65,8 @@ The name combines **Primărie** (town hall) + **IA** (AI / Inteligență Artific
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/primaria.git
-cd primaria
+git clone https://github.com/Bogdan0708/PrimatIA.git
+cd PrimatIA
 
 # 2. Start infrastructure services (PostgreSQL, PgBouncer, Redis, MinIO)
 docker compose up -d
@@ -80,7 +89,10 @@ npm run dev
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
-**Demo credentials (development):**
+**Demo credentials — local development only:**
+
+These fixed accounts are created by the demo seed flow. Never use these credentials
+or run the demo seed against a public, shared, staging, pilot, or production environment.
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -104,7 +116,7 @@ Demo tenant: **Primăria Comunei Bogdan Vodă, Maramureș**
 ## Project Structure
 
 ```
-primaria/
+PrimatIA/
 ├── prisma/
 │   ├── schema.prisma              # Database schema (Prisma)
 │   ├── migrations/                # SQL migrations (RLS, init)
@@ -191,7 +203,7 @@ primaria/
 
 ### Multi-Tenancy
 
-Each primărie (municipality) operates as an isolated tenant. Data isolation is enforced at the database level using PostgreSQL Row-Level Security (RLS). Every tenant-scoped table includes a `tenant_id` column, and RLS policies ensure that queries only return data belonging to the current tenant.
+The repository implements a tenant-isolation design using PostgreSQL Row-Level Security (RLS). Tenant-scoped tables include a `tenant_id` column, and application database access is designed to set tenant context before queries. This is valuable implementation evidence, not proof of an independently audited or deployed security boundary.
 
 ```sql
 -- Tenant context set on every request via parameterized query
@@ -218,7 +230,12 @@ CREATE POLICY tenant_isolation ON contribuabili FOR ALL
 - Audit logging for all CRUD operations (immutable, INSERT + SELECT only)
 - CORS configuration for portal API
 
-## Tax Types Supported
+## Tax Types Modeled in the Prototype
+
+The cited legal provisions are design references, not a legal opinion, compliance
+attestation, or guarantee that calculated amounts are correct for a municipality's
+current HCL configuration. Validate rules, rates, rounding, forms, and effective dates
+with qualified Romanian tax/legal specialists before any real-world use.
 
 ### Core (MVP)
 
@@ -286,9 +303,11 @@ Test coverage focuses on the tax engine (`src/lib/tax-engine/`) and PatrimVen XM
 
 ## Deployment
 
-For production deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+For the self-hosting reference, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+It is an operator-oriented example, not evidence of a current public deployment or
+production-readiness approval.
 
-**Quick overview:**
+**Reference Compose workflow:**
 
 ```bash
 # Production deployment with Docker Compose
@@ -297,7 +316,7 @@ cp .env.production.example .env
 docker compose -f docker-compose.production.yml up -d --build
 ```
 
-The production setup includes:
+The repository's deployment configuration includes:
 - Multi-stage Dockerfile (Node.js 20 Alpine, standalone output)
 - PostgreSQL 16 with PgBouncer connection pooling
 - Redis 7 with authentication
@@ -312,12 +331,17 @@ The production setup includes:
 | [Architecture](docs/ARCHITECTURE.md) | System architecture and design decisions |
 | [Data Model](docs/DATA_MODEL.md) | Database schema and entity relationships |
 | [Implementation](docs/IMPLEMENTATION.md) | 22-week implementation roadmap |
-| [Deployment](docs/DEPLOYMENT.md) | Production deployment guide |
+| [Deployment](docs/DEPLOYMENT.md) | Self-hosting reference and operational checklist |
 | [User Guide](docs/USER_GUIDE.md) | User guide for commune staff (Romanian) |
 | [Incident Response](docs/INCIDENT_RESPONSE.md) | Security incident response procedures |
 | [Changelog](CHANGELOG.md) | Version history |
 
-## Legal Compliance
+## Legal and Regulatory Design References
+
+The implementation was designed with the following sources and topics in mind. This
+list does **not** establish legal compliance, ANAF acceptance, GDPR/NIS2 conformity,
+eIDAS qualification, or certification. Requirements and generated outputs must be
+reviewed against current official sources by qualified professionals before deployment.
 
 - **Cod Fiscal** (L227/2015, Titlul IX) -- Tax calculation rules
 - **Cod de Procedura Fiscala** -- Payment distribution, enforcement
@@ -329,7 +353,7 @@ The production setup includes:
 
 ## Contributing
 
-This project is currently in pilot phase. For contribution guidelines, contact the development team.
+This project is currently a portfolio/pilot project with no public deployment. For contribution guidelines, contact the development team.
 
 ## License
 
