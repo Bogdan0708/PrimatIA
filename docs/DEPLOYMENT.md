@@ -1,4 +1,14 @@
-# PrimărIA — Ghid de Deployment Producție
+# PrimărIA — Referință de Self-Hosting (Nu Aprobare pentru Producție)
+
+> **Statut:** PrimărIA este un proiect de portofoliu/pilot și nu are în prezent un
+> deployment public. Acest document descrie un flux tehnic de referință pentru
+> self-hosting; nu dovedește că sistemul este production-ready, auditat, certificat
+> sau conform juridic. Înainte de utilizarea cu date reale, operatorul trebuie să
+> valideze independent securitatea, backup/restore, monitorizarea, protecția datelor,
+> regulile fiscale și toate integrările externe.
+>
+> **Denumire:** **PrimărIA** este numele produsului. **PrimatIA** este slug-ul ASCII
+> al repository-ului GitHub și apare ca atare în URL-ul de clonare.
 
 ## Cerințe Preliminare
 
@@ -15,8 +25,8 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 
 # Clonare repository
-git clone https://github.com/your-org/primaria.git /opt/primaria
-cd /opt/primaria
+git clone https://github.com/Bogdan0708/PrimatIA.git /opt/PrimatIA
+cd /opt/PrimatIA
 ```
 
 ## 2. Configurarea Variabilelor de Mediu
@@ -90,7 +100,7 @@ sudo nginx -t && sudo systemctl reload nginx
 ## 4. Lansarea Aplicației
 
 ```bash
-cd /opt/primaria
+cd /opt/PrimatIA
 
 # Build și start toate serviciile
 docker compose -f docker-compose.production.yml up -d --build
@@ -112,8 +122,7 @@ docker compose -f docker-compose.production.yml exec app npm run db:preflight
 # Rulare migrări Prisma
 docker compose -f docker-compose.production.yml exec app npx prisma migrate deploy
 
-# Seed cu date demo (opțional — doar pentru testare)
-docker compose -f docker-compose.production.yml exec app npm run db:seed
+# NU rulați db:seed aici: conturile și datele demo sunt exclusiv pentru dezvoltare locală
 ```
 
 **Important:** `prisma migrate deploy` rulează migrările fără a crea noi migrări. Utilizați `prisma migrate dev` doar în mediul de dezvoltare.
@@ -147,7 +156,7 @@ TENANT_ID=<TENANT_ID> ROLLBACK_BATCH_ID=<BATCH_ID> npm run ops:staging-gate -- -
 curl -s https://primaria.exemplu.ro/api/health | jq .
 ```
 
-Răspuns așteptat:
+Exemplu de răspuns sănătos (valorile reale depind de versiunea rulată):
 
 ```json
 {
@@ -168,16 +177,16 @@ Răspuns așteptat:
 Creați un cron job pentru backup zilnic:
 
 ```bash
-# /opt/primaria/scripts/backup-db.sh
+# /opt/PrimatIA/scripts/backup-db.sh
 #!/bin/bash
 set -euo pipefail
 
-BACKUP_DIR="/opt/backups/primaria"
+BACKUP_DIR="/opt/backups/PrimatIA"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 mkdir -p "$BACKUP_DIR"
 
 # Dump din containerul PostgreSQL
-docker compose -f /opt/primaria/docker-compose.production.yml exec -T postgres \
+docker compose -f /opt/PrimatIA/docker-compose.production.yml exec -T postgres \
   pg_dump -U primaria_admin -Fc primaria > "$BACKUP_DIR/primaria_${TIMESTAMP}.dump"
 
 # Păstrare ultimele 30 de backup-uri
@@ -187,10 +196,10 @@ echo "Backup completat: primaria_${TIMESTAMP}.dump"
 ```
 
 ```bash
-chmod +x /opt/primaria/scripts/backup-db.sh
+chmod +x /opt/PrimatIA/scripts/backup-db.sh
 
 # Adăugare în crontab — zilnic la 02:00
-echo "0 2 * * * /opt/primaria/scripts/backup-db.sh >> /var/log/primaria-backup.log 2>&1" | crontab -
+echo "0 2 * * * /opt/PrimatIA/scripts/backup-db.sh >> /var/log/primaria-backup.log 2>&1" | crontab -
 ```
 
 ### Restaurare Backup
@@ -198,7 +207,7 @@ echo "0 2 * * * /opt/primaria/scripts/backup-db.sh >> /var/log/primaria-backup.l
 ```bash
 # Restaurare din backup
 docker compose -f docker-compose.production.yml exec -T postgres \
-  pg_restore -U primaria_admin -d primaria --clean --if-exists < /opt/backups/primaria/primaria_20260101_020000.dump
+  pg_restore -U primaria_admin -d primaria --clean --if-exists < /opt/backups/PrimatIA/primaria_20260101_020000.dump
 ```
 
 ### Backup MinIO (documente)
@@ -212,13 +221,13 @@ chmod +x /usr/local/bin/mc
 mc alias set primaria http://localhost:9000 ACCESS_KEY SECRET_KEY
 
 # Backup periodic
-mc mirror primaria/primaria-documents /opt/backups/primaria/documents/
+mc mirror primaria/primaria-documents /opt/backups/PrimatIA/documents/
 ```
 
 ## 8. Actualizări
 
 ```bash
-cd /opt/primaria
+cd /opt/PrimatIA
 
 # Pull ultimele schimbări
 git pull origin main
@@ -265,7 +274,7 @@ docker image prune -f
 - [ ] Setați backup-uri automate (secțiunea 7)
 - [ ] Testați restaurarea dintr-un backup
 
-## Structura Serviciilor (Producție)
+## Structura Serviciilor din Configurația de Referință
 
 | Serviciu | Port Intern | Descriere |
 |----------|-------------|-----------|

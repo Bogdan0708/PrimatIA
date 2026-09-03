@@ -1,5 +1,18 @@
 # PrimărIA — Technical Audit Report
 
+> **HISTORICAL SNAPSHOT — NOT A CURRENT ASSESSMENT**
+>
+> This report records findings from **2026-02-20** against the then-current
+> `master` branch. It must not be used as a statement of the present security,
+> test, deployment, or compliance posture. Later commits introduced remediation
+> in areas including tenant-scoped database access, portal request protection,
+> deployment configuration, CI build coverage, validation, and tests. See the
+> repository [CHANGELOG](CHANGELOG.md) and subsequent commit history for that work.
+> Some findings may be resolved, partially addressed, superseded, or still open;
+> this historical document does **not** claim that every issue was fixed. Re-audit
+> the current default branch and collect environment-specific evidence before any
+> pilot or real-data use.
+
 **Date:** 2026-02-20  
 **Branch:** master  
 **Codebase:** ~243 TypeScript files, ~1200-line Prisma schema, Next.js 14.2.35
