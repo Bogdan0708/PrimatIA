@@ -91,14 +91,9 @@ The application will be available at [http://localhost:3000](http://localhost:30
 
 **Demo credentials — local development only:**
 
-These fixed accounts are created by the demo seed flow. Never use these credentials
-or run the demo seed against a public, shared, staging, pilot, or production environment.
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | `admin@bogdanvoda.ro` | `Admin123!` |
-| Operator | `operator@bogdanvoda.ro` | `Operator123!` |
-| Citizen Portal | `cetatean@example.ro` | `Citizen123!` |
+Demo accounts are created by `npm run db:seed`; passwords are printed to the console
+and are not committed. Never run the demo seed against a public, shared, staging,
+pilot, or production environment.
 
 Demo tenant: **Primăria Comunei Bogdan Vodă, Maramureș**
 
@@ -357,9 +352,7 @@ This project is currently a portfolio/pilot project with no public deployment. F
 
 ## License
 
-Copyright 2026 PrimărIA. All rights reserved.
-
-This software is proprietary. Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited without express written permission.
+MIT — see [LICENSE](LICENSE).
 
 ---
 

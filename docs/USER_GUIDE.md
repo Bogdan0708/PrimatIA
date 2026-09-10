@@ -12,11 +12,8 @@ Ghid de utilizare pentru personalul primăriei.
 
 **Conturi demo (mediul de dezvoltare):**
 
-| Rol | Email | Parolă |
-|-----|-------|--------|
-| Administrator | admin@bogdanvoda.ro | Admin123! |
-| Operator | operator@bogdanvoda.ro | Operator123! |
-| Cetățean (portal) | cetatean@example.ro | Citizen123! |
+Conturile demo sunt create de `npm run db:seed`; parolele sunt afișate în consolă
+și nu sunt incluse în cod sursă.
 
 După autentificare, sunteți redirecționat la **Tabloul de bord** principal.
 

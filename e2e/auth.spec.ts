@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 
+// Must match the SEED_PASSWORD used for `npm run db:seed` (see prisma/seed.ts).
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? '';
+
 test.describe('Authentication', () => {
   test('login page loads correctly', async ({ page }) => {
     await page.goto('/ro/login');
@@ -14,7 +17,7 @@ test.describe('Authentication', () => {
     await page.goto('/ro/login');
 
     await page.getByLabel('Adresă de email').fill('admin@bogdanvoda.ro');
-    await page.getByLabel('Parolă').fill('Admin123!');
+    await page.getByLabel('Parolă').fill(SEED_PASSWORD);
     await page.getByRole('button', { name: 'Autentificare', exact: true }).click();
 
     // Should redirect to the dashboard
