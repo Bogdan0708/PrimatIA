@@ -4,6 +4,7 @@ import { SignJWT } from "jose";
 import { resolvePortalTenant, getPortalJwtSecret } from "@/lib/portal-auth";
 import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+import { portalLoginSchema } from "@/lib/validations/portal";
 
 export async function POST(request: NextRequest) {
   const logContext = getRequestLogContext(request);
@@ -20,14 +21,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, password } = body;
-
-    if (!email || !password) {
+    const parsed = portalLoginSchema.safeParse(body);
+    if (!parsed.success) {
       return withRateLimitHeaders(NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Date invalide", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       ), rateLimit);
     }
+    const { email, password } = parsed.data;
 
     const tenantId = await resolvePortalTenant(request);
     if (!tenantId) {

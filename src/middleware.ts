@@ -16,22 +16,43 @@ const intlMiddleware = createMiddleware({
 function addSecurityHeaders(response: NextResponse): NextResponse {
   // Content Security Policy
   const isDev = process.env.NODE_ENV === "development";
-  response.headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      // unsafe-eval only in dev (Next.js HMR); production uses strict-dynamic with unsafe-inline fallback
-      `script-src 'self' https://js.stripe.com${isDev ? " 'unsafe-inline' 'unsafe-eval'" : " 'unsafe-inline'"}`,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.stripe.com",
-      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self' https://checkout.stripe.com",
-    ].join("; ")
-  );
+
+  // Enforced policy: 'unsafe-inline' is required until nonce propagation is
+  // wired through Next.js script rendering (layout.tsx + Script components).
+  const cspDirectives = [
+    "default-src 'self'",
+    `script-src 'self' https://js.stripe.com${isDev ? " 'unsafe-inline' 'unsafe-eval'" : " 'unsafe-inline'"}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://api.stripe.com",
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https://checkout.stripe.com",
+  ];
+
+  response.headers.set("Content-Security-Policy", cspDirectives.join("; "));
+
+  // Report-Only with strict policy to surface violations without breaking anything.
+  // Monitor browser console for CSP violations before removing unsafe-inline.
+  if (!isDev) {
+    response.headers.set(
+      "Content-Security-Policy-Report-Only",
+      [
+        "default-src 'self'",
+        "script-src 'self' https://js.stripe.com 'strict-dynamic'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "connect-src 'self' https://api.stripe.com",
+        "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "form-action 'self' https://checkout.stripe.com",
+      ].join("; ")
+    );
+  }
 
   // HTTP Strict Transport Security
   response.headers.set(
@@ -128,8 +149,20 @@ function rejectCrossOriginMutation(request: NextRequest): NextResponse | null {
   const origin = request.headers.get("origin");
   const referer = request.headers.get("referer");
 
-  // If no Origin header (same-origin form posts, curl, server-to-server), allow
-  if (!origin && !referer) return null;
+  // If no Origin AND no Referer: require X-Requested-With header for API mutations.
+  // Browsers always send Origin on cross-origin and same-origin POST/PUT/DELETE.
+  // Missing both headers means non-browser client (curl, server-to-server).
+  if (!origin && !referer) {
+    // Allow health checks and internal API calls with explicit header
+    const xrw = request.headers.get("x-requested-with");
+    if (xrw === "XMLHttpRequest" || xrw === "fetch") return null;
+    // Allow Stripe webhook (already filtered above) and health endpoints
+    if (pathname === "/api/health" || pathname === "/api/health/deep") return null;
+    return new NextResponse(
+      JSON.stringify({ error: "Missing origin header" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const host = request.headers.get("host") || request.nextUrl.host;
   const expectedOrigin = `${request.nextUrl.protocol}//${host}`;

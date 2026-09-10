@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { generateRevenueForecast } from "@/lib/ai/revenue-forecast";
-import { setTenantContext } from "@/lib/db";
+import { withTenantScope } from "@/lib/db";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 import {
   checkSharedRateLimit,
@@ -58,13 +58,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await setTenantContext(session.user.tenantId);
-    const forecast = await generateRevenueForecast(session.user.tenantId, year);
+    return await withTenantScope(session.user.tenantId, async () => {
+      const forecast = await generateRevenueForecast(session.user.tenantId, year);
 
-    return withRateLimitHeaders(
-      NextResponse.json({ success: true, data: forecast }),
-      rateLimit
-    );
+      return withRateLimitHeaders(
+        NextResponse.json({ success: true, data: forecast }),
+        rateLimit
+      );
+    });
   } catch (error) {
     logError(
       {

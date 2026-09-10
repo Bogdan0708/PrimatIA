@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { TaxConfigurationError } from "./errors";
 import type {
   VehicleTaxInput,
   TaxCalculationResult,
@@ -306,7 +307,7 @@ export async function calculateVehicleTax(
 
   // Validate masaTotalaKg if provided
   if (input.masaTotalaKg != null && input.masaTotalaKg <= 0) {
-    throw new Error("masaTotalaKg must be a positive number");
+    throw new TaxConfigurationError("Masa totală (kg) trebuie să fie un număr pozitiv");
   }
 
   let bazaImpozabila: number;
@@ -324,7 +325,7 @@ export async function calculateVehicleTax(
       taxType,
       category
     );
-    if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+    if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
     rateTableId = rateEntry.id;
     bazaImpozabila = 1;
@@ -344,7 +345,7 @@ export async function calculateVehicleTax(
       taxType,
       category
     );
-    if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+    if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
     rateTableId = rateEntry.id;
     bazaImpozabila = cmc;
@@ -366,7 +367,7 @@ export async function calculateVehicleTax(
       taxType,
       category
     );
-    if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+    if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
     rateTableId = rateEntry.id;
     bazaImpozabila = cmc;
@@ -380,7 +381,7 @@ export async function calculateVehicleTax(
       taxType,
       category
     );
-    if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+    if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
     rateTableId = rateEntry.id;
     bazaImpozabila = input.nrLocuri ?? 0;
@@ -404,7 +405,7 @@ export async function calculateVehicleTax(
         taxType,
         category
       );
-      if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+      if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
       rateTableId = rateEntry.id;
       bazaImpozabila = (input.masaTotalaKg ?? 0) / 1000;
@@ -429,7 +430,7 @@ export async function calculateVehicleTax(
         taxType,
         category
       );
-      if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+      if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
       rateTableId = rateEntry.id;
       bazaImpozabila = 1;
@@ -445,7 +446,7 @@ export async function calculateVehicleTax(
       taxType,
       category
     );
-    if (!rateEntry) throw new Error(`No rate for vehicle: ${category}`);
+    if (!rateEntry) throw new TaxConfigurationError(`Lipsește rata din tabelul HCL pentru vehicul: categorie=${category}`);
 
     rateTableId = rateEntry.id;
     bazaImpozabila = 1;

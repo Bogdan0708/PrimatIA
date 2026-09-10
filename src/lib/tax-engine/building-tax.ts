@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { TaxConfigurationError } from "./errors";
 import type {
   BuildingTaxInput,
   TaxCalculationResult,
@@ -78,7 +79,7 @@ function resolveMixedUseShares(input: BuildingTaxInput): {
   let nonResidentialSurface = input.suprafataNerezidentiala ?? 0;
 
   if (residentialSurface <= 0 && nonResidentialSurface <= 0) {
-    throw new Error("Mixed-use buildings require residential or non-residential area data");
+    throw new TaxConfigurationError("Clădirile cu destinație mixtă necesită suprafața rezidențială sau nerezidențială completată");
   }
 
   if (residentialSurface <= 0 && nonResidentialSurface > 0 && totalSurface > nonResidentialSurface) {
@@ -91,7 +92,7 @@ function resolveMixedUseShares(input: BuildingTaxInput): {
 
   const totalDeclaredSurface = residentialSurface + nonResidentialSurface;
   if (totalDeclaredSurface <= 0) {
-    throw new Error("Mixed-use building surface split is invalid");
+    throw new TaxConfigurationError("Împărțirea suprafețelor clădirii mixte este invalidă (suma trebuie să fie pozitivă)");
   }
 
   return {
@@ -158,8 +159,8 @@ export async function calculateBuildingTax(
     ]);
 
     if (!residentialRateEntry || !nonResidentialRateEntry) {
-      throw new Error(
-        `No rate table entry found for mixed building tax: construction=${input.tipConstructie}, zone=${input.zona}`
+      throw new TaxConfigurationError(
+        `Lipsește rata din tabelul HCL pentru clădire mixtă: tip construcție=${input.tipConstructie}, zonă=${input.zona}`
       );
     }
 
@@ -275,8 +276,8 @@ export async function calculateBuildingTax(
     );
 
     if (!rateEntry) {
-      throw new Error(
-        `No rate table entry found for building tax: type=${taxType}, construction=${input.tipConstructie}, zone=${input.zona}`
+      throw new TaxConfigurationError(
+        `Lipsește rata din tabelul HCL pentru impozit clădiri: tip=${taxType}, construcție=${input.tipConstructie}, zonă=${input.zona}`
       );
     }
 

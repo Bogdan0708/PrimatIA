@@ -308,7 +308,7 @@ describe("calculateVehicleTax", () => {
         makeHcl(),
         []
       )
-    ).rejects.toThrow(/No rate for vehicle/);
+    ).rejects.toThrow(/Lipsește rata din tabelul HCL pentru vehicul/);
   });
 
   it("calculates bonificatie and installments", async () => {

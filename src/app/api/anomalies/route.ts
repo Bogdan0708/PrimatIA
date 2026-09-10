@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { detectAnomalies } from "@/lib/ai/anomaly-detection";
-import { setTenantContext } from "@/lib/db";
+import { withTenantScope } from "@/lib/db";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
 import {
   checkSharedRateLimit,
@@ -47,13 +47,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await setTenantContext(session.user.tenantId);
-    const anomalies = await detectAnomalies(session.user.tenantId);
+    return await withTenantScope(session.user.tenantId, async () => {
+      const anomalies = await detectAnomalies(session.user.tenantId);
 
-    return withRateLimitHeaders(
-      NextResponse.json({ success: true, data: anomalies }),
-      rateLimit
-    );
+      return withRateLimitHeaders(
+        NextResponse.json({ success: true, data: anomalies }),
+        rateLimit
+      );
+    });
   } catch (error) {
     logError(
       {

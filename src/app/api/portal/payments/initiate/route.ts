@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
 import { getPaymentGateway } from "@/lib/payments/payment-gateway";
-import { prisma, setTenantContext } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { checkSharedRateLimit, createRateLimitExceededResponse, withRateLimitHeaders } from "@/lib/rate-limit";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+import { paymentInitiateSchema } from "@/lib/validations/portal";
 
 export async function POST(request: NextRequest) {
   const logContext = getRequestLogContext(request);
@@ -28,25 +29,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { contribuabilId, items } = body;
-
-    if (!contribuabilId || !items || !Array.isArray(items) || items.length === 0) {
+    const parsed = paymentInitiateSchema.safeParse(body);
+    if (!parsed.success) {
       return withRateLimitHeaders(NextResponse.json(
-        { error: "contribuabilId and items are required" },
+        { error: "Date invalide", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       ), rateLimit);
     }
+    const { contribuabilId, items } = parsed.data;
 
-    await setTenantContext(citizen.tenantId);
-
-    // Verify citizen has access to this contribuabil
-    const link = await prisma.citizenContribuabilLink.findFirst({
-      where: {
-        citizenUserId: citizen.sub,
-        contribuabilId,
-        isActive: true,
-      },
-    });
+    // DB check: verify citizen access (scoped transaction, released quickly)
+    const link = await withTenantScope(citizen.tenantId, () =>
+      prisma.citizenContribuabilLink.findFirst({
+        where: {
+          citizenUserId: citizen.sub,
+          contribuabilId,
+          isActive: true,
+        },
+      })
+    );
 
     if (!link) {
       logWarn({
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       return withRateLimitHeaders(NextResponse.json({ error: "Access denied" }, { status: 403 }), rateLimit);
     }
 
+    // External call: gateway (network I/O, outside DB transaction)
     const gateway = getPaymentGateway();
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
@@ -71,21 +73,23 @@ export async function POST(request: NextRequest) {
       cancelUrl: `${baseUrl}/portal/plati`,
     });
 
-    // Store payment in DB
+    // DB write: store payment record (scoped transaction)
     const totalAmount = items.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
 
-    await prisma.onlinePayment.create({
-      data: {
-        tenantId: citizen.tenantId,
-        citizenUserId: citizen.sub,
-        contribuabilId,
-        suma: totalAmount,
-        status: "initiated",
-        gatewayRef: result.gatewayRef,
-        selectedDebts: items,
-        expiresAt: result.expiresAt,
-      },
-    });
+    await withTenantScope(citizen.tenantId, () =>
+      prisma.onlinePayment.create({
+        data: {
+          tenantId: citizen.tenantId,
+          citizenUserId: citizen.sub,
+          contribuabilId,
+          suma: totalAmount,
+          status: "initiated",
+          gatewayRef: result.gatewayRef,
+          selectedDebts: items,
+          expiresAt: result.expiresAt,
+        },
+      })
+    );
 
     return withRateLimitHeaders(NextResponse.json({
       success: true,
