@@ -56,3 +56,4 @@ next-env.d.ts
 
 # Vendored skill bundles (not part of the app)
 .claude/skills/
+.gstack/
