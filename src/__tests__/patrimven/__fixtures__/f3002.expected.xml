@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrimVen formType="F3002" anFiscal="2026" cuiUAT="4374028" sirutaUAT="106464" dataGenerare="15.01.2026">
+  <Declaratii>
+    <Declaratie>
+      <Contribuabil>
+        <Tip>PF</Tip>
+        <CNP>cnp-hash-9f1c2a3b4d5e6f708192a3b4c5d6e7f8</CNP>
+        <Nume>Popescu</Nume>
+        <Prenume>Ion</Prenume>
+        <Adresa>
+          <Judet>MM</Judet>
+          <Localitate>Sighetu Marmatiei</Localitate>
+          <Strada>Str. Bogdan Voda</Strada>
+          <Numar>22</Numar>
+          <Bloc>B2</Bloc>
+          <Scara>A</Scara>
+          <Etaj>3</Etaj>
+          <Apartament>12</Apartament>
+          <CodPostal>435500</CodPostal>
+        </Adresa>
+      </Contribuabil>
+      <Vehicule>
+        <Vehicul>
+          <NrInmatriculare>MM01ABC</NrInmatriculare>
+          <SerieSasiu>WVWZZZ1JZ3W000001</SerieSasiu>
+          <TipVehicul>01</TipVehicul>
+          <Marca>Dacia</Marca>
+          <Model>Logan</Model>
+          <CapacitateCilindrica>1461</CapacitateCilindrica>
+          <AnFabricatie>2018</AnFabricatie>
+          <PutereKw>65</PutereKw>
+          <MasaTotala>1600</MasaTotala>
+        </Vehicul>
+        <Vehicul>
+          <NrInmatriculare>MM02XYZ</NrInmatriculare>
+          <SerieSasiu>1HGCM82633A004352</SerieSasiu>
+          <TipVehicul>04</TipVehicul>
+          <Marca>Yamaha</Marca>
+          <Model>YBR125</Model>
+          <CapacitateCilindrica>125</CapacitateCilindrica>
+          <AnFabricatie>2020</AnFabricatie>
+          <PutereKw>8</PutereKw>
+          <MasaTotala>130</MasaTotala>
+        </Vehicul>
+      </Vehicule>
+    </Declaratie>
+  </Declaratii>
+</PatrimVen>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrimVen formType="F3101" anFiscal="2026" cuiUAT="4374028" sirutaUAT="106464" dataGenerare="15.01.2026">
+  <Certificate>
+    <Certificat>
+      <Contribuabil>
+        <Tip>PJ</Tip>
+        <CUI>RO12345674</CUI>
+        <Nume>SC EXEMPLU PATRIMONIU SRL</Nume>
+        <Adresa>
+          <Judet>MM</Judet>
+          <Localitate>Baia Mare</Localitate>
+          <Strada>Str. Victoriei</Strada>
+          <Numar>10</Numar>
+          <CodPostal>430001</CodPostal>
+        </Adresa>
+      </Contribuabil>
+      <Impozite>
+        <Impozit>
+          <TipImpozit>IC_N</TipImpozit>
+          <AnFiscal>2026</AnFiscal>
+          <SumaImpozit>4200</SumaImpozit>
+          <SumaPlatita>4200</SumaPlatita>
+          <SumaRestanta>0</SumaRestanta>
+        </Impozit>
+        <Impozit>
+          <TipImpozit>IT_I</TipImpozit>
+          <AnFiscal>2026</AnFiscal>
+          <SumaImpozit>650</SumaImpozit>
+          <SumaPlatita>400</SumaPlatita>
+          <SumaRestanta>250</SumaRestanta>
+        </Impozit>
+      </Impozite>
+      <TotalRestanta>250</TotalRestanta>
+    </Certificat>
+  </Certificate>
+</PatrimVen>

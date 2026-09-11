@@ -2,6 +2,7 @@ import { XMLBuilder } from "fast-xml-parser";
 import { prisma, setTenantContext } from "@/lib/db";
 import { decryptCnp } from "@/lib/crypto";
 import { formatDate } from "@/lib/formatting";
+import { validateCuiCheckDigit } from "@/lib/anaf/cui-validator";
 import type {
   PatrimVenAddress,
   PatrimVenPerson,
@@ -110,8 +111,64 @@ async function buildPerson(
 }
 
 // ============================================================================
+// Helper: validate declarant CUI (offline checksum, per OUG 11/2021 export
+// requirements — a malformed CUI must never reach an ANAF-bound export file)
+// ============================================================================
+
+function assertValidCui(person: PatrimVenPerson): void {
+  if (!person.CUI) return;
+
+  const cleanCui = person.CUI.replace(/^RO/i, "").replace(/\D/g, "");
+
+  if (!cleanCui || !validateCuiCheckDigit(cleanCui)) {
+    throw new Error(
+      `CUI invalid: cifra de control incorectă pentru declarantul "${person.Nume}" (CUI: ${person.CUI})`
+    );
+  }
+}
+
+function assertValidCuis(records: { Contribuabil: PatrimVenPerson }[]): void {
+  for (const r of records) {
+    assertValidCui(r.Contribuabil);
+  }
+}
+
+// ============================================================================
 // F3001 — Property Declarations (buildings + land)
 // ============================================================================
+
+/**
+ * Pure XML builder for F3001. Takes already-resolved declaration records and
+ * export metadata and returns the PatrimVen XML document as a string. No I/O.
+ */
+export function buildF3001Xml(
+  records: F3001Data[],
+  meta: PatrimVenExportMeta
+): string {
+  assertValidCuis(records);
+
+  const xmlObj = {
+    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
+    PatrimVen: {
+      "@_formType": meta.formType,
+      "@_anFiscal": meta.fiscalYear,
+      "@_cuiUAT": meta.tenantCui,
+      "@_sirutaUAT": meta.tenantSiruta,
+      "@_dataGenerare": formatDate(meta.generatedAt),
+      Declaratii: {
+        Declaratie: records.map((r) => ({
+          Contribuabil: r.Contribuabil,
+          Proprietati: {
+            ...(r.Cladiri.length > 0 && { Cladire: r.Cladiri }),
+            ...(r.Terenuri.length > 0 && { Teren: r.Terenuri }),
+          },
+        })),
+      },
+    },
+  };
+
+  return builder.build(xmlObj);
+}
 
 export async function generateF3001(
   tenantId: string,
@@ -166,42 +223,50 @@ export async function generateF3001(
     records.push({ Contribuabil: person, Cladiri: cladiri, Terenuri: terenuri });
   }
 
-  const xmlObj = {
-    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
-    PatrimVen: {
-      "@_formType": "F3001",
-      "@_anFiscal": fiscalYear,
-      "@_cuiUAT": tenant.cui || "",
-      "@_sirutaUAT": tenant.sirutaCode || "",
-      "@_dataGenerare": formatDate(new Date()),
-      Declaratii: {
-        Declaratie: records.map((r) => ({
-          Contribuabil: r.Contribuabil,
-          Proprietati: {
-            ...(r.Cladiri.length > 0 && { Cladire: r.Cladiri }),
-            ...(r.Terenuri.length > 0 && { Teren: r.Terenuri }),
-          },
-        })),
-      },
-    },
+  const meta: PatrimVenExportMeta = {
+    formType: "F3001",
+    fiscalYear,
+    tenantCui: tenant.cui || "",
+    tenantSiruta: tenant.sirutaCode || "",
+    generatedAt: new Date().toISOString(),
+    recordCount: records.length,
   };
 
-  return {
-    xml: builder.build(xmlObj),
-    meta: {
-      formType: "F3001",
-      fiscalYear,
-      tenantCui: tenant.cui || "",
-      tenantSiruta: tenant.sirutaCode || "",
-      generatedAt: new Date().toISOString(),
-      recordCount: records.length,
-    },
-  };
+  return { xml: buildF3001Xml(records, meta), meta };
 }
 
 // ============================================================================
 // F3002 — Vehicle Declarations
 // ============================================================================
+
+/**
+ * Pure XML builder for F3002. No I/O.
+ */
+export function buildF3002Xml(
+  records: F3002Data[],
+  meta: PatrimVenExportMeta
+): string {
+  assertValidCuis(records);
+
+  const xmlObj = {
+    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
+    PatrimVen: {
+      "@_formType": meta.formType,
+      "@_anFiscal": meta.fiscalYear,
+      "@_cuiUAT": meta.tenantCui,
+      "@_sirutaUAT": meta.tenantSiruta,
+      "@_dataGenerare": formatDate(meta.generatedAt),
+      Declaratii: {
+        Declaratie: records.map((r) => ({
+          Contribuabil: r.Contribuabil,
+          Vehicule: { Vehicul: r.Vehicule },
+        })),
+      },
+    },
+  };
+
+  return builder.build(xmlObj);
+}
 
 export async function generateF3002(
   tenantId: string,
@@ -244,39 +309,50 @@ export async function generateF3002(
     records.push({ Contribuabil: person, Vehicule: vehicule });
   }
 
-  const xmlObj = {
-    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
-    PatrimVen: {
-      "@_formType": "F3002",
-      "@_anFiscal": fiscalYear,
-      "@_cuiUAT": tenant.cui || "",
-      "@_sirutaUAT": tenant.sirutaCode || "",
-      "@_dataGenerare": formatDate(new Date()),
-      Declaratii: {
-        Declaratie: records.map((r) => ({
-          Contribuabil: r.Contribuabil,
-          Vehicule: { Vehicul: r.Vehicule },
-        })),
-      },
-    },
+  const meta: PatrimVenExportMeta = {
+    formType: "F3002",
+    fiscalYear,
+    tenantCui: tenant.cui || "",
+    tenantSiruta: tenant.sirutaCode || "",
+    generatedAt: new Date().toISOString(),
+    recordCount: records.length,
   };
 
-  return {
-    xml: builder.build(xmlObj),
-    meta: {
-      formType: "F3002",
-      fiscalYear,
-      tenantCui: tenant.cui || "",
-      tenantSiruta: tenant.sirutaCode || "",
-      generatedAt: new Date().toISOString(),
-      recordCount: records.length,
-    },
-  };
+  return { xml: buildF3002Xml(records, meta), meta };
 }
 
 // ============================================================================
 // F3003 — Other Local Taxes
 // ============================================================================
+
+/**
+ * Pure XML builder for F3003. No I/O.
+ */
+export function buildF3003Xml(
+  records: F3003Data[],
+  meta: PatrimVenExportMeta
+): string {
+  assertValidCuis(records);
+
+  const xmlObj = {
+    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
+    PatrimVen: {
+      "@_formType": meta.formType,
+      "@_anFiscal": meta.fiscalYear,
+      "@_cuiUAT": meta.tenantCui,
+      "@_sirutaUAT": meta.tenantSiruta,
+      "@_dataGenerare": formatDate(meta.generatedAt),
+      Declaratii: {
+        Declaratie: records.map((r) => ({
+          Contribuabil: r.Contribuabil,
+          Taxe: { Taxa: r.Taxe },
+        })),
+      },
+    },
+  };
+
+  return builder.build(xmlObj);
+}
 
 export async function generateF3003(
   tenantId: string,
@@ -334,39 +410,51 @@ export async function generateF3003(
     records.push({ Contribuabil: person, Taxe: taxe });
   }
 
-  const xmlObj = {
-    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
-    PatrimVen: {
-      "@_formType": "F3003",
-      "@_anFiscal": fiscalYear,
-      "@_cuiUAT": tenant.cui || "",
-      "@_sirutaUAT": tenant.sirutaCode || "",
-      "@_dataGenerare": formatDate(new Date()),
-      Declaratii: {
-        Declaratie: records.map((r) => ({
-          Contribuabil: r.Contribuabil,
-          Taxe: { Taxa: r.Taxe },
-        })),
-      },
-    },
+  const meta: PatrimVenExportMeta = {
+    formType: "F3003",
+    fiscalYear,
+    tenantCui: tenant.cui || "",
+    tenantSiruta: tenant.sirutaCode || "",
+    generatedAt: new Date().toISOString(),
+    recordCount: records.length,
   };
 
-  return {
-    xml: builder.build(xmlObj),
-    meta: {
-      formType: "F3003",
-      fiscalYear,
-      tenantCui: tenant.cui || "",
-      tenantSiruta: tenant.sirutaCode || "",
-      generatedAt: new Date().toISOString(),
-      recordCount: records.length,
-    },
-  };
+  return { xml: buildF3003Xml(records, meta), meta };
 }
 
 // ============================================================================
 // F3101 — Fiscal Certificates
 // ============================================================================
+
+/**
+ * Pure XML builder for F3101. No I/O.
+ */
+export function buildF3101Xml(
+  records: F3101Data[],
+  meta: PatrimVenExportMeta
+): string {
+  assertValidCuis(records);
+
+  const xmlObj = {
+    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
+    PatrimVen: {
+      "@_formType": meta.formType,
+      "@_anFiscal": meta.fiscalYear,
+      "@_cuiUAT": meta.tenantCui,
+      "@_sirutaUAT": meta.tenantSiruta,
+      "@_dataGenerare": formatDate(meta.generatedAt),
+      Certificate: {
+        Certificat: records.map((r) => ({
+          Contribuabil: r.Contribuabil,
+          Impozite: { Impozit: r.Impozite },
+          TotalRestanta: r.TotalRestanta,
+        })),
+      },
+    },
+  };
+
+  return builder.build(xmlObj);
+}
 
 export async function generateF3101(
   tenantId: string,
@@ -415,35 +503,16 @@ export async function generateF3101(
     });
   }
 
-  const xmlObj = {
-    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
-    PatrimVen: {
-      "@_formType": "F3101",
-      "@_anFiscal": fiscalYear,
-      "@_cuiUAT": tenant.cui || "",
-      "@_sirutaUAT": tenant.sirutaCode || "",
-      "@_dataGenerare": formatDate(new Date()),
-      Certificate: {
-        Certificat: records.map((r) => ({
-          Contribuabil: r.Contribuabil,
-          Impozite: { Impozit: r.Impozite },
-          TotalRestanta: r.TotalRestanta,
-        })),
-      },
-    },
+  const meta: PatrimVenExportMeta = {
+    formType: "F3101",
+    fiscalYear,
+    tenantCui: tenant.cui || "",
+    tenantSiruta: tenant.sirutaCode || "",
+    generatedAt: new Date().toISOString(),
+    recordCount: records.length,
   };
 
-  return {
-    xml: builder.build(xmlObj),
-    meta: {
-      formType: "F3101",
-      fiscalYear,
-      tenantCui: tenant.cui || "",
-      tenantSiruta: tenant.sirutaCode || "",
-      generatedAt: new Date().toISOString(),
-      recordCount: records.length,
-    },
-  };
+  return { xml: buildF3101Xml(records, meta), meta };
 }
 
 // ============================================================================

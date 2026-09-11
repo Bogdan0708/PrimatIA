@@ -158,7 +158,7 @@ export async function validateCuiBatch(
 // CUI Check Digit (offline validation)
 // ---------------------------------------------------------------------------
 
-function validateCuiCheckDigit(cui: string): boolean {
+export function validateCuiCheckDigit(cui: string): boolean {
   const weights = [7, 5, 3, 2, 1, 7, 5, 3, 2];
   const digits = cui.split("").map(Number);
 

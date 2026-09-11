@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrimVen formType="F3003" anFiscal="2026" cuiUAT="4374028" sirutaUAT="106464" dataGenerare="15.01.2026">
+  <Declaratii>
+    <Declaratie>
+      <Contribuabil>
+        <Tip>PJ</Tip>
+        <CUI>RO12345674</CUI>
+        <Nume>SC EXEMPLU PATRIMONIU SRL</Nume>
+        <Adresa>
+          <Judet>MM</Judet>
+          <Localitate>Baia Mare</Localitate>
+          <Strada>Str. Victoriei</Strada>
+          <Numar>10</Numar>
+          <CodPostal>430001</CodPostal>
+        </Adresa>
+      </Contribuabil>
+      <Taxe>
+        <Taxa>
+          <TipTaxa>TF</TipTaxa>
+          <Descriere>Taxă firmă</Descriere>
+          <SumaStabilita>500</SumaStabilita>
+          <SumaIncasata>500</SumaIncasata>
+        </Taxa>
+        <Taxa>
+          <TipTaxa>TH</TipTaxa>
+          <Descriere>Taxă hotelieră</Descriere>
+          <SumaStabilita>1200</SumaStabilita>
+          <SumaIncasata>800</SumaIncasata>
+        </Taxa>
+        <Taxa>
+          <TipTaxa>TS</TipTaxa>
+          <Descriere>Taxă spectacole</Descriere>
+          <SumaStabilita>300</SumaStabilita>
+          <SumaIncasata>0</SumaIncasata>
+        </Taxa>
+      </Taxe>
+    </Declaratie>
+  </Declaratii>
+</PatrimVen>
