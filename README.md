@@ -2,6 +2,8 @@
 
 *Prototip de platformă SaaS pentru administrarea impozitelor și taxelor locale în comunele din România*
 
+[![CI](https://github.com/Bogdan0708/PrimatIA/actions/workflows/ci.yml/badge.svg)](https://github.com/Bogdan0708/PrimatIA/actions/workflows/ci.yml)
+
 ---
 
 > **Project status:** PrimărIA is a portfolio/pilot project. There is no current
@@ -12,6 +14,33 @@
 >
 > **Naming:** **PrimărIA** is the product/brand name (Primărie + IA). **PrimatIA**
 > is the ASCII GitHub repository slug used in clone URLs and local path examples.
+
+```mermaid
+flowchart TB
+  subgraph Citizen portal
+    CP[Next.js /portal] --> API[/api/portal/*]
+  end
+  subgraph Staff portal
+    SP[Next.js authenticated] --> AAPI[/api/*]
+  end
+  API & AAPI --> TE[Deterministic tax engine\nArt. 457–470, micro-lei integers]
+  API & AAPI --> DB[(PostgreSQL 16\n32 tables forced RLS\nPgBouncer txn mode)]
+  API --> AI[Fiscal assistant\nprompt-injection guard, PII redaction\n→ AI gateway]
+  AAPI --> PV[PatrimVen XML F3001–F3101]
+  AAPI --> PDF[react-pdf legal documents]
+```
+
+| ![citizen](docs/screenshots/citizen-dashboard.png) | ![tax](docs/screenshots/tax-explainer.png) | ![patrimven](docs/screenshots/patrimven-export.png) |
+|---|---|---|
+
+## Entry points
+- `src/lib/tax-engine/{building-tax,land-tax,vehicle-tax}.ts` — statutory calculators with proration and bonificație
+- `prisma/migrations/20260221_add_rls_policies/migration.sql` — tenant isolation; `src/lib/db.ts` sets the tenant context per transaction
+- `src/lib/crypto.ts` — AES-256-GCM CNP encryption with separate hash column
+- `src/lib/patrimven/xml-generator.ts` — ANAF PatrimVen exporter
+- `src/app/api/chatbot/route.ts` + `src/lib/ai/knowledge-base.ts` — cited fiscal assistant with injection defence and PII scrubbing
+
+Tests: `npx vitest run` — 300+ passing at this revision (CI badge above). Implementation evidence; no municipality rollout or ANAF certification claimed.
 
 ## Overview
 
