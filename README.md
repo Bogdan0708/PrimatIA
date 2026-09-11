@@ -323,7 +323,7 @@ npx vitest --coverage
 npx vitest src/__tests__/tax-engine/building-tax.test.ts
 ```
 
-Test coverage focuses on the tax engine (`src/lib/tax-engine/`) and PatrimVen XML generator (`src/lib/patrimven/`).
+Test coverage focuses on the tax engine (`src/lib/tax-engine/`) and PatrimVen XML (golden-file tests in src/__tests__/patrimven) generator (`src/lib/patrimven/`).
 
 ## Deployment
 

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatrimVen formType="F3001" anFiscal="2026" cuiUAT="4374028" sirutaUAT="106464" dataGenerare="15.01.2026">
+  <Declaratii>
+    <Declaratie>
+      <Contribuabil>
+        <Tip>PJ</Tip>
+        <CUI>RO12345674</CUI>
+        <Nume>SC EXEMPLU PATRIMONIU SRL</Nume>
+        <Adresa>
+          <Judet>MM</Judet>
+          <Localitate>Baia Mare</Localitate>
+          <Strada>Str. Victoriei</Strada>
+          <Numar>10</Numar>
+          <CodPostal>430001</CodPostal>
+        </Adresa>
+      </Contribuabil>
+      <Proprietati>
+        <Cladire>
+          <TipCladire>01</TipCladire>
+          <SuprafataC>120.5</SuprafataC>
+          <ValoareImpozabila>350000</ValoareImpozabila>
+          <AnConstructie>2005</AnConstructie>
+          <Destinatie>N</Destinatie>
+          <Zona>A</Zona>
+          <Adresa>
+            <Judet>MM</Judet>
+            <Localitate>Baia Mare</Localitate>
+            <Strada>Str. Victoriei</Strada>
+            <Numar>10</Numar>
+            <CodPostal>430001</CodPostal>
+          </Adresa>
+        </Cladire>
+        <Cladire>
+          <TipCladire>02</TipCladire>
+          <SuprafataC>85</SuprafataC>
+          <ValoareImpozabila>180000</ValoareImpozabila>
+          <AnConstructie>1998</AnConstructie>
+          <Destinatie>R</Destinatie>
+          <Zona>B</Zona>
+          <Adresa>
+            <Judet>MM</Judet>
+            <Localitate>Baia Mare</Localitate>
+            <Strada>Str. Victoriei</Strada>
+            <Numar>10</Numar>
+            <CodPostal>430001</CodPostal>
+          </Adresa>
+        </Cladire>
+        <Teren>
+          <CategorieTeren>01</CategorieTeren>
+          <Suprafata>500</Suprafata>
+          <Zona>A</Zona>
+          <Adresa>
+            <Judet>MM</Judet>
+            <Localitate>Baia Mare</Localitate>
+            <Strada>Str. Victoriei</Strada>
+            <Numar>10</Numar>
+            <CodPostal>430001</CodPostal>
+          </Adresa>
+        </Teren>
+      </Proprietati>
+    </Declaratie>
+  </Declaratii>
+</PatrimVen>
