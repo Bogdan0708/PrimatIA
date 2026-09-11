@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // Must match the SEED_PASSWORD used for `npm run db:seed` (see prisma/seed.ts).
-const SEED_PASSWORD = process.env.SEED_PASSWORD ?? '';
+const SEED_PASSWORD = process.env.SEED_PASSWORD;
 
 test.describe('Authentication', () => {
   test('login page loads correctly', async ({ page }) => {
@@ -14,6 +14,10 @@ test.describe('Authentication', () => {
   });
 
   test('login with valid admin credentials redirects to dashboard', async ({ page }) => {
+    if (!SEED_PASSWORD) {
+      throw new Error('Set SEED_PASSWORD to the value used by `npm run db:seed` before running e2e tests.');
+    }
+
     await page.goto('/ro/login');
 
     await page.getByLabel('Adresă de email').fill('admin@bogdanvoda.ro');

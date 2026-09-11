@@ -133,7 +133,7 @@ function checkRequestSize(request: NextRequest): boolean {
 // CSRF / Origin validation for state-changing API requests
 // ---------------------------------------------------------------------------
 
-function rejectCrossOriginMutation(request: NextRequest): NextResponse | null {
+export function rejectCrossOriginMutation(request: NextRequest): NextResponse | null {
   // Only check state-changing methods
   if (request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS") {
     return null;
