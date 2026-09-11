@@ -1,7 +1,7 @@
 -- GDPR Art. 17 — Right to Erasure request tracking
 
 CREATE TABLE "gdpr_erasure_requests" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "id" UUID NOT NULL,
     "tenant_id" UUID NOT NULL,
     "citizen_user_id" UUID NOT NULL,
     "status" VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -29,7 +29,7 @@ ALTER TABLE "gdpr_erasure_requests"
 
 ALTER TABLE "gdpr_erasure_requests"
     ADD CONSTRAINT "gdpr_erasure_requests_citizen_user_id_fkey"
-    FOREIGN KEY ("citizen_user_id") REFERENCES "citizen_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    FOREIGN KEY ("citizen_user_id") REFERENCES "citizen_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- Enable RLS
 ALTER TABLE "gdpr_erasure_requests" ENABLE ROW LEVEL SECURITY;
