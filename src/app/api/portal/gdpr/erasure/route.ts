@@ -7,6 +7,7 @@ import {
   withRateLimitHeaders,
 } from "@/lib/rate-limit";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+import { writeAuditLog } from "@/lib/audit";
 
 /**
  * POST /api/portal/gdpr/erasure
@@ -94,6 +95,15 @@ export async function POST(request: NextRequest) {
       // Notifications are per-citizenUserId, safe to delete immediately.
       const deletedNotifications = await prisma.notificare.deleteMany({
         where: { citizenUserId: citizen.sub },
+      });
+
+      await writeAuditLog({
+        tenantId: citizen.tenantId,
+        userId: citizen.sub,
+        action: "gdpr.erasure.requested",
+        entityType: "gdpr_erasure_request",
+        entityId: erasureRequest.id,
+        newValues: { status: erasureRequest.status },
       });
 
       return {

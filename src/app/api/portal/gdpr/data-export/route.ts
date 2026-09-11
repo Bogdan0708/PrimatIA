@@ -7,6 +7,7 @@ import {
   withRateLimitHeaders,
 } from "@/lib/rate-limit";
 import { getRequestLogContext, logError, logWarn } from "@/lib/logger";
+import { writeAuditLog } from "@/lib/audit";
 
 /**
  * POST /api/portal/gdpr/data-export
@@ -225,6 +226,14 @@ export async function POST(request: NextRequest) {
           sentAt: true,
           createdAt: true,
         },
+      });
+
+      await writeAuditLog({
+        tenantId: citizen.tenantId,
+        userId: citizen.sub,
+        action: "gdpr.export.generated",
+        entityType: "citizen_user",
+        entityId: citizen.sub,
       });
 
       return {
