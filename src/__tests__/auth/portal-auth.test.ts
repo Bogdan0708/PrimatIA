@@ -60,7 +60,7 @@ describe("getPortalJwtSecret", () => {
     vi.stubEnv("NEXTAUTH_SECRET", "staff-secret");
 
     expect(() => getPortalJwtSecret()).toThrow(
-      "CITIZEN_JWT_SECRET (or JWT_SECRET) must be configured"
+      "CITIZEN_JWT_SECRET (or JWT_SECRET in development) must be configured"
     );
   });
 });

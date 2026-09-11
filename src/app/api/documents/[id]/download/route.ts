@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getCitizenFromRequest } from "@/lib/portal-auth";
-import { prisma, setTenantContext } from "@/lib/db";
+import { prisma, withTenantScope } from "@/lib/db";
 import { getPresignedUrl } from "@/lib/storage";
 import { logger, getRequestLogContext } from "@/lib/logger";
 
@@ -33,40 +33,53 @@ export async function GET(
   }
 
   const tenantId = staffSession?.user?.tenantId ?? citizenSession!.tenantId;
-  await setTenantContext(tenantId);
 
-  const doc = await prisma.document.findFirst({
-    where: { id: documentId, tenantId },
+  // DB reads: fetch document and verify ownership (scoped transaction, released quickly)
+  const { doc, accessDenied } = await withTenantScope(tenantId, async () => {
+    const doc = await prisma.document.findFirst({
+      where: { id: documentId, tenantId },
+    });
+
+    if (!doc?.fileUrl) {
+      return { doc: null, accessDenied: false };
+    }
+
+    // For citizen users, verify they own the document
+    if (citizenSession) {
+      const link = await prisma.citizenContribuabilLink.findFirst({
+        where: {
+          citizenUserId: citizenSession.sub,
+          tenantId,
+        },
+        select: { contribuabilId: true },
+      });
+
+      if (!link || doc.contribuabilId !== link.contribuabilId) {
+        return { doc: null, accessDenied: true };
+      }
+    }
+
+    return { doc, accessDenied: false };
   });
+
+  if (accessDenied) {
+    logger.warn(
+      {
+        ...logContext,
+        tenantId,
+        citizenUserId: citizenSession?.sub,
+        entityId: documentId,
+      },
+      "Citizen document download rejected because ownership check failed"
+    );
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
 
   if (!doc?.fileUrl) {
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  // For citizen users, verify they own the document
-  if (citizenSession) {
-    const link = await prisma.citizenContribuabilLink.findFirst({
-      where: {
-        citizenUserId: citizenSession.sub,
-        tenantId,
-      },
-      select: { contribuabilId: true },
-    });
-
-    if (!link || doc.contribuabilId !== link.contribuabilId) {
-      logger.warn(
-        {
-          ...logContext,
-          tenantId,
-          citizenUserId: citizenSession.sub,
-          entityId: documentId,
-        },
-        "Citizen document download rejected because ownership check failed"
-      );
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-  }
-
+  // External call: generate presigned URL (network I/O, outside DB transaction)
   try {
     const url = await getPresignedUrl(doc.fileUrl);
     return NextResponse.redirect(url);

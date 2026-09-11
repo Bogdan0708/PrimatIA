@@ -290,7 +290,7 @@ describe("calculateLandTax", () => {
 
     await expect(
       calculateLandTax(makeInput(), makeHcl(), [])
-    ).rejects.toThrow(/No rate table entry found for land tax/);
+    ).rejects.toThrow(/Lipsește rata din tabelul HCL pentru impozit teren/);
   });
 
   it("calculates bonificatie and installments correctly", async () => {

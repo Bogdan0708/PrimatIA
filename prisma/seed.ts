@@ -1,9 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import { seedTaxRates2025 } from "./seed/tax-rates-2025";
 import { seedBudgetCodes } from "./seed/budget-codes";
 
 const prisma = new PrismaClient();
+
+// One password for every demo account in this seed run. Override with
+// SEED_PASSWORD for a reproducible value (e.g. in CI); otherwise a random
+// password is generated and printed once at the end of the seed — it is
+// never committed and never hardcoded in docs or README.
+const SEED_PASSWORD = process.env.SEED_PASSWORD ?? randomBytes(9).toString("base64url");
 
 async function main() {
   console.log("Seeding database...");
@@ -197,10 +204,10 @@ async function main() {
 
   const tenantId = demoTenant.id;
 
-  // Per-user passwords for demo accounts
-  const adminPasswordHash = await hash("Admin123!", 12);
-  const operatorPasswordHash = await hash("Operator123!", 12);
-  const contabilPasswordHash = await hash("Operator123!", 12);
+  // Per-user passwords for demo accounts (all share SEED_PASSWORD, printed below)
+  const adminPasswordHash = await hash(SEED_PASSWORD, 12);
+  const operatorPasswordHash = await hash(SEED_PASSWORD, 12);
+  const contabilPasswordHash = await hash(SEED_PASSWORD, 12);
 
   // =============================================================================
   // 4. DEMO STAFF USERS (admin, operator, contabil)
@@ -1708,7 +1715,7 @@ async function main() {
       data: {
         tenantId,
         email: citizenEmail,
-        passwordHash: await hash("Citizen123!", 12),
+        passwordHash: await hash(SEED_PASSWORD, 12),
         firstName: "Ion",
         lastName: "Popescu",
         phone: "0740100001",
@@ -1767,6 +1774,13 @@ async function main() {
   console.log(`  - Penalties on overdue debts`);
   console.log(`  - Payments with distributions`);
   console.log(`  - Demo citizen: ${citizenEmail}`);
+  console.log("\n=== Demo login credentials (local dev only — not committed) ===");
+  console.log(`  Password for all demo accounts: ${SEED_PASSWORD}`);
+  console.log(`  Admin:    admin@bogdanvoda.ro`);
+  console.log(`  Operator: operator@bogdanvoda.ro`);
+  console.log(`  Contabil: contabil@bogdanvoda.ro`);
+  console.log(`  Citizen:  ${citizenEmail}`);
+  console.log("===============================================================\n");
 }
 
 main()

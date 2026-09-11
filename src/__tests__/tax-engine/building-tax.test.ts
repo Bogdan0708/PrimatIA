@@ -477,7 +477,7 @@ describe("calculateBuildingTax", () => {
     await expect(
       calculateBuildingTax(makeInput(), makeHcl(), [])
     ).rejects.toThrow(
-      /No rate table entry found for building tax/
+      /Lipsește rata din tabelul HCL pentru impozit clădiri/
     );
   });
 

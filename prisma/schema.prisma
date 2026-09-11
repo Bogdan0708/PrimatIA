@@ -82,6 +82,7 @@ model Tenant {
   chitantaSequences     ChitantaSequence[]
   documentSequences     DocumentSequence[]
   passwordResetTokens   PasswordResetToken[]
+  gdprErasureRequests   GdprErasureRequest[]
 
   @@map("tenants")
 }
@@ -490,7 +491,7 @@ model TaxRateTable {
   hclDecision HclDecision @relation(fields: [hclDecisionId], references: [id])
   impozite    Impozit[]   @relation("ImpozitRateTable")
 
-  @@index([tenantId, hclDecisionId, taxType, category, zona])
+  @@unique([tenantId, hclDecisionId, taxType, category, zona])
   @@map("tax_rate_tables")
 }
 
@@ -934,13 +935,15 @@ model AuditLog {
   ipAddress String? @map("ip_address") @db.Inet
   userAgent String? @map("user_agent")
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, entityType, entityId, createdAt])
   @@index([tenantId, userId, createdAt])
+  @@index([expiresAt], map: "audit_logs_expires_at_idx")
   @@map("audit_logs")
 }
 
@@ -1026,11 +1029,41 @@ model CitizenUser {
   certificateRequests CertificateRequest[]
   onlinePayments      OnlinePayment[]
   contactMessages     ContactMessage[]
-  passwordResetTokens PasswordResetToken[]
+  passwordResetTokens  PasswordResetToken[]
+  gdprErasureRequests  GdprErasureRequest[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
   @@map("citizen_users")
+}
+
+model GdprErasureRequest {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  citizenUserId  String @map("citizen_user_id") @db.Uuid
+
+  status         String @default("pending") @db.VarChar(20) // pending, approved, rejected, completed
+  reason         String? @db.VarChar(500)
+
+  // Admin review
+  reviewedById   String?   @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime? @map("reviewed_at") @db.Timestamptz
+  reviewNote     String?   @map("review_note") @db.VarChar(500)
+
+  // Execution
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  anonymizedData Json?     @map("anonymized_data") @db.JsonB // summary of what was anonymized
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  citizenUser CitizenUser  @relation(fields: [citizenUserId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([citizenUserId])
+  @@map("gdpr_erasure_requests")
 }
 
 model PasswordResetToken {

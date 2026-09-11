@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { TaxConfigurationError } from "./errors";
 import type {
   LandTaxInput,
   TaxCalculationResult,
@@ -46,8 +47,8 @@ export async function calculateLandTax(
   );
 
   if (!rateEntry) {
-    throw new Error(
-      `No rate table entry found for land tax: type=${taxType}, category=${input.categorie}, zone=${input.zona}`
+    throw new TaxConfigurationError(
+      `Lipsește rata din tabelul HCL pentru impozit teren: tip=${taxType}, categorie=${input.categorie}, zonă=${input.zona}`
     );
   }
 

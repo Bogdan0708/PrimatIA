@@ -11,15 +11,25 @@ import { prisma, withTenantScope } from "@/lib/db";
  * prevent token confusion between staff (NextAuth) and citizen sessions.
  */
 export function getPortalJwtSecret(): Uint8Array {
-  const secret =
-    process.env.CITIZEN_JWT_SECRET ||
-    process.env.JWT_SECRET;
-  if (!secret) {
+  const citizenSecret = process.env.CITIZEN_JWT_SECRET;
+  if (citizenSecret) {
+    return new TextEncoder().encode(citizenSecret);
+  }
+  // In production, require a dedicated citizen secret to prevent token confusion
+  // between staff (NextAuth) and citizen sessions.
+  if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "CITIZEN_JWT_SECRET (or JWT_SECRET) must be configured"
+      "CITIZEN_JWT_SECRET must be configured in production (cannot share JWT_SECRET with staff auth)"
     );
   }
-  return new TextEncoder().encode(secret);
+  // Dev fallback only
+  const fallback = process.env.JWT_SECRET;
+  if (!fallback) {
+    throw new Error(
+      "CITIZEN_JWT_SECRET (or JWT_SECRET in development) must be configured"
+    );
+  }
+  return new TextEncoder().encode(fallback);
 }
 
 export interface CitizenSession {

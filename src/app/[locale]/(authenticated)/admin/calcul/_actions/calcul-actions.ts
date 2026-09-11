@@ -2,7 +2,6 @@
 
 import { prisma, withTenantScope } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth-utils";
-import { setTenantContext } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import {
@@ -11,6 +10,7 @@ import {
   type TaxCalculationResult,
 } from "@/lib/tax-engine";
 import { clearAnomalyCache } from "@/lib/ai/anomaly-detection";
+import { logger } from "@/lib/logger";
 import {
   evaluateConditions,
   type ContribuabilSnapshot,
@@ -36,9 +36,9 @@ export async function runMassCalculation(
   const session = await requireAdmin();
   if (!session?.user?.tenantId)
     return { success: false, error: "No tenant context" };
-  await setTenantContext(session.user.tenantId);
 
   try {
+    return await withTenantScope(session.user.tenantId, async () => {
     // Verify active HCL exists
     const hcl = await resolveActiveHcl(session.user.tenantId, fiscalYear);
     if (!hcl) {
@@ -192,7 +192,7 @@ export async function runMassCalculation(
             });
 
             if (!taxType) {
-              console.error(`Tax type not found: ${entry.taxTypeCode}`);
+              logger.error({ taxTypeCode: entry.taxTypeCode }, "Tax type not found in registry");
               errors++;
               continue;
             }
@@ -230,10 +230,7 @@ export async function runMassCalculation(
         }
         processed++;
       } catch (err) {
-        console.error(
-          `Error calculating taxes for contribuabil ${c.id}:`,
-          err
-        );
+        logger.error({ err, contribuabilId: c.id, fiscalYear }, "Error calculating taxes for contribuabil");
         errors++;
       }
     }
@@ -243,11 +240,12 @@ export async function runMassCalculation(
     revalidatePath("/contribuabili");
 
     return {
-      success: true,
+      success: true as const,
       data: { processed, taxes: totalTaxes, errors },
     };
+    });
   } catch (error) {
-    console.error("Error running mass calculation:", error);
+    logger.error({ err: error }, "Error running mass calculation");
     return { success: false, error: "Eroare la calculul în masă" };
   }
 }
@@ -408,7 +406,7 @@ export async function runEligibilityDetection(
           }
           checked++;
         } catch (err) {
-          console.error(`Error detecting eligibility for ${c.id}:`, err);
+          logger.error({ err, contribuabilId: c.id, fiscalYear }, "Error detecting eligibility");
           errors++;
         }
       }
@@ -430,7 +428,7 @@ export async function runEligibilityDetection(
       };
     });
   } catch (error) {
-    console.error("Error running eligibility detection:", error);
+    logger.error({ err: error }, "Error running eligibility detection");
     return { success: false, error: "Eroare la detectarea eligibilității" };
   }
 }

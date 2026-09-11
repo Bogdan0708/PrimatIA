@@ -1,13 +1,16 @@
 export * from "./types";
 export * from "./utils";
+export { TaxConfigurationError } from "./errors";
 export { calculateBuildingTax } from "./building-tax";
 export { calculateLandTax } from "./land-tax";
 export { calculateVehicleTax } from "./vehicle-tax";
 
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { calculateBuildingTax } from "./building-tax";
 import { calculateLandTax } from "./land-tax";
 import { calculateVehicleTax } from "./vehicle-tax";
+import { TaxConfigurationError } from "./errors";
 import { toSafeNumber } from "./utils";
 import { normalizeVehicleType } from "@/lib/vehicle-normalization";
 import type {
@@ -101,7 +104,7 @@ export async function calculateAllTaxesForContribuabil(
   errors: { propertyType: string; propertyId: string; error: string }[];
 }> {
   const hcl = await resolveActiveHcl(tenantId, fiscalYear);
-  if (!hcl) throw new Error(`No active HCL decision for fiscal year ${fiscalYear}`);
+  if (!hcl) throw new TaxConfigurationError(`Nu există HCL activ pentru anul fiscal ${fiscalYear}`);
 
   // Load contribuabil type (PF/PJ) and tenant commune rank
   const [contribuabil, tenant] = await Promise.all([
@@ -201,7 +204,7 @@ export async function calculateAllTaxesForContribuabil(
       );
       buildingResults.push(result);
     } catch (err) {
-      console.error(`Error calculating building tax ${b.id}:`, err);
+      logger.error({ err, buildingId: b.id, contribuabilId }, "Error calculating building tax");
       buildingResults.push(null);
       errors.push({
         propertyType: "cladire",
@@ -239,7 +242,7 @@ export async function calculateAllTaxesForContribuabil(
       );
       landResults.push(result);
     } catch (err) {
-      console.error(`Error calculating land tax ${l.id}:`, err);
+      logger.error({ err, landId: l.id, contribuabilId }, "Error calculating land tax");
       landResults.push(null);
       errors.push({
         propertyType: "teren",
@@ -284,7 +287,7 @@ export async function calculateAllTaxesForContribuabil(
       );
       vehicleResults.push(result);
     } catch (err) {
-      console.error(`Error calculating vehicle tax ${v.id}:`, err);
+      logger.error({ err, vehicleId: v.id, contribuabilId }, "Error calculating vehicle tax");
       vehicleResults.push(null);
       errors.push({
         propertyType: "vehicul",

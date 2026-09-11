@@ -16,8 +16,12 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
+// In development, multiply rate limits by 10x to avoid blocking during testing
+const DEV_RATE_LIMIT_MULTIPLIER = process.env.NODE_ENV === "development" ? 10 : 1;
+
 /**
  * Check rate limit using Redis INCR + PEXPIRE (atomic sliding window).
+ * In development, limits are 10x higher to avoid blocking during testing.
  */
 export async function checkSharedRateLimit(params: {
   request: NextRequest;
@@ -26,6 +30,8 @@ export async function checkSharedRateLimit(params: {
   windowMs: number;
   keySuffix?: string;
 }): Promise<RateLimitResult> {
+  const effectiveLimit = params.limit * DEV_RATE_LIMIT_MULTIPLIER;
+
   try {
     const redis = await ensureRedisConnection();
     const ip = getClientIp(params.request);
@@ -50,11 +56,11 @@ export async function checkSharedRateLimit(params: {
 
     const count = Number(result[0][1] ?? 0);
     const ttlMs = Math.max(0, Number(result[2][1] ?? params.windowMs));
-    const remaining = Math.max(0, params.limit - count);
+    const remaining = Math.max(0, effectiveLimit - count);
 
     return {
-      allowed: count <= params.limit,
-      limit: params.limit,
+      allowed: count <= effectiveLimit,
+      limit: effectiveLimit,
       remaining,
       retryAfterSeconds: Math.max(1, Math.ceil(ttlMs / 1000)),
     };
@@ -62,8 +68,8 @@ export async function checkSharedRateLimit(params: {
     // Fail open if Redis is unavailable
     return {
       allowed: true,
-      limit: params.limit,
-      remaining: params.limit,
+      limit: effectiveLimit,
+      remaining: effectiveLimit,
       retryAfterSeconds: 0,
     };
   }

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { setTenantContext } from "@/lib/db";
+import { withTenantScope } from "@/lib/db";
 import { reversePayment } from "@/lib/payments/reversal";
 import { logger, getRequestLogContext } from "@/lib/logger";
 import { checkSharedRateLimit, createRateLimitExceededResponse } from "@/lib/rate-limit";
 import type { Role } from "@/lib/constants";
+import { paymentReversalSchema } from "@/lib/validations/portal";
 
 const PAYMENT_ROLES: Role[] = ["super_admin", "primaria_admin", "operator", "contabil"];
 
@@ -41,34 +42,34 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { plataId, reason } = body;
-
-    if (!plataId || !reason) {
+    const parsed = paymentReversalSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Payment ID and reason are required" },
+        { error: "Date invalide", details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { plataId, reason } = parsed.data;
 
-    await setTenantContext(session.user.tenantId);
+    return await withTenantScope(session.user.tenantId, async () => {
+      const result = await reversePayment({
+        plataId,
+        tenantId: session.user.tenantId,
+        reversedById: session.user.id,
+        reason,
+      });
 
-    const result = await reversePayment({
-      plataId,
-      tenantId: session.user.tenantId,
-      reversedById: session.user.id,
-      reason,
-    });
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error },
+          { status: 400 }
+        );
+      }
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      stornoPlataId: result.stornoPlataId,
+      return NextResponse.json({
+        success: true,
+        stornoPlataId: result.stornoPlataId,
+      });
     });
   } catch (error) {
     logger.error({ err: error, ...logContext }, "Payment reversal failed unexpectedly");
