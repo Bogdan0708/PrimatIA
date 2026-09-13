@@ -386,3 +386,26 @@ MIT — see [LICENSE](LICENSE).
 ---
 
 *Built for Romanian communes. Construit pentru comunele din Romania.*
+
+### Synthetic database verification
+
+CI migrates a disposable PostgreSQL 16 database, then runs the tax-engine
+integration suite using a separate `NOSUPERUSER NOBYPASSRLS` role. The suite
+creates and removes two synthetic tenants; it does not use the demonstration
+seed or any resident records. It verifies stored-rate calculations, parallel
+tenant contexts, unfiltered reads/raw SQL, foreign-ID reads/updates/deletes,
+forbidden inserts/tenant reassignment, released transaction context and RLS
+coverage across every table carrying `tenant_id`.
+
+To reproduce, migrate an empty local database named `primaria_test`, grant a
+non-owner, non-superuser application role table/sequence access, and run:
+
+```sh
+INTEGRATION_TESTS=true DATABASE_URL=postgresql://primaria_integration:synthetic-test-only@localhost:5432/primaria_test npx vitest run src/__tests__/tax-engine/integration/
+```
+
+Unit-only `npm test` skips these opt-in tests. This database evidence does not
+establish deployment readiness, external XML acceptance, complete erasure
+implementation or legal compliance. Application deployments must use an
+application role without SUPERUSER/BYPASSRLS; migration-owner tests cannot
+prove enforcement.
