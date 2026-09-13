@@ -1,164 +1,123 @@
-/**
- * Integration tests for the tax engine against the real seeded database.
- *
- * Prerequisites:
- *   - PostgreSQL running with seeded demo data (tenant bogdan-voda)
- *   - DATABASE_URL pointing to the real database
- *
- * Run:
- *   INTEGRATION_TESTS=true DATABASE_URL="postgresql://primaria_app:primaria_dev_password@localhost:5435/primaria" \
- *     npx vitest run src/__tests__/tax-engine/integration/
+/** Synthetic PostgreSQL integration suite. Never run against an existing application DB.
+ * Run migrations with the owner role; run tests with a separate NOSUPERUSER NOBYPASSRLS role.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { randomUUID } from "node:crypto";
 
-const TENANT_ID = "00000000-0000-0000-0000-000000000000";
+const enabled = process.env.INTEGRATION_TESTS === "true";
+const integration = enabled ? describe : describe.skip;
+const tenantA = randomUUID();
+const tenantB = randomUUID();
+const taxpayerA = randomUUID();
+const taxpayerB = randomUUID();
 
-// Opt-in via INTEGRATION_TESTS=true. Skips in CI and unit-test-only runs.
-const runIntegration = process.env.INTEGRATION_TESTS === "true" && !!process.env.DATABASE_URL;
-
-const describeIntegration = runIntegration ? describe : describe.skip;
-
-describeIntegration("Tax Engine — Integration (real DB)", () => {
-  // Dynamic imports to avoid loading Prisma in unit test environment
-  let withTenantScope: (tenantId: string, fn: () => Promise<unknown>) => Promise<unknown>;
-  let calculateAllTaxesForContribuabil: (
-    tenantId: string,
-    contribuabilId: string,
-    fiscalYear: number
-  ) => Promise<{
-    buildings: (TaxResult | null)[];
-    land: (TaxResult | null)[];
-    vehicles: (TaxResult | null)[];
-    errors: { propertyType: string; propertyId: string; error: string }[];
-  }>;
-  let prismaDisconnect: () => Promise<void>;
-
-  interface TaxResult {
-    bazaImpozabila: number;
-    rataAplicata: number;
-    sumaCalculata: number;
-    sumaScutire: number;
-    bonificatie: number;
-    sumaDatorata: number;
-    nrLuni: number;
-    rata1: number;
-    rata2: number;
-  }
+integration("Tax engine and two-tenant PostgreSQL isolation", () => {
+  let db: typeof import("@/lib/db");
+  let calculate: typeof import("@/lib/tax-engine").calculateAllTaxesForContribuabil;
 
   beforeAll(async () => {
-    const db = await import("@/lib/db");
-    const engine = await import("@/lib/tax-engine");
-    withTenantScope = db.withTenantScope as typeof withTenantScope;
-    calculateAllTaxesForContribuabil = engine.calculateAllTaxesForContribuabil;
-
-    prismaDisconnect = async () => {
-      // Prisma handles connection pooling internally
-    };
-  });
-
-  afterAll(async () => {
-    await prismaDisconnect?.();
-  });
-
-  // -----------------------------------------------------------------------
-  // Popescu Ion — PF with 1 building, 1 land, 1 vehicle (full year 2026)
-  // -----------------------------------------------------------------------
-  const POPESCU_ION = "b204583e-5fa3-4169-ae26-d67b994b9e86";
-
-  it("calculates correct taxes for Popescu Ion (PF, full year)", async () => {
-    const result = await withTenantScope(TENANT_ID, () =>
-      calculateAllTaxesForContribuabil(TENANT_ID, POPESCU_ION, 2026)
-    ) as Awaited<ReturnType<typeof calculateAllTaxesForContribuabil>>;
-
-    expect(result.errors).toHaveLength(0);
-
-    // Building: rezidentiala, cadre_beton, zona A
-    // 180,000 × 0.0008% × 1.0 (age abrogated 2026) × 1.0 (rank 5) × 1.056 (inflation) = ~2 lei
-    expect(result.buildings).toHaveLength(1);
-    const building = result.buildings[0]!;
-    expect(building.bazaImpozabila).toBe(180_000);
-    expect(building.rataAplicata).toBeCloseTo(0.0008, 4);
-    expect(building.sumaDatorata).toBe(2);
-    expect(building.nrLuni).toBe(12);
-
-    // Land: intravilan_curti, zona A, 500 m²
-    // 500 × 1.5 lei/m² × 1.056 = 792 lei
-    expect(result.land).toHaveLength(1);
-    const land = result.land[0]!;
-    expect(land.bazaImpozabila).toBe(500);
-    expect(land.rataAplicata).toBe(1.5);
-    expect(land.sumaDatorata).toBe(792);
-    expect(land.nrLuni).toBe(12);
-
-    // Vehicle: autoturism 1199cc, euro_6
-    // ceil(1199/200)=6 × 8 lei = 48, × 0.9 (euro 6) × 1.056 = ~46 lei
-    expect(result.vehicles).toHaveLength(1);
-    const vehicle = result.vehicles[0]!;
-    expect(vehicle.bazaImpozabila).toBe(1199);
-    expect(vehicle.rataAplicata).toBe(8);
-    expect(vehicle.sumaDatorata).toBe(46);
-    expect(vehicle.nrLuni).toBe(12);
-  });
-
-  it("returns installment splits summing to total", async () => {
-    const result = await withTenantScope(TENANT_ID, () =>
-      calculateAllTaxesForContribuabil(TENANT_ID, POPESCU_ION, 2026)
-    ) as Awaited<ReturnType<typeof calculateAllTaxesForContribuabil>>;
-
-    for (const arr of [result.buildings, result.land, result.vehicles]) {
-      for (const tax of arr) {
-        if (!tax) continue;
-        expect(tax.rata1 + tax.rata2).toBe(tax.sumaDatorata);
-      }
+    const url = new URL(process.env.DATABASE_URL ?? "");
+    if (!['localhost', '127.0.0.1', 'postgres'].includes(url.hostname) || url.pathname !== '/primaria_test') {
+      throw new Error("Integration tests require the isolated local primaria_test database");
+    }
+    db = await import("@/lib/db");
+    calculate = (await import("@/lib/tax-engine")).calculateAllTaxesForContribuabil;
+    const [role] = await db.prisma.$queryRaw<{ rolsuper: boolean; rolbypassrls: boolean }[]>`
+      SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`;
+    expect(role).toEqual({ rolsuper: false, rolbypassrls: false });
+    for (const [tenantId, taxpayerId, area] of [[tenantA, taxpayerA, 500], [tenantB, taxpayerB, 200]] as const) {
+      await db.prisma.tenant.create({ data: { id: tenantId, name: "Synthetic integration fixture", slug: tenantId, county: "Test" } });
+      await db.withTenantScope(tenantId, async () => {
+        await db.prisma.contribuabil.create({ data: { id: taxpayerId, tenantId, tip: "PF", nume: "Synthetic taxpayer" } });
+        const hcl = await db.prisma.hclDecision.create({ data: {
+          tenantId, hclNumber: "TEST", hclDate: new Date("2025-01-01"), fiscalYear: 2026,
+          validFrom: new Date("2026-01-01"), status: "active", inflationIndex: 1.056, bonificatieProcent: 10,
+        } });
+        await db.prisma.taxRateTable.create({ data: {
+          tenantId, hclDecisionId: hcl.id, taxType: "impozit_teren_curti", category: "intravilan_curti", zona: "A",
+          rateType: "per_unit", rateValue: 1.5, unit: "lei/mp",
+        } });
+        await db.prisma.proprietateTeren.create({ data: {
+          tenantId, contribuabilId: taxpayerId, categorie: "intravilan_curti", suprafataMp: area,
+          zona: "A", dataDobandire: new Date("2020-01-01"),
+        } });
+      });
     }
   });
 
-  it("calculates bonificatie when HCL has bonificatieProcent", async () => {
-    const result = await withTenantScope(TENANT_ID, () =>
-      calculateAllTaxesForContribuabil(TENANT_ID, POPESCU_ION, 2026)
-    ) as Awaited<ReturnType<typeof calculateAllTaxesForContribuabil>>;
-
-    // Land tax is large enough to have a meaningful bonificatie (10% of 792 = 79)
-    const land = result.land[0]!;
-    expect(land.bonificatie).toBeGreaterThan(0);
-    // bonificatie = floor(sumaDatorata * bonificatieProcent / 100)
-    expect(land.bonificatie).toBe(Math.floor(792 * 10 / 100));
+  afterAll(async () => {
+    if (!db) return;
+    for (const tenantId of [tenantA, tenantB]) {
+      await db.withTenantScope(tenantId, async () => {
+        await db.prisma.proprietateTeren.deleteMany({ where: { tenantId } });
+        await db.prisma.contribuabil.deleteMany({ where: { tenantId } });
+        await db.prisma.taxRateTable.deleteMany({ where: { tenantId } });
+        await db.prisma.hclDecision.deleteMany({ where: { tenantId } });
+        await db.prisma.tenant.deleteMany({ where: { id: tenantId } });
+      });
+    }
+    await db.prisma.$disconnect();
   });
 
-  // -----------------------------------------------------------------------
-  // Multiple contribuabili: verify no cross-contamination
-  // -----------------------------------------------------------------------
-  const IONESCU_MARIA = "7b8f2ae8-cd1b-45ae-be2e-c72f5c531859";
-
-  it("calculates taxes for different contribuabili independently", async () => {
-    const [popescuResult, ionescuResult] = await withTenantScope(TENANT_ID, async () => {
-      const a = await calculateAllTaxesForContribuabil(TENANT_ID, POPESCU_ION, 2026);
-      const b = await calculateAllTaxesForContribuabil(TENANT_ID, IONESCU_MARIA, 2026);
-      return [a, b] as const;
-    }) as readonly [
-      Awaited<ReturnType<typeof calculateAllTaxesForContribuabil>>,
-      Awaited<ReturnType<typeof calculateAllTaxesForContribuabil>>
-    ];
-
-    // Both should have zero errors
-    expect(popescuResult.errors).toHaveLength(0);
-    expect(ionescuResult.errors).toHaveLength(0);
-
-    // They should have different property counts (different people)
-    const popescuTotal = popescuResult.buildings.length + popescuResult.land.length + popescuResult.vehicles.length;
-    const ionescuTotal = ionescuResult.buildings.length + ionescuResult.land.length + ionescuResult.vehicles.length;
-    expect(popescuTotal).toBeGreaterThan(0);
-    expect(ionescuTotal).toBeGreaterThan(0);
+  it("calculates deterministic land tax from database rates", async () => {
+    const result = await db.withTenantScope(tenantA, () => calculate(tenantA, taxpayerA, 2026));
+    expect(result.errors).toEqual([]);
+    expect(result.land).toHaveLength(1);
+    expect(result.land[0]).toMatchObject({ bazaImpozabila: 500, rataAplicata: 1.5, sumaDatorata: 792, nrLuni: 12 });
   });
 
-  // -----------------------------------------------------------------------
-  // Error handling: non-existent contribuabil
-  // -----------------------------------------------------------------------
-  it("throws TaxConfigurationError for non-existent fiscal year", async () => {
-    await expect(
-      withTenantScope(TENANT_ID, () =>
-        calculateAllTaxesForContribuabil(TENANT_ID, POPESCU_ION, 1900)
-      )
-    ).rejects.toThrow(/Nu există HCL activ/);
+  it("keeps installment splits equal to the amount due", async () => {
+    const result = await db.withTenantScope(tenantA, () => calculate(tenantA, taxpayerA, 2026));
+    expect(result.land).toHaveLength(1);
+    expect(result.land[0]!.rata1 + result.land[0]!.rata2).toBe(792);
+  });
+
+  it("uses the stored discount rate", async () => {
+    const result = await db.withTenantScope(tenantA, () => calculate(tenantA, taxpayerA, 2026));
+    expect(result.land[0]!.bonificatie).toBe(79);
+  });
+
+  it("calculates different tenants concurrently without context leakage", async () => {
+    const [a, b] = await Promise.all([
+      db.withTenantScope(tenantA, () => calculate(tenantA, taxpayerA, 2026)),
+      db.withTenantScope(tenantB, () => calculate(tenantB, taxpayerB, 2026)),
+    ]);
+    expect(a.errors).toEqual([]);
+    expect(b.errors).toEqual([]);
+    expect(a.land[0]!.sumaDatorata).toBe(792);
+    expect(b.land[0]!.sumaDatorata).toBe(317);
+  });
+
+  it("rejects missing fiscal configuration", async () => {
+    await expect(db.withTenantScope(tenantA, () => calculate(tenantA, taxpayerA, 1900))).rejects.toThrow(/Nu există HCL activ/);
+  });
+
+  it("filters unqualified reads and direct foreign IDs at the database", async () => {
+    await db.withTenantScope(tenantA, async () => {
+      expect((await db.prisma.contribuabil.findMany()).map(row => row.id)).toEqual([taxpayerA]);
+      expect(await db.prisma.contribuabil.findUnique({ where: { id: taxpayerB } })).toBeNull();
+      const rows = await db.prisma.$queryRaw<{ id: string }[]>`SELECT id FROM contribuabili`;
+      expect(rows.map(row => row.id)).toEqual([taxpayerA]);
+      expect(await db.prisma.contribuabil.updateMany({ where: { id: taxpayerB }, data: { nume: "Cross-tenant change" } })).toEqual({ count: 0 });
+      expect(await db.prisma.contribuabil.deleteMany({ where: { id: taxpayerB } })).toEqual({ count: 0 });
+    });
+  });
+
+  it("rejects inserting or moving rows into another tenant", async () => {
+    await expect(db.withTenantScope(tenantA, () => db.prisma.contribuabil.create({ data: { tenantId: tenantB, tip: "PF", nume: "Forbidden" } }))).rejects.toThrow();
+    await expect(db.withTenantScope(tenantA, () => db.prisma.contribuabil.update({ where: { id: taxpayerA }, data: { tenantId: tenantB } }))).rejects.toThrow();
+  });
+
+  it("fails closed after transaction context is released", async () => {
+    await db.withTenantScope(tenantA, () => db.prisma.contribuabil.findMany());
+    expect(await db.prisma.contribuabil.findMany()).toEqual([]);
+  });
+
+  it("enforces RLS on every table carrying tenant_id, including later migrations", async () => {
+    const missing = await db.prisma.$queryRaw<{ relname: string }[]>`
+      SELECT c.relname FROM pg_class c JOIN pg_attribute a ON c.oid = a.attrelid
+      WHERE a.attname = 'tenant_id' AND c.relkind = 'r' AND c.relnamespace = 'public'::regnamespace
+      AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity OR NOT EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid))`;
+    expect(missing).toEqual([]);
   });
 });

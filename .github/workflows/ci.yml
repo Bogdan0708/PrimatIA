@@ -103,5 +103,22 @@ jobs:
             --shadow-database-url "$SHADOW_DATABASE_URL" \
             --exit-code
 
-      - name: Run tests
+      - name: Run unit tests
         run: npm test
+
+      - name: Create restricted integration role
+        env:
+          PGPASSWORD: primaria_test
+        run: |
+          psql -h localhost -U primaria_test -d primaria_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE primaria_integration LOGIN PASSWORD 'synthetic-test-only' NOSUPERUSER NOBYPASSRLS;
+          GRANT USAGE ON SCHEMA public TO primaria_integration;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO primaria_integration;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO primaria_integration;
+          SQL
+
+      - name: Run synthetic PostgreSQL and tenant isolation tests
+        env:
+          INTEGRATION_TESTS: "true"
+          DATABASE_URL: postgresql://primaria_integration:synthetic-test-only@localhost:5432/primaria_test
+        run: npx vitest run src/__tests__/tax-engine/integration/
